@@ -61,8 +61,9 @@ export default function MemberView({ id }: { id: string }) {
         <section className="panel">
           <div className="sectionTitle"><h2>Contact</h2></div>
           <dl className="facts">
-            <dt>Email</dt><dd>{m.email ? <a href={`mailto:${m.email}`}><Mail size={13} /> {m.email}</a> : '—'}</dd>
-            <dt>Phone</dt><dd>{m.phone ? <a href={`tel:${m.phone}`}><Phone size={13} /> {m.phone}</a> : '—'}</dd>
+            <dt>Cell phone</dt><dd>{m.cell_phone ? <a href={`tel:${m.cell_phone}`}><Phone size={13} /> {m.cell_phone}</a> : '—'}</dd>
+            <dt>Military email</dt><dd>{m.mil_email ? <a href={`mailto:${m.mil_email}`}><Mail size={13} /> {m.mil_email}</a> : '—'}</dd>
+            <dt>Personal email</dt><dd>{m.personal_email ? <a href={`mailto:${m.personal_email}`}><Mail size={13} /> {m.personal_email}</a> : '—'}</dd>
             <dt>Ammo issued</dt><dd>{ammo.r} rds 5.56 · {ammo.p} rds 9mm (all time)</dd>
             {m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
           </dl>

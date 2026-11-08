@@ -274,3 +274,5 @@ details summary { cursor: pointer; font-size: 13px; color: var(--info); margin-t
   .panel { border: 0; padding: 0; }
   .attTable select, .attTable input { border: 0; padding: 0; appearance: none; background: none; }
 }
+
+.nowrap { white-space: nowrap; }

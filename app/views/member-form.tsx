@@ -4,7 +4,7 @@ import { useTeam } from '../../lib/data';
 import { DUTY_STATUSES, TEAM_STATUSES, type Compliance, type Member } from '../../lib/types';
 import { Modal } from './ui';
 
-const blank = { last_name: '', first_name: '', rank: '', unit: '', duty_status: '', team_status: 'New', staff_role: '', email: '', phone: '', notes: '' };
+const blank = { last_name: '', first_name: '', rank: '', unit: '', duty_status: '', team_status: 'New', staff_role: '', cell_phone: '', mil_email: '', personal_email: '', notes: '' };
 
 export function MemberForm({ member, onClose, onSaved }: { member?: Member; onClose: () => void; onSaved?: (id: string) => void }) {
   const { sb, reload } = useTeam();
@@ -40,8 +40,9 @@ export function MemberForm({ member, onClose, onSaved }: { member?: Member; onCl
             <select value={f.team_status} onChange={set('team_status')}>{TEAM_STATUSES.map(s => <option key={s}>{s}</option>)}</select>
           </label>
           <label>Staff role<input value={f.staff_role} onChange={set('staff_role')} placeholder="OIC, NCOIC, Instructor…" /></label>
-          <label>Email<input type="email" value={f.email} onChange={set('email')} /></label>
-          <label>Phone<input type="tel" value={f.phone} onChange={set('phone')} /></label>
+          <label>Cell phone<input type="tel" autoComplete="off" value={f.cell_phone} onChange={set('cell_phone')} placeholder="316-555-0100" /></label>
+          <label>Military email<input type="email" autoComplete="off" value={f.mil_email} onChange={set('mil_email')} placeholder="first.last.1@us.af.mil" /></label>
+          <label>Personal email<input type="email" autoComplete="off" value={f.personal_email} onChange={set('personal_email')} /></label>
         </div>
         <label>Notes<textarea rows={3} value={f.notes} onChange={set('notes')} placeholder="Match intent, gear, MTU history…" /></label>
         {err && <p className="alert">{err}</p>}

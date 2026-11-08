@@ -22,8 +22,9 @@ export type Member = {
   duty_status: string | null;
   team_status: TeamStatus;
   staff_role: string | null;
-  email: string | null;
-  phone: string | null;
+  cell_phone: string | null;
+  mil_email: string | null;
+  personal_email: string | null;
   notes: string | null;
 };
 
