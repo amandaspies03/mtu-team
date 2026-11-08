@@ -102,7 +102,7 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
             {signingUp && <ProfileFields value={info} onChange={setInfo} />}
             {!recovery && (
               <label>{signingUp ? 'Sign-in email' : 'Email'}
-                {signingUp && <span>The email you’ll use to sign in. It can be your military or personal email.</span>}
+                {signingUp && <span className="signinNote">Use your <b>personal email</b>, not your military email. This is the email you’ll sign in with.</span>}
                 <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </label>
             )}

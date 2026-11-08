@@ -343,3 +343,4 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 
 .ammoStat { flex-wrap: nowrap; }
 .ammoIn { font-family: Georgia, serif; font-size: 22px !important; width: 96px !important; padding: 4px 8px; }
+.authCard label > span.signinNote { color: var(--ink); background: var(--brass-soft); padding: 7px 10px; border-radius: 6px; font-size: 12px; }
