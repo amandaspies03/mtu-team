@@ -58,7 +58,9 @@ export default function Events() {
   const save = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
   const [view, setViewState] = useState<'list' | 'calendar'>(() => pref('mtu-cal-view', 'list') as 'list' | 'calendar');
   const [mode, setModeState] = useState<CalMode>(() => pref('mtu-cal-mode', 'month') as CalMode);
-  const [cursor, setCursor] = useState(today);
+  // Remember the month/day being viewed for this browser tab, so coming back from an event returns to it.
+  const [cursor, setCursorState] = useState(() => { try { return sessionStorage.getItem('mtu-cal-cursor') || today; } catch { return today; } });
+  const setCursor = (c: string) => { setCursorState(c); try { sessionStorage.setItem('mtu-cal-cursor', c); } catch { /* storage blocked */ } };
   const setView = (v: 'list' | 'calendar') => { setViewState(v); save('mtu-cal-view', v); };
   const setMode = (m: CalMode) => { setModeState(m); save('mtu-cal-mode', m); };
   const list = events.filter(e => !kind || e.kind === kind);

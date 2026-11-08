@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { ORDERS_LABEL, type Attendance, type AttendanceStatus, type OrdersStatus } from '../../lib/types';
 import { displayName, eventRange, fullName, kindLabel, scoreText, todayISO } from '../../lib/util';
@@ -173,8 +173,10 @@ function AddShooters({ eventId, existing, past, members, onClose }: { eventId: s
   const { sb, reload } = useTeam();
   const [picked, setPicked] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false);
+  const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
-  const pool = members.filter(m => !existing.includes(m.id) && (showAll || ['Active', 'New', 'Tryout'].includes(m.team_status)));
+  const pool = members.filter(m => !existing.includes(m.id) && (showAll || ['Active', 'New', 'Tryout'].includes(m.team_status)))
+    .filter(m => !q.trim() || `${m.last_name} ${m.first_name ?? ''} ${m.rank ?? ''} ${m.unit ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
   async function save() {
     setBusy(true); setErr('');
     const { error } = await sb.from('attendance').insert(picked.map(member_id => ({ event_id: eventId, member_id, status: past ? 'attended' : 'planned' })));
@@ -183,6 +185,7 @@ function AddShooters({ eventId, existing, past, members, onClose }: { eventId: s
   }
   return (
     <Modal title="Add shooters" onClose={onClose}>
+      <label className="search pickSearch"><Search size={16} /><input autoFocus placeholder="Search name, rank or unit…" value={q} onChange={x => setQ(x.target.value)} aria-label="Search shooters" /></label>
       <label className="check"><input type="checkbox" checked={showAll} onChange={x => setShowAll(x.target.checked)} /> Include reserve and alumni</label>
       <div className="pickList">
         {pool.map(m => (
@@ -191,7 +194,7 @@ function AddShooters({ eventId, existing, past, members, onClose }: { eventId: s
             {fullName(m)} <small className="sub">{[m.rank, m.unit, m.team_status].filter(Boolean).join(' · ')}</small>
           </label>
         ))}
-        {pool.length === 0 && <p className="formNote">Everyone is already on this roster.</p>}
+        {pool.length === 0 && <p className="formNote">{q ? 'No shooters match that search.' : 'Everyone is already on this roster.'}</p>}
       </div>
       {err && <p className="alert">{err}</p>}
       <div className="formActions"><button className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={!picked.length || busy} onClick={save}>Add {picked.length || ''}</button></div>
