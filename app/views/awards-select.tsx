@@ -6,7 +6,7 @@ import { EIC_LABEL, type EicBadge, type Member } from '../../lib/types';
 
 /** Chips for a shooter's awards. */
 export function AwardChips({ member, none = "—" }: { member: Member; none?: string }) {
-  const chips = [member.gov20 && 'Gov 20', member.eic_badge && EIC_LABEL[member.eic_badge], member.chiefs50 && "Chief's 50"].filter(Boolean) as string[];
+  const chips = [member.gov20_pistol && 'Gov 20 Pistol', member.gov20_rifle && 'Gov 20 Rifle', member.eic_badge && EIC_LABEL[member.eic_badge], member.chiefs50 && "Chief's 50"].filter(Boolean) as string[];
   if (!chips.length) return <span className="muted">{none}</span>;
   return <span className="awardChips">{chips.map(c => <span key={c} className={`award ${c.startsWith('Bronze') ? 'bronze' : c.startsWith('Silver') ? 'silver' : c.startsWith('Gold') ? 'gold' : ''}`}>{c}</span>)}</span>;
 }
@@ -34,7 +34,7 @@ export function AwardsSelect({ member }: { member: Member }) {
   }, [open]);
   if (!isStaff) return <AwardChips member={member} />;
 
-  async function save(change: Partial<Pick<Member, 'gov20' | 'chiefs50' | 'eic_badge'>>) {
+  async function save(change: Partial<Pick<Member, 'gov20_pistol' | 'gov20_rifle' | 'chiefs50' | 'eic_badge'>>) {
     setErr('');
     const { error } = await sb.from('members').update(change).eq('id', member.id);
     if (error) setErr(error.message); else await reload();
@@ -47,7 +47,8 @@ export function AwardsSelect({ member }: { member: Member }) {
       </button>
       {open && (
         <div className="awardsPop" role="group" aria-label="Awards" style={{ top: pos.top, left: pos.left }}>
-          <label className="check"><input type="checkbox" checked={member.gov20} onChange={e => save({ gov20: e.target.checked })} /> Governor&apos;s 20</label>
+          <label className="check"><input type="checkbox" checked={member.gov20_pistol} onChange={e => save({ gov20_pistol: e.target.checked })} /> Governor&apos;s 20 – Pistol</label>
+          <label className="check"><input type="checkbox" checked={member.gov20_rifle} onChange={e => save({ gov20_rifle: e.target.checked })} /> Governor&apos;s 20 – Rifle</label>
           <label className="check"><input type="checkbox" checked={member.chiefs50} onChange={e => save({ chiefs50: e.target.checked })} /> Chief&apos;s 50</label>
           <div className="awardsGroup">
             <span>EIC badge</span>

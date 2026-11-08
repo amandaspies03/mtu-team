@@ -28,7 +28,8 @@ export type Member = {
   pistol_no: number | null;
   rifle_no: number | null;
   notes: string | null;
-  gov20: boolean;
+  gov20_pistol: boolean;
+  gov20_rifle: boolean;
   chiefs50: boolean;
   eic_badge: EicBadge | null;
 };
