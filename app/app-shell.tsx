@@ -16,6 +16,8 @@ import MatchDay from './views/matchday';
 import Admin from './views/admin';
 import Resources from './views/resources';
 import AuthScreen from './views/auth';
+import { blankProfile, ProfileFields, type ProfileInfo } from './views/profile-fields';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type Route = { view: string; id?: string };
 const parseHash = (): Route => {
@@ -65,7 +67,7 @@ export default function AppShell() {
   if (!profile) return (
     <div className="authShell"><div className="authCard">
       <h1>{profileLoaded ? 'No access record' : 'Checking your access…'}</h1>
-      {profileLoaded && !profileError && <p>Your access request was removed or never finished setting up. Contact MTU staff.</p>}
+      {profileLoaded && !profileError && <p>This account isn’t set up on the team site. Contact MTU staff for an invite link.</p>}
       {profileError && <p className="alert">{profileError}</p>}
       <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
     </div></div>
@@ -73,27 +75,26 @@ export default function AppShell() {
   if (!profile.approved) return (
     <div className="authShell"><div className="authCard">
       <div className="brandIcon"><Crosshair size={26} /></div>
-      <h1>Waiting for approval</h1>
-      <p>Your account ({profile.email}) was created. MTU staff need to approve it and link it to your roster entry before you can see team information.</p>
-      <p className="formNote">Let SMSgt Howard or TSgt Spies know you signed up.</p>
+      <h1>Access turned off</h1>
+      <p>MTU staff have turned off access for {profile.email}. If you think that’s a mistake, contact MTU staff.</p>
       <div className="row">
         <button className="primary" onClick={loadProfile}>Check again</button>
         <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
       </div>
     </div></div>
   );
+  if (!profile.member_id) return <CompleteProfile sb={sb} onDone={loadProfile} />;
   return <TeamProvider sb={sb} me={profile}><Workspace /></TeamProvider>;
 }
 
 function Workspace() {
-  const { sb, me, isStaff, memberById, loading, error, reload, profiles } = useTeam();
+  const { sb, me, isStaff, memberById, loading, error, reload } = useTeam();
   const [route, setRoute] = useState<Route>(parseHash);
   useEffect(() => {
     const on = () => { setRoute(parseHash()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  const pending = profiles.filter(p => !p.approved).length;
   const meMember = memberById(me.member_id);
 
   const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; match?: string[] }[] = [
@@ -130,7 +131,6 @@ function Workspace() {
           {nav.filter(n => !n.staff || isStaff).map(n => (
             <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => go(n.view)}>
               {n.icon}<span>{n.label}</span>
-              {n.view === 'admin' && pending > 0 && <span className="navCount">{pending}</span>}
             </button>
           ))}
         </nav>
@@ -148,5 +148,29 @@ function Workspace() {
         <footer><span>184th MTU · For official use by team members. Do not store SSNs, DoD IDs, or weapon serial numbers here.</span></footer>
       </main>
     </div>
+  );
+}
+
+/** Accounts created before invite sign-up (or without roster info) add their roster entry once. */
+function CompleteProfile({ sb, onDone }: { sb: SupabaseClient; onDone: () => void }) {
+  const [info, setInfo] = useState<ProfileInfo>(blankProfile);
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setErr('');
+    const { error } = await sb.rpc('complete_my_profile', { info });
+    setBusy(false);
+    if (error) setErr(error.message); else onDone();
+  }
+  return (
+    <div className="authShell"><form className="authCard wideCard" onSubmit={save}>
+      <div className="brandIcon"><Crosshair size={26} /></div>
+      <div className="eyebrow">ONE-TIME SETUP</div>
+      <h1>Add your roster info</h1>
+      <p className="formNote">This creates your entry on the team roster.</p>
+      <ProfileFields value={info} onChange={setInfo} />
+      {err && <p className="alert">{err}</p>}
+      <button className="primary wide" disabled={busy}>{busy ? 'Saving…' : 'Save and continue'}</button>
+      <div className="authLinks"><button type="button" onClick={() => sb.auth.signOut()}>Sign out</button></div>
+    </form></div>
   );
 }

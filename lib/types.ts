@@ -122,3 +122,9 @@ export const RANK_GROUPS: { label: string; ranks: string[] }[] = [
 
 /** Team weapon inventory: numbers 1–N for each type. */
 export const WEAPON_COUNT = { pistol: 24, rifle: 24 } as const;
+
+export type StaffEmail = { email: string; added_by: string | null; created_at: string };
+export type Invite = {
+  id: string; token: string; note: string | null; member_id: string | null; created_by: string | null;
+  created_at: string; expires_at: string; used_at: string | null; used_by: string | null;
+};

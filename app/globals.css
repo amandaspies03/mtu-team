@@ -307,3 +307,10 @@ a.primary { text-decoration: none; display: inline-flex; align-items: center; ga
 a.disabledLink { opacity: .5; pointer-events: none; }
 @media (max-width: 820px) { .weaponSelect { width: 70px; font-size: 16px; } }
 a.secondary { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+
+.authCard.wideCard { max-width: 640px; }
+
+.inviteMade { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; }
+.inviteMade code { font-size: 12px; overflow-wrap: anywhere; background: #fff8; padding: 6px 8px; border-radius: 5px; }
+.subhead { margin: 18px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.inlineForm button { white-space: nowrap; flex-shrink: 0; }

@@ -1,18 +1,41 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Crosshair } from 'lucide-react';
+import { blankProfile, ProfileFields, type ProfileInfo } from './profile-fields';
 
-type Mode = 'signin' | 'signup' | 'forgot';
+type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
+
+const inviteFromHash = () => {
+  const m = typeof window === 'undefined' ? null : window.location.hash.match(/^#invite\/([\w-]+)/);
+  return m ? m[1] : null;
+};
+
+function friendly(msg: string, mode: Mode) {
+  if (/database error saving new user/i.test(msg)) {
+    return mode === 'staff'
+      ? 'That email isn’t on the MTU staff list. Team members need an invite link from staff.'
+      : 'This invite link is no longer valid. Ask MTU staff for a new one.';
+  }
+  return msg;
+}
 
 export default function AuthScreen({ sb, recovery, onRecovered }: { sb: SupabaseClient; recovery: boolean; onRecovered: () => void }) {
-  const [mode, setMode] = useState<Mode>('signin');
+  const [token] = useState(inviteFromHash);
+  const [mode, setMode] = useState<Mode>(token ? 'invite' : 'signin');
+  const [invite, setInvite] = useState<{ valid: boolean; reason?: string } | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [info, setInfo] = useState<ProfileInfo>(blankProfile);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const signingUp = mode === 'staff' || mode === 'invite';
+
+  useEffect(() => {
+    if (!token) return;
+    sb.rpc('check_invite', { p_token: token }).then(({ data, error }) => setInvite(error ? { valid: false, reason: error.message } : data));
+  }, [sb, token]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,51 +52,71 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
       if (mode === 'signin') {
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
-      } else if (mode === 'signup') {
+      } else if (signingUp) {
         if (password.length < 10) throw new Error('Use at least 10 characters for your password.');
-        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: { display_name: name } } });
+        const meta = { ...info, ...(mode === 'invite' ? { invite: token } : {}) };
+        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: meta } });
         if (error) throw error;
-        if (!data.session) setNotice('Check your email to confirm your account, then sign in. Staff will approve you after that.');
+        if (mode === 'invite') history.replaceState(null, '', window.location.pathname);
+        if (!data.session) {
+          setNotice('Account created. Check your email for a confirmation link, then sign in.');
+          setMode('signin');
+        }
       } else {
         const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirect });
         if (error) throw error;
         setNotice('If that email has an account, a reset link is on its way.');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(friendly(err instanceof Error ? err.message : 'Something went wrong', mode));
     } finally {
       setBusy(false);
     }
   }
 
+  const title = recovery ? 'Set a new password' : mode === 'staff' ? 'Staff account' : mode === 'invite' ? 'Join the team' : mode === 'forgot' ? 'Reset password' : 'Team sign in';
+  const inviteBad = mode === 'invite' && invite && !invite.valid;
+
   return (
     <div className="authShell">
-      <form className="authCard" onSubmit={submit}>
+      <form className={`authCard${signingUp ? ' wideCard' : ''}`} onSubmit={submit}>
         <div className="brandIcon"><Crosshair size={26} /></div>
         <div className="eyebrow">184TH MARKSMANSHIP TRAINING UNIT</div>
-        <h1>{recovery ? 'Set a new password' : mode === 'signup' ? 'Request access' : mode === 'forgot' ? 'Reset password' : 'Team sign in'}</h1>
-        {!recovery && mode === 'signup' && (
-          <label>Name and rank<input value={name} onChange={e => setName(e.target.value)} placeholder="TSgt Jane Doe" required /></label>
+        <h1>{title}</h1>
+        {mode === 'staff' && <p className="formNote">For MTU staff only. Your email must already be on the staff list.</p>}
+        {mode === 'invite' && !invite && <p className="formNote">Checking your invite…</p>}
+        {inviteBad && <p className="alert">{invite!.reason}</p>}
+        {mode === 'invite' && invite?.valid && <p className="formNote">Fill in your info below. It goes straight onto the team roster.</p>}
+
+        {!inviteBad && (
+          <>
+            {signingUp && <ProfileFields value={info} onChange={setInfo} />}
+            {!recovery && (
+              <label>{signingUp ? 'Sign-in email' : 'Email'}
+                {signingUp && <span>The email you’ll use to sign in. It can be your military or personal email.</span>}
+                <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              </label>
+            )}
+            {(recovery || mode !== 'forgot') && (
+              <label>{recovery ? 'New password' : 'Password'}
+                <input type="password" autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={recovery || signingUp ? 10 : undefined} />
+              </label>
+            )}
+            {error && <p className="alert">{error}</p>}
+            {notice && <p className="success">{notice}</p>}
+            <button className="primary wide" disabled={busy || (mode === 'invite' && !invite?.valid)}>
+              {busy ? 'Working…' : recovery ? 'Save password' : signingUp ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}
+            </button>
+          </>
         )}
-        {!recovery && (
-          <label>Email<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
-        )}
-        {(recovery || mode !== 'forgot') && (
-          <label>{recovery ? 'New password' : 'Password'}
-            <input type="password" autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={recovery || mode === 'signup' ? 10 : undefined} />
-          </label>
-        )}
-        {error && <p className="alert">{error}</p>}
-        {notice && <p className="success">{notice}</p>}
-        <button className="primary wide" disabled={busy}>{busy ? 'Working…' : recovery ? 'Save password' : mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}</button>
         {!recovery && (
           <div className="authLinks">
-            {mode !== 'signin' && <button type="button" onClick={() => setMode('signin')}>Back to sign in</button>}
-            {mode === 'signin' && <button type="button" onClick={() => setMode('signup')}>New to the team? Request access</button>}
-            {mode === 'signin' && <button type="button" onClick={() => setMode('forgot')}>Forgot password</button>}
+            {mode !== 'signin' && <button type="button" onClick={() => { setMode('signin'); setError(''); }}>Back to sign in</button>}
+            {mode === 'signin' && <button type="button" onClick={() => { setMode('forgot'); setError(''); }}>Forgot password</button>}
+            {mode === 'signin' && <button type="button" onClick={() => { setMode('staff'); setError(''); }}>MTU staff: create account</button>}
           </div>
         )}
-        <p className="formNote">Accounts are approved by MTU staff. Don’t enter SSNs, DoD ID numbers or weapon serial numbers anywhere in this app.</p>
+        {mode === 'signin' && <p className="formNote">New to the team? Ask MTU staff for an invite link.</p>}
       </form>
     </div>
   );

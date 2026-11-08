@@ -12,9 +12,9 @@ Same stack as Battle Buddy: Next.js 16 on Vercel, Supabase (Postgres + Auth), Gi
 - `npm install && npm run dev`
 
 ## Access model
-- Anyone can request access; the account is created unapproved.
-- Staff approve accounts and link them to a roster entry on the **Access** page.
-- `amandaspies03@gmail.com` is made staff automatically on sign-up.
+- Staff sign up with an email on the staff list; everyone else needs a single-use invite link from staff.
+- Each sign-up creates (or fills in) the person's roster entry. Staff manage invites, the staff list and accounts on the **Access** page.
+- Staff access comes only from the staff list (`staff_emails`).
 - Shooters: read the calendar, roster, scores and match-day tools; RSVP for themselves; see only their own quals.
 - Staff: edit everything. All rules are enforced by Postgres row-level security.
 
