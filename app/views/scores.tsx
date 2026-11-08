@@ -13,7 +13,7 @@ export default function Scores() {
   const [tab, setTab] = useState<Tab>('board');
   return (
     <div>
-      <PageTitle eyebrow="PERFORMANCE" title="Scores">Leaderboards by course of fire. Modified courses and AF quals are tracked separately from full EIC scores.</PageTitle>
+      <PageTitle eyebrow="PERFORMANCE" title="Scores">Leaderboards for each match on the Match day page.</PageTitle>
       <div className="tabs">
         <button className={tab === 'board' ? 'on' : ''} onClick={() => setTab('board')}>Leaderboard</button>
         {isStaff && <button className={tab === 'enter' ? 'on' : ''} onClick={() => setTab('enter')}>Enter scores</button>}
@@ -77,7 +77,7 @@ function Leaderboard() {
           ))}</tbody>
         </table></div>
       )}
-      <p className="formNote">Ties are broken by X count. Scores without a date (e.g. the 2023 TAG Match) count toward best and average but not the trend line.</p>
+      <p className="formNote">Ties are broken by X count.</p>
     </section>
   );
 }
