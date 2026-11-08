@@ -410,3 +410,24 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 
 .pickSearch { max-width: none; margin-bottom: 10px; }
 .rowActions { white-space: nowrap; }
+.board td.pick { width: 34px; }
+.pickBox { width: 20px; height: 20px; border: 1.5px solid #b9bcae; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: var(--card); position: relative; }
+.pickBox input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.pickBox:has(input:checked)::after { content: ''; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.pickBox:has(input:focus-visible) { outline: 3px solid var(--brass); outline-offset: 2px; }
+.pickBox:has(input:disabled) { opacity: .4; cursor: not-allowed; }
+.compare { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.legendItem { border: 1px solid var(--line); border-radius: 30px; padding: 5px 10px; font-size: 13px; background: var(--card); }
+.legendItem i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legendItem svg { color: var(--muted); }
+.chartBox { position: relative; width: 100%; }
+.chartBox svg { display: block; max-width: 100%; }
+.chartBox .grid { stroke: var(--line); stroke-width: 1; }
+.chartBox .axis { fill: var(--muted); font-size: 12px; }
+.chartBox circle { cursor: pointer; }
+.chartTip { position: absolute; background: var(--olive); color: #fff; font-size: 12.5px; padding: 6px 10px; border-radius: 6px; border-left: 4px solid; white-space: nowrap; pointer-events: none; z-index: 2; }
+.compareHead { font-size: 14px; font-weight: 600; margin: 20px 0 8px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: 1px; }
+table.entry tr.again td { border-top-color: transparent; }
