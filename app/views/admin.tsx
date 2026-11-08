@@ -62,14 +62,14 @@ function Access() {
 
   return (
     <div>
-      <p className="formNote tabIntro">Shooters join through invite links; staff sign up with an email on the staff list. Each new account adds the person to the roster automatically.</p>
+      <p className="formNote tabIntro">Shooters join through invite links; staff sign up with an email on the staff list. If the person is already on the roster (matched by email, then cell phone, then name) their account links to that entry and only fills in blanks; otherwise they’re added as a new shooter.</p>
       {err && <p className="alert">{err}</p>}
 
       <section className="panel">
         <div className="sectionTitle"><h2>Invite a shooter</h2></div>
         <form className="formGrid three" onSubmit={createInvite}>
           <label>Who is it for? <span>Just a note for staff</span><input value={note} onChange={e => setNote(e.target.value)} placeholder="SrA Jones, 161 IS" /></label>
-          <label>Already on the roster? <span>Optional: their sign-up fills in this entry</span>
+          <label>Already on the roster? <span>Optional. Sign-ups are matched to the roster automatically by email, phone or name</span>
             <select value={forMember} onChange={e => setForMember(e.target.value)}>
               <option value="">No, add them as a new shooter</option>
               {members.filter(m => !linkedIds.has(m.id)).map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
