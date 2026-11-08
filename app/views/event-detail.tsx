@@ -88,8 +88,8 @@ export default function EventView({ id }: { id: string }) {
                 <td><select value={a.status} onChange={x => patch(a, { status: x.target.value as AttendanceStatus })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td>
                 <td><select value={a.orders_status} onChange={x => patch(a, { orders_status: x.target.value as OrdersStatus })}>{Object.entries(ORDERS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
                 <td><input defaultValue={a.transport ?? ''} placeholder="Van, POV, ammo truck…" onBlur={x => x.target.value !== (a.transport ?? '') && patch(a, { transport: x.target.value || null })} /></td>
-                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_556 ?? ''} onBlur={x => patch(a, { ammo_556: x.target.value === '' ? null : Math.max(0, +x.target.value) })} /></td>
-                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_9mm ?? ''} onBlur={x => patch(a, { ammo_9mm: x.target.value === '' ? null : Math.max(0, +x.target.value) })} /></td>
+                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_556 ?? ''} onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== a.ammo_556) patch(a, { ammo_556: v }); }} /></td>
+                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_9mm ?? ''} onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== a.ammo_9mm) patch(a, { ammo_9mm: v }); }} /></td>
                 <td><input defaultValue={a.note ?? ''} onBlur={x => x.target.value !== (a.note ?? '') && patch(a, { note: x.target.value || null })} /></td>
                 <td className="noPrint"><button className="iconBtn" aria-label={`Remove ${fullName(m)}`} onClick={() => remove(a)}><X size={15} /></button></td>
               </tr>

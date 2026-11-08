@@ -51,7 +51,13 @@ export default function AppShell() {
     setProfile(data as Profile | null);
     setProfileLoaded(true);
   }
-  useEffect(() => { setProfile(null); setProfileLoaded(false); if (session) loadProfile(); }, [session?.user.id]);
+  useEffect(() => {
+    setProfile(null); setProfileLoaded(false);
+    if (!session) return;
+    // Defer past the auth event: querying inside Supabase's sign-in callback can wait on its auth lock forever.
+    const t = setTimeout(loadProfile, 0);
+    return () => clearTimeout(t);
+  }, [session?.user.id]);
 
   if (!sb) return <div className="authShell"><div className="authCard"><h1>Setup needed</h1><p>The Supabase URL and publishable key are not configured for this deployment.</p></div></div>;
   if (!ready) return <div className="loadingScreen">Loading…</div>;
@@ -122,7 +128,7 @@ function Workspace() {
         </a>
         <nav>
           {nav.filter(n => !n.staff || isStaff).map(n => (
-            <button key={n.view} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => go(n.view)}>
+            <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => go(n.view)}>
               {n.icon}<span>{n.label}</span>
               {n.view === 'admin' && pending > 0 && <span className="navCount">{pending}</span>}
             </button>
