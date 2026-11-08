@@ -500,3 +500,7 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .standing strong { font-family: Georgia, serif; font-size: 28px; font-weight: 400; }
 .standing strong small { font-family: inherit; font-size: 14px; color: var(--muted); }
 .standing > span:last-child { font-size: 13px; color: var(--muted); }
+.previewBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--info-bg); color: var(--info); border: 1px solid #bcd3e3; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; font-size: 14px; }
+.previewBar span { flex: 1; min-width: 220px; }
+.previewBar button { background: var(--info); color: #fff; border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 13px; }
+@media (max-width: 820px) { .sideFoot .previewToggle { display: none; } }

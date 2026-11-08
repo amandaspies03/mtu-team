@@ -9,7 +9,7 @@ import { ComplianceForm, MemberForm } from './member-form';
 import { Empty, ExpiryTag, Modal, Sparkline, Tag } from './ui';
 
 export default function MemberView({ id }: { id: string }) {
-  const { sb, isStaff, me, memberById, compliance, attendance, events, scores, courses, profiles, reload } = useTeam();
+  const { sb, isStaff, realStaff, setPreviewShooter, me, memberById, compliance, attendance, events, scores, courses, profiles, reload } = useTeam();
   const m = memberById(id);
   const [editContact, setEditContact] = useState(false);
   const [editing, setEditing] = useState(false), [editComp, setEditComp] = useState(false), [deleting, setDeleting] = useState(false), [err, setErr] = useState('');
@@ -53,6 +53,7 @@ export default function MemberView({ id }: { id: string }) {
           </div>
         </div>
         {isStaff && <div className="titleActions">
+          {isMe && realStaff && <button className="secondary" onClick={() => setPreviewShooter(true)}>View as shooter</button>}
           <button className="secondary" onClick={() => setEditing(true)}><Pencil size={15} /> Edit</button>
           <button className="secondary danger" onClick={() => setDeleting(true)}><Trash2 size={15} /> Remove</button>
         </div>}

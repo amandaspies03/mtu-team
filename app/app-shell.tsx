@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -91,7 +91,7 @@ export default function AppShell() {
 }
 
 function Workspace() {
-  const { sb, me, isStaff, memberById, loading, error, reload } = useTeam();
+  const { sb, me, isStaff, realStaff, previewShooter, setPreviewShooter, memberById, loading, error, reload } = useTeam();
   const [route, setRoute] = useState<Route>(parseHash);
   const [pwOpen, setPwOpen] = useState(false);
   useEffect(() => {
@@ -146,13 +146,15 @@ function Workspace() {
         <div className="sideFoot">
           <div className="who">
             <strong>{meMember ? displayName(meMember) : me.display_name || me.email}</strong>
-            <span>{isStaff ? 'Staff' : 'Shooter'}</span>
+            <span>{isStaff ? 'Staff' : previewShooter ? 'Staff · shooter view' : 'Shooter'}</span>
           </div>
+          {realStaff && <button className="signout previewToggle" onClick={() => setPreviewShooter(!previewShooter)}><Eye size={14} /> {previewShooter ? 'Back to staff view' : 'View as shooter'}</button>}
           <button className="signout" onClick={() => setPwOpen(true)}><KeyRound size={14} /> Change password</button>
           <button className="signout" onClick={() => sb.auth.signOut()}><LogOut size={14} /> Sign out</button>
         </div>
       </aside>
       <main>
+        {previewShooter && <div className="previewBar"><Eye size={16} /><span><b>Shooter view.</b> This is what a shooter sees. Anything you change still saves to your real account.</span><button onClick={() => setPreviewShooter(false)}>Back to staff view</button></div>}
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}
         {pwOpen && <ChangePassword sb={sb} email={me.email ?? ''} onClose={() => setPwOpen(false)} />}
