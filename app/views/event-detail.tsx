@@ -104,6 +104,16 @@ export default function EventView({ id }: { id: string }) {
               return (
                 <div key={i.key} className={`prepItem ${done ? 'done' : ''}`}>
                   <label className="check"><input type="checkbox" checked={done} onChange={x => saveEvent(i.key === 'prep_van_driver' && !x.target.checked ? { prep_van_driver: false, van_driver_id: null } : { [i.key]: x.target.checked })} /> {i.label}</label>
+                  {i.key === 'prep_ammo_draw' && (
+                    <div className="drawFields">
+                      <label>Requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
+                        onBlur={x => { const v = x.target.value || null; if (v !== e.ammo_draw_requested_on) saveEvent(v ? { ammo_draw_requested_on: v, prep_ammo_draw: true } : { ammo_draw_requested_on: null }); }} /></label>
+                      {(['ammo_draw_556', 'ammo_draw_9mm'] as const).map(f => (
+                        <label key={f}>{f === 'ammo_draw_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
+                          onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== e[f]) saveEvent({ [f]: v }); }} /></label>
+                      ))}
+                    </div>
+                  )}
                   {i.key === 'prep_van_driver' && (
                     <select aria-label="Van driver" value={e.van_driver_id ?? ''} onChange={x => saveEvent({ van_driver_id: x.target.value || null, prep_van_driver: !!x.target.value || e.prep_van_driver })}>
                       <option value="">Who’s driving?</option>

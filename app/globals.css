@@ -466,3 +466,6 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .prepItem .check { flex: 1; min-width: 200px; font-weight: 500; }
 .prepItem select { max-width: 260px; }
 .prepItem .check { margin: 0; } .prepItem { min-height: 56px; }
+.drawFields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.drawFields label { font-size: 12px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.drawFields input[type=date] { width: 160px; }
