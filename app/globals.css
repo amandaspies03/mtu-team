@@ -314,3 +314,13 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 .inviteMade code { font-size: 12px; overflow-wrap: anywhere; background: #fff8; padding: 6px 8px; border-radius: 5px; }
 .subhead { margin: 18px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 .inlineForm button { white-space: nowrap; flex-shrink: 0; }
+
+.pwField { margin-bottom: 14px; }
+.pwField label { margin-bottom: 8px; }
+.pwInput { position: relative; display: block; }
+.pwInput input { padding-right: 42px; }
+.pwInput .iconBtn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); }
+.pwRules { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.pwRules li { display: flex; align-items: center; gap: 5px; }
+.pwRules li.ok { color: var(--good); }
+@media (max-width: 600px) { .pwRules { grid-template-columns: 1fr; } }

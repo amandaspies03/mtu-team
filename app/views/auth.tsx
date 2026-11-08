@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Crosshair } from 'lucide-react';
 import { blankProfile, ProfileFields, type ProfileInfo } from './profile-fields';
+import { NewPasswordField } from './password-field';
+import { isBreached, passwordError, passwordHelp, passwordOk } from '../../lib/password-policy';
 
 type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
 
@@ -42,10 +44,14 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
     setBusy(true); setError(''); setNotice('');
     try {
       const redirect = window.location.origin;
+      const personal = [email, info.first_name, info.last_name, info.mil_email, info.personal_email];
+      if (recovery || signingUp) {
+        if (!passwordOk(password, personal)) throw new Error(passwordHelp);
+        if (await isBreached(password)) throw new Error('That password has shown up in a known data breach. Please choose a different one.');
+      }
       if (recovery) {
-        if (password.length < 10) throw new Error('Use at least 10 characters.');
         const { error } = await sb.auth.updateUser({ password });
-        if (error) throw error;
+        if (error) throw new Error(passwordError(error));
         onRecovered();
         return;
       }
@@ -53,10 +59,9 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else if (signingUp) {
-        if (password.length < 10) throw new Error('Use at least 10 characters for your password.');
         const meta = { ...info, ...(mode === 'invite' ? { invite: token } : {}) };
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: meta } });
-        if (error) throw error;
+        if (error) throw (error as { code?: string }).code === 'weak_password' ? new Error(passwordHelp) : error;
         if (mode === 'invite') history.replaceState(null, '', window.location.pathname);
         if (!data.session) {
           setNotice('Account created. Check your email for a confirmation link, then sign in.');
@@ -97,10 +102,11 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
                 <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </label>
             )}
-            {(recovery || mode !== 'forgot') && (
-              <label>{recovery ? 'New password' : 'Password'}
-                <input type="password" autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={recovery || signingUp ? 10 : undefined} />
-              </label>
+            {(recovery || signingUp) && (
+              <NewPasswordField label={recovery ? 'New password' : 'Password'} value={password} onChange={setPassword} personal={[email, info.first_name, info.last_name, info.mil_email, info.personal_email]} />
+            )}
+            {mode === 'signin' && !recovery && (
+              <label>Password<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label>
             )}
             {error && <p className="alert">{error}</p>}
             {notice && <p className="success">{notice}</p>}

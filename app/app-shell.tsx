@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, LogOut, ShieldCheck, Timer, Users, Target } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, ShieldCheck, Timer, Users, Target } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -16,6 +16,7 @@ import MatchDay from './views/matchday';
 import Admin from './views/admin';
 import Resources from './views/resources';
 import AuthScreen from './views/auth';
+import { ChangePassword } from './views/change-password';
 import { blankProfile, ProfileFields, type ProfileInfo } from './views/profile-fields';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -90,6 +91,7 @@ export default function AppShell() {
 function Workspace() {
   const { sb, me, isStaff, memberById, loading, error, reload } = useTeam();
   const [route, setRoute] = useState<Route>(parseHash);
+  const [pwOpen, setPwOpen] = useState(false);
   useEffect(() => {
     const on = () => { setRoute(parseHash()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', on);
@@ -139,12 +141,14 @@ function Workspace() {
             <strong>{meMember ? displayName(meMember) : me.display_name || me.email}</strong>
             <span>{isStaff ? 'Staff' : 'Shooter'}</span>
           </div>
+          <button className="signout" onClick={() => setPwOpen(true)}><KeyRound size={14} /> Change password</button>
           <button className="signout" onClick={() => sb.auth.signOut()}><LogOut size={14} /> Sign out</button>
         </div>
       </aside>
       <main>
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}
+        {pwOpen && <ChangePassword sb={sb} email={me.email ?? ''} onClose={() => setPwOpen(false)} />}
         <footer><span>184th MTU · For official use by team members. Do not store SSNs, DoD IDs, or weapon serial numbers here.</span></footer>
       </main>
     </div>
