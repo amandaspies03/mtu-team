@@ -1,6 +1,6 @@
 export type Role = 'staff' | 'shooter';
-export type TeamStatus = 'Active' | 'New' | 'Tryout' | 'Reserve' | 'Alumni';
-export const TEAM_STATUSES: TeamStatus[] = ['Active', 'New', 'Tryout', 'Reserve', 'Alumni'];
+export type TeamStatus = 'Active' | 'New' | 'Tryout' | 'Inactive';
+export const TEAM_STATUSES: TeamStatus[] = ['Active', 'New', 'Tryout', 'Inactive'];
 export const DUTY_STATUSES = ['AGR', 'Traditional', 'Technician', 'DSG', 'Civilian', 'Other'] as const;
 
 export type Profile = {

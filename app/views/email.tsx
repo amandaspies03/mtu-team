@@ -40,7 +40,7 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
     const current = members.filter(m => ['Active', 'New', 'Tryout'].includes(m.team_status));
     if (audience === 'going') return going.map(a => memberById(a.member_id)).filter(Boolean) as Member[];
     if (audience === 'orders') return ordersOpen.map(a => memberById(a.member_id)).filter(Boolean) as Member[];
-    if (audience === 'everyone') return members.filter(m => m.team_status !== 'Alumni');
+    if (audience === 'everyone') return members.filter(m => m.team_status !== 'Inactive');
     return current;
   }, [audience, members, going, ordersOpen, memberById]);
   const to = [...new Set(recipients.flatMap(m => addresses(m, pref)))];
@@ -75,7 +75,7 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
               {event && <option value="going">Shooters going ({going.length})</option>}
               {event && <option value="orders">Going, orders not cut ({ordersOpen.length})</option>}
               <option value="team">Current team: Active, New, Tryout</option>
-              <option value="everyone">Everyone except alumni</option>
+              <option value="everyone">Everyone except inactive</option>
             </select>
           </label>
           <label>Addresses

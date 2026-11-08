@@ -186,7 +186,7 @@ function AddShooters({ eventId, existing, past, members, onClose }: { eventId: s
   return (
     <Modal title="Add shooters" onClose={onClose}>
       <label className="search pickSearch"><Search size={16} /><input autoFocus placeholder="Search name, rank or unit…" value={q} onChange={x => setQ(x.target.value)} aria-label="Search shooters" /></label>
-      <label className="check"><input type="checkbox" checked={showAll} onChange={x => setShowAll(x.target.checked)} /> Include reserve and alumni</label>
+      <label className="check"><input type="checkbox" checked={showAll} onChange={x => setShowAll(x.target.checked)} /> Include inactive shooters</label>
       <div className="pickList">
         {pool.map(m => (
           <label key={m.id} className="check">

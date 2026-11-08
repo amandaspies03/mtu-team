@@ -10,7 +10,7 @@ import { WeaponSelect } from './weapon-select';
 import { EmailComposer } from './email';
 import { PageTitle, Tag } from './ui';
 
-const statusTone = { Active: 'good', New: 'info', Tryout: 'brass', Reserve: 'neutral', Alumni: 'neutral' } as const;
+const statusTone = { Active: 'good', New: 'info', Tryout: 'brass', Inactive: 'neutral' } as const;
 
 export default function Roster() {
   const { isStaff, members, compliance, attendance, events } = useTeam();

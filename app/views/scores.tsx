@@ -147,7 +147,7 @@ function EnterScores({ onDone }: { onDone: () => void }) {
           <tr><td colSpan={3}>
             <select value="" onChange={e => e.target.value && setExtra([...extra, e.target.value])}>
               <option value="">+ Add a shooter who isn’t on the event roster…</option>
-              {members.filter(m => !ids.includes(m.id) && m.team_status !== 'Alumni').map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+              {members.filter(m => !ids.includes(m.id) && m.team_status !== 'Inactive').map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
             </select>
           </td></tr>
         </tbody>

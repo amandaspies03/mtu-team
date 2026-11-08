@@ -121,11 +121,11 @@ export default function MemberView({ id }: { id: string }) {
       {editComp && <ComplianceForm memberId={m.id} current={c} onClose={() => setEditComp(false)} />}
       {deleting && (
         <Modal title="Remove from roster?" onClose={() => setDeleting(false)}>
-          <p>This permanently deletes {displayName(m)} along with their scores and attendance history. To keep their history, set their team status to <b>Alumni</b> instead.</p>
+          <p>This permanently deletes {displayName(m)} along with their scores and attendance history. To keep their history, set their team status to <b>Inactive</b> instead.</p>
           {err && <p className="alert">{err}</p>}
           <div className="formActions">
             <button className="secondary" onClick={() => setDeleting(false)}>Cancel</button>
-            <button className="secondary" onClick={() => { setDeleting(false); setEditing(true); }}>Mark as Alumni instead</button>
+            <button className="secondary" onClick={() => { setDeleting(false); setEditing(true); }}>Mark as Inactive instead</button>
             <button className="primary dangerBg" onClick={remove}>Delete permanently</button>
           </div>
         </Modal>
