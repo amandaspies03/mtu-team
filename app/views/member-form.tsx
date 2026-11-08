@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useTeam } from '../../lib/data';
-import { DUTY_STATUSES, TEAM_STATUSES, type Compliance, type Member } from '../../lib/types';
+import { DUTY_STATUSES, RANK_GROUPS, TEAM_STATUSES, type Compliance, type Member } from '../../lib/types';
 import { Modal } from './ui';
 
 const blank = { last_name: '', first_name: '', rank: '', unit: '', duty_status: '', team_status: 'New', staff_role: '', cell_phone: '', mil_email: '', personal_email: '', notes: '' };
@@ -31,7 +31,13 @@ export function MemberForm({ member, onClose, onSaved }: { member?: Member; onCl
         <div className="formGrid">
           <label>Last name<input value={f.last_name} onChange={set('last_name')} required /></label>
           <label>First name<input value={f.first_name} onChange={set('first_name')} /></label>
-          <label>Rank<input value={f.rank} onChange={set('rank')} placeholder="SSgt" /></label>
+          <label>Rank
+            <select value={f.rank} onChange={set('rank')}>
+              <option value="">Select rank…</option>
+              {f.rank && !RANK_GROUPS.some(g => g.ranks.includes(f.rank)) && <option value={f.rank}>{f.rank}</option>}
+              {RANK_GROUPS.map(g => <optgroup key={g.label} label={g.label}>{g.ranks.map(r => <option key={r} value={r}>{r}</option>)}</optgroup>)}
+            </select>
+          </label>
           <label>Unit<input value={f.unit} onChange={set('unit')} placeholder="161 IS" /></label>
           <label>Duty status
             <select value={f.duty_status} onChange={set('duty_status')}><option value="">—</option>{DUTY_STATUSES.map(s => <option key={s}>{s}</option>)}</select>
