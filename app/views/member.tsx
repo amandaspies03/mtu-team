@@ -27,7 +27,6 @@ export default function MemberView({ id }: { id: string }) {
     const avg = totals.length ? totals.reduce((t, s) => t + Number(s.total), 0) / totals.length : null;
     return { co, list, best, avg, trend: dated.map(s => Number(s.total)) };
   }).filter(x => x.list.length);
-  const ammo = att.reduce((t, { a }) => ({ r: t.r + (a.ammo_556 ?? 0), p: t.p + (a.ammo_9mm ?? 0) }), { r: 0, p: 0 });
   const linked = profiles.find(p => p.member_id === m.id);
 
   async function remove() {
@@ -65,7 +64,6 @@ export default function MemberView({ id }: { id: string }) {
             <dt>Military email</dt><dd>{m.mil_email ? <a href={`mailto:${m.mil_email}`}><Mail size={13} /> {m.mil_email}</a> : '—'}</dd>
             <dt>Personal email</dt><dd>{m.personal_email ? <a href={`mailto:${m.personal_email}`}><Mail size={13} /> {m.personal_email}</a> : '—'}</dd>
             <dt>Team weapons</dt><dd>Pistol #{m.pistol_no ?? '—'} · Rifle #{m.rifle_no ?? '—'}</dd>
-            <dt>Ammo issued</dt><dd>{ammo.r} rds 5.56 · {ammo.p} rds 9mm (all time)</dd>
             {m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
           </dl>
         </section>
@@ -108,12 +106,12 @@ export default function MemberView({ id }: { id: string }) {
         <div className="sectionTitle"><h2>Attendance</h2><span className="formNote">{att.filter(x => x.a.status === 'attended').length} attended</span></div>
         {att.length === 0 ? <Empty title="No practices recorded" /> : (
           <div className="tableWrap"><table>
-            <thead><tr><th>Date</th><th>Event</th><th>Status</th><th>Orders</th><th className="num">5.56</th><th className="num">9mm</th><th>Note</th></tr></thead>
+            <thead><tr><th>Date</th><th>Event</th><th>Status</th><th>Orders</th><th>Note</th></tr></thead>
             <tbody>{att.map(({ a, e }) => (
               <tr key={a.id} className="clickable" onClick={() => go('event', e.id)}>
                 <td>{eventRange(e)}</td><td>{e.title} <small className="sub">{kindLabel[e.kind]}</small></td>
                 <td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                <td>{a.status === 'planned' || a.orders_status !== 'none' ? ORDERS_LABEL[a.orders_status] : '—'}</td><td className="num">{a.ammo_556 ?? ''}</td><td className="num">{a.ammo_9mm ?? ''}</td><td>{[a.transport, a.note].filter(Boolean).join(' · ')}</td>
+                <td>{a.status === 'planned' || a.orders_status !== 'none' ? ORDERS_LABEL[a.orders_status] : '—'}</td><td>{[a.transport, a.note].filter(Boolean).join(' · ')}</td>
               </tr>))}</tbody>
           </table></div>
         )}

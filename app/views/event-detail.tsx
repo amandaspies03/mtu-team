@@ -24,10 +24,25 @@ export default function EventView({ id }: { id: string }) {
     .map(a => ({ a, m: memberById(a.member_id) }))
     .sort((x, y) => STATUSES.indexOf(x.a.status) - STATUSES.indexOf(y.a.status) || fullName(x.m).localeCompare(fullName(y.m)));
   const going = rows.filter(r => r.a.status === 'planned' || r.a.status === 'attended');
-  const ammo = rows.reduce((t, { a }) => ({ r: t.r + (a.ammo_556 ?? 0), p: t.p + (a.ammo_9mm ?? 0) }), { r: 0, p: 0 });
   const evScores = scores.filter(s => s.event_id === e.id);
   const evTeams = teams.filter(t => t.event_id === e.id);
 
+  function AmmoStat({ label, field }: { label: string; field: 'ammo_556' | 'ammo_9mm' }) {
+    const value = e![field];
+    if (!isStaff) return <div><strong>{value ?? '—'}</strong><span>rds {label} issued</span></div>;
+    return (
+      <div className="ammoStat">
+        <input className="numIn ammoIn" type="number" min={0} inputMode="numeric" aria-label={`Rounds of ${label} issued`} defaultValue={value ?? ''} key={`${field}-${value}`}
+          onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== value) saveEvent({ [field]: v }); }} />
+        <span>rds {label} issued</span>
+      </div>
+    );
+  }
+  async function saveEvent(change: Record<string, number | null>) {
+    setErr('');
+    const { error } = await sb.from('events').update(change).eq('id', e!.id);
+    if (error) setErr(error.message); else await reload();
+  }
   async function patch(a: Attendance, change: Partial<Attendance>) {
     setErr('');
     const { error } = await sb.from('attendance').update(change).eq('id', a.id);
@@ -75,32 +90,30 @@ export default function EventView({ id }: { id: string }) {
       <div className="stats">
         <div><strong>{going.length}</strong><span>{past ? 'on roster' : 'going'}</span></div>
         <div><strong>{going.filter(r => r.a.orders_status === 'cut' || r.a.orders_status === 'signed' || r.a.orders_status === 'not_required').length}/{going.length}</strong><span>orders ready</span></div>
-        <div><strong>{ammo.r}</strong><span>rds 5.56 issued</span></div>
-        <div><strong>{ammo.p}</strong><span>rds 9mm issued</span></div>
+        {AmmoStat({ label: "5.56", field: "ammo_556" })}
+        {AmmoStat({ label: "9mm", field: "ammo_9mm" })}
       </div>
 
       {e.notes && <section className="panel"><div className="sectionTitle"><h2>Plan</h2></div><p className="pre">{e.notes}</p></section>}
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Roster, orders &amp; ammo</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
+        <div className="sectionTitle"><h2>Roster &amp; orders</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
         {rows.length === 0 ? <Empty title="No one on the roster yet">{isStaff ? 'Add shooters, or have them RSVP from their dashboard.' : 'Be the first to RSVP.'}</Empty> : (
           <div className="tableWrap"><table className="attTable">
-            <thead><tr><th>Shooter</th><th>Status</th><th>336 / orders</th><th>Transport / duty</th><th className="num">5.56</th><th className="num">9mm</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
+            <thead><tr><th>Shooter</th><th>Status</th><th>336 / orders</th><th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
             <tbody>{rows.map(({ a, m }) => isStaff ? (
               <tr key={a.id}>
                 <td><a href={`#member/${a.member_id}`}>{fullName(m)}</a>{m?.unit && <small className="sub">{m.unit}</small>}</td>
                 <td><select value={a.status} onChange={x => patch(a, { status: x.target.value as AttendanceStatus })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td>
                 <td><select value={a.orders_status} onChange={x => patch(a, { orders_status: x.target.value as OrdersStatus })}>{Object.entries(ORDERS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
                 <td><input defaultValue={a.transport ?? ''} placeholder="Van, POV, ammo truck…" onBlur={x => x.target.value !== (a.transport ?? '') && patch(a, { transport: x.target.value || null })} /></td>
-                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_556 ?? ''} onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== a.ammo_556) patch(a, { ammo_556: v }); }} /></td>
-                <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={a.ammo_9mm ?? ''} onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== a.ammo_9mm) patch(a, { ammo_9mm: v }); }} /></td>
                 <td><input defaultValue={a.note ?? ''} onBlur={x => x.target.value !== (a.note ?? '') && patch(a, { note: x.target.value || null })} /></td>
                 <td className="noPrint"><button className="iconBtn" aria-label={`Remove ${fullName(m)}`} onClick={() => remove(a)}><X size={15} /></button></td>
               </tr>
             ) : (
               <tr key={a.id}>
                 <td>{fullName(m)}</td><td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                <td>{ORDERS_LABEL[a.orders_status]}</td><td>{a.transport}</td><td className="num">{a.ammo_556 ?? ''}</td><td className="num">{a.ammo_9mm ?? ''}</td><td>{a.note}</td>
+                <td>{ORDERS_LABEL[a.orders_status]}</td><td>{a.transport}</td><td>{a.note}</td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -148,7 +161,7 @@ export default function EventView({ id }: { id: string }) {
       {adding && <AddShooters eventId={e.id} past={past} existing={rows.map(r => r.a.member_id)} onClose={() => setAdding(false)} members={members} />}
       {deleting && (
         <Modal title="Delete this event?" onClose={() => setDeleting(false)}>
-          <p>This removes the event, its roster, ammo log and match teams. Scores stay on each shooter’s record.</p>
+          <p>This removes the event, its roster, ammo count and match teams. Scores stay on each shooter’s record.</p>
           <div className="formActions"><button className="secondary" onClick={() => setDeleting(false)}>Cancel</button><button className="primary dangerBg" onClick={deleteEvent}>Delete</button></div>
         </Modal>
       )}

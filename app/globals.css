@@ -340,3 +340,6 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 .updateBanner .primary { background: var(--brass); color: var(--olive); padding: 8px 12px; }
 .totalRow td { font-weight: 700; border-top: 2px solid var(--line); }
 .inlineLabel { white-space: nowrap; } .inlineLabel select { width: auto; }
+
+.ammoStat { flex-wrap: nowrap; }
+.ammoIn { font-family: Georgia, serif; font-size: 22px !important; width: 96px !important; padding: 4px 8px; }

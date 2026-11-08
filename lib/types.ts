@@ -56,6 +56,8 @@ export type TeamEvent = {
   location: string | null;
   notes: string | null;
   aar: string | null;
+  ammo_556: number | null;
+  ammo_9mm: number | null;
 };
 
 export type AttendanceStatus = 'planned' | 'attended' | 'absent' | 'excused';
@@ -75,8 +77,6 @@ export type Attendance = {
   status: AttendanceStatus;
   orders_status: OrdersStatus;
   transport: string | null;
-  ammo_556: number | null;
-  ammo_9mm: number | null;
   note: string | null;
 };
 
