@@ -438,3 +438,8 @@ table.entry tr.again td { border-top-color: transparent; }
 .pickerList button.on { background: var(--brass-soft); }
 .pickerList .formNote { margin: 6px 10px; }
 .addRow { margin-top: 12px; }
+.field { margin: 14px 0 6px; }
+.fieldLabel { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+table.entry th.courseHead { text-align: center; border-bottom: 2px solid var(--brass); white-space: nowrap; }
+table.entry tbody td:first-child, table.entry thead tr:first-child th:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; }

@@ -185,35 +185,38 @@ function sessionLabels(scores: Score[]) {
   return [...new Set(scores.map(s => s.session_label).filter((x): x is string => !!x))].sort();
 }
 
-type Entry = { key: number; member_id: string; t: string; x: string };
+type Cell = { t: string; x: string };
+type Entry = { key: number; member_id: string; v: Record<string, Cell> };
 let entryKey = 0;
-const newEntry = (member_id: string): Entry => ({ key: ++entryKey, member_id, t: '', x: '' });
+const newEntry = (member_id: string): Entry => ({ key: ++entryKey, member_id, v: {} });
 
 function EnterScores({ onDone }: { onDone: () => void }) {
   const { sb, scores, members, courses, reload } = useTeam();
   const [label, setLabel] = useState('');
   const [date, setDate] = useState(todayISO());
-  const [code, setCode] = useState('PISTOL_EIC');
-  const course = courses.find(c => c.code === code);
+  const [codes, setCodes] = useState<string[]>(['PISTOL_EIC']);
+  const picked = courses.filter(c => codes.includes(c.code));
   const [entries, setEntries] = useState<Entry[]>([]);
   const name = (id: string) => fullName(members.find(m => m.id === id));
   const ordered = [...entries].sort((a, b) => name(a.member_id).localeCompare(name(b.member_id)) || a.key - b.key);
   const has = new Set(entries.map(e => e.member_id));
   const current = members.filter(m => m.team_status !== 'Inactive').sort((a, b) => fullName(a).localeCompare(fullName(b)));
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
-  const filled = entries.filter(e => e.t !== '').length;
-  const set = (key: number, patch: Partial<Entry>) => setEntries(entries.map(e => (e.key === key ? { ...e, ...patch } : e)));
+  const filled = entries.reduce((n, e) => n + picked.filter(c => (e.v[c.code]?.t ?? '') !== '').length, 0);
+  const setCell = (key: number, code: string, patch: Partial<Cell>) =>
+    setEntries(entries.map(e => (e.key === key ? { ...e, v: { ...e.v, [code]: { ...{ t: '', x: '' }, ...e.v[code], ...patch } } } : e)));
+  const toggleCourse = (code: string) => setCodes(codes.includes(code) ? (codes.length > 1 ? codes.filter(c => c !== code) : codes) : [...codes, code]);
 
   async function save() {
     setErr('');
     if (!label.trim()) { setErr('Type the practice or match name.'); return; }
-    const rows = entries.filter(e => e.t !== '').map(e => {
-      const total = Number(e.t), x = course?.has_x && e.x !== '' ? Number(e.x) : null;
-      return { member_id: e.member_id, course_code: code, event_id: null, shot_on: date || null, session_label: label.trim(), total, x_count: x, raw: scoreText(total, x) };
-    });
+    const rows = entries.flatMap(e => picked.filter(c => (e.v[c.code]?.t ?? '') !== '').map(c => {
+      const cell = e.v[c.code], total = Number(cell.t), x = c.has_x && cell.x !== '' ? Number(cell.x) : null;
+      return { member_id: e.member_id, course_code: c.code, event_id: null, shot_on: date || null, session_label: label.trim(), total, x_count: x, raw: scoreText(total, x) };
+    }));
     if (!rows.length) { setErr('Enter at least one score.'); return; }
-    const bad = rows.find(r => !scoreOk(r.total, r.x_count, course?.max_score));
-    if (bad) { setErr(`Check ${name(bad.member_id)}: score must be 0–${course?.max_score ?? '∞'} and X count a whole number.`); return; }
+    const bad = rows.find(r => !scoreOk(r.total, r.x_count, courses.find(c => c.code === r.course_code)?.max_score));
+    if (bad) { const c = courses.find(x => x.code === bad.course_code); setErr(`Check ${name(bad.member_id)} on ${c?.name}: score must be 0–${c?.max_score ?? '∞'} and X count a whole number.`); return; }
     setBusy(true);
     const { error } = await sb.from('scores').insert(rows);
     setBusy(false);
@@ -225,14 +228,22 @@ function EnterScores({ onDone }: { onDone: () => void }) {
 
   return (
     <section className="panel">
-      <div className="formGrid three">
+      <div className="formGrid">
         <label>Practice / match<input list="sessionLabels" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Practice, TAG Match, Winston P. Wilson" required /></label>
         <label>Date fired<input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
-        <label>Course of fire<select value={code} onChange={e => setCode(e.target.value)}>{courses.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}</select></label>
       </div>
       <datalist id="sessionLabels">{sessionLabels(scores).map(l => <option key={l} value={l} />)}</datalist>
+      <div className="field">
+        <span className="fieldLabel">Courses fired <small className="sub">tick every match you shot — each gets its own column</small></span>
+        <div className="chips">{courses.map(c => <button key={c.code} type="button" className={`chip ${codes.includes(c.code) ? 'on' : ''}`} aria-pressed={codes.includes(c.code)} onClick={() => toggleCourse(c.code)}>{c.name}</button>)}</div>
+      </div>
       <div className="tableWrap"><table className="entry">
-        <thead><tr><th>Shooter</th><th className="num">Score{course?.max_score ? ` / ${course.max_score}` : ''}</th>{course?.has_x && <th className="num">X count</th>}<th /></tr></thead>
+        <thead>
+          <tr><th rowSpan={picked.some(c => c.has_x) ? 2 : 1}>Shooter</th>
+            {picked.map(c => <th key={c.code} className="num courseHead" colSpan={c.has_x ? 2 : 1}>{c.name}</th>)}
+            <th rowSpan={picked.some(c => c.has_x) ? 2 : 1} /></tr>
+          {picked.some(c => c.has_x) && <tr>{picked.map(c => [<th key={c.code + 't'} className="num">Score{c.max_score ? ` / ${c.max_score}` : ''}</th>, c.has_x && <th key={c.code + 'x'} className="num">X</th>])}</tr>}
+        </thead>
         <tbody>
           {ordered.map((e, i) => {
             const first = i === 0 || ordered[i - 1].member_id !== e.member_id;
@@ -241,8 +252,10 @@ function EnterScores({ onDone }: { onDone: () => void }) {
             return (
               <tr key={e.key} className={first ? '' : 'again'}>
                 <td>{first ? name(e.member_id) : ''}{n > 1 && <small className="sub">Score {idx} of {n}</small>}</td>
-                <td className="num"><input className="numIn" type="number" inputMode="numeric" min={0} max={course?.max_score ?? undefined} value={e.t} onChange={ev => set(e.key, { t: ev.target.value })} aria-label={`${name(e.member_id)} score ${idx}`} /></td>
-                {course?.has_x && <td className="num"><input className="numIn" type="number" inputMode="numeric" min={0} value={e.x} onChange={ev => set(e.key, { x: ev.target.value })} aria-label={`${name(e.member_id)} X count ${idx}`} /></td>}
+                {picked.map(c => [
+                  <td key={c.code + 't'} className="num"><input className="numIn" type="number" inputMode="numeric" min={0} max={c.max_score ?? undefined} value={e.v[c.code]?.t ?? ''} onChange={ev => setCell(e.key, c.code, { t: ev.target.value })} aria-label={`${name(e.member_id)} ${c.name} score ${idx}`} /></td>,
+                  c.has_x && <td key={c.code + 'x'} className="num"><input className="numIn" type="number" inputMode="numeric" min={0} value={e.v[c.code]?.x ?? ''} onChange={ev => setCell(e.key, c.code, { x: ev.target.value })} aria-label={`${name(e.member_id)} ${c.name} X count ${idx}`} /></td>,
+                ])}
                 <td className="rowActions">
                   <button className="iconBtn" title="Add another score for this shooter" aria-label={`Add another score for ${name(e.member_id)}`} onClick={() => setEntries([...entries, newEntry(e.member_id)])}><Plus size={14} /></button>
                   <button className="iconBtn" title="Remove this row" aria-label="Remove this row" onClick={() => setEntries(entries.filter(x => x.key !== e.key))}><X size={14} /></button>
@@ -253,10 +266,10 @@ function EnterScores({ onDone }: { onDone: () => void }) {
         </tbody>
       </table></div>
       <div className="row addRow">
-              <ShooterPicker pool={current.filter(m => !has.has(m.id))} onPick={id => setEntries([...entries, newEntry(id)])} />
-              {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
-            </div>
-      <p className="formNote">Shot the same course more than once today? Use + on a shooter’s row to add another score for them.</p>
+        <ShooterPicker pool={current.filter(m => !has.has(m.id))} onPick={id => setEntries([...entries, newEntry(id)])} />
+        {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
+      </div>
+      <p className="formNote">Leave a box blank if someone didn’t shoot that course. Shot the same course twice? Use + on a shooter’s row for another line.</p>
       {err && <p className="alert">{err}</p>}
       <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : filled === 1 ? 'Save 1 score' : `Save ${filled || ''} scores`}</button></div>
     </section>
