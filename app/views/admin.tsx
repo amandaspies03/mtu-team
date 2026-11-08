@@ -7,6 +7,7 @@ import { fullName, milDate } from '../../lib/util';
 import { Empty, PageTitle, Tag } from './ui';
 import ChangeLog from './changelog';
 import Backups from './backups';
+import Ranges from './ranges-admin';
 
 const inviteUrl = (i: Invite) => `${window.location.origin}/#invite/${i.token}`;
 const isOpen = (i: Invite) => !i.used_at && new Date(i.expires_at) > new Date();
@@ -156,16 +157,18 @@ function Access() {
 }
 
 export default function Admin() {
-  const [tab, setTab] = useState<'access' | 'log' | 'backups'>('access');
+  const [tab, setTab] = useState<'access' | 'ranges' | 'log' | 'backups'>('access');
   return (
     <div>
       <PageTitle eyebrow="STAFF ONLY" title="Admin">Who can get in, what’s changed, and backups of the team’s data.</PageTitle>
       <div className="tabs">
         <button className={tab === 'access' ? 'on' : ''} onClick={() => setTab('access')}>Access</button>
+        <button className={tab === 'ranges' ? 'on' : ''} onClick={() => setTab('ranges')}>Ranges</button>
         <button className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>Change log</button>
         <button className={tab === 'backups' ? 'on' : ''} onClick={() => setTab('backups')}>Backups</button>
       </div>
       {tab === 'access' && <Access />}
+      {tab === 'ranges' && <Ranges />}
       {tab === 'log' && <ChangeLog />}
       {tab === 'backups' && <Backups />}
     </div>

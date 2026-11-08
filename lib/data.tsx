@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Score, TeamEvent } from './types';
+import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent } from './types';
 
 export type TeamData = {
   sb: SupabaseClient;
@@ -18,6 +18,7 @@ export type TeamData = {
   profiles: Profile[];
   staffEmails: StaffEmail[];
   invites: Invite[];
+  ranges: Range[];
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
@@ -41,7 +42,7 @@ async function all<T>(q: PromiseLike<{ data: T[] | null; error: { message: strin
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'reload' | 'memberById' | 'loading' | 'error'>>({
-    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [],
+    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,7 +50,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
   const reload = useCallback(async () => {
     setError('');
     try {
-      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites] = await Promise.all([
+      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges] = await Promise.all([
         all<Member>(sb.from('members').select('*').order('last_name').order('first_name')),
         all<Compliance>(sb.from('member_compliance').select('*')),
         all<TeamEvent>(sb.from('events').select('*').order('start_date')),
@@ -61,8 +62,9 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         isStaff ? all<Profile>(sb.from('profiles').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as Profile[]),
         isStaff ? all<StaffEmail>(sb.from('staff_emails').select('*').order('email')) : Promise.resolve([] as StaffEmail[]),
         isStaff ? all<Invite>(sb.from('invites').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as Invite[]),
+        all<Range>(sb.from('ranges').select('*').order('name')),
       ]);
-      setState({ members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites });
+      setState({ members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load team data');
     } finally {

@@ -12,10 +12,10 @@ import { Empty, Modal, PageTitle, Rsvp, Tag } from './ui';
 const kindTone = { practice: 'good', match: 'brass', tryout: 'info', qual: 'warn', cleaning: 'neutral', meeting: 'neutral', other: 'neutral' } as const;
 
 export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; onClose: () => void; initialDate?: string }) {
-  const { sb, reload } = useTeam();
+  const { sb, reload, ranges } = useTeam();
   const [f, setF] = useState({
     title: event?.title ?? 'MTU Practice', kind: event?.kind ?? 'practice', start_date: event?.start_date ?? initialDate ?? '', end_date: event?.end_date ?? '',
-    location: event?.location ?? '', notes: event?.notes ?? '',
+    location: event ? event.location ?? '' : ranges[0]?.name ?? '', notes: event?.notes ?? '',
   });
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
   async function save(e: React.FormEvent) {
@@ -40,7 +40,13 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
           <label>Date<input type="date" value={f.start_date} onChange={e => setF({ ...f, start_date: e.target.value })} required /></label>
           <label>End date <span>multi-day matches</span><input type="date" value={f.end_date} onChange={e => setF({ ...f, end_date: e.target.value })} /></label>
         </div>
-        <label>Location<input value={f.location} onChange={e => setF({ ...f, location: e.target.value })} placeholder="STC, Cory’s range, McConnell…" /></label>
+        <label>Location <span>staff add ranges under Admin → Ranges</span>
+          <select value={f.location} onChange={e => setF({ ...f, location: e.target.value })}>
+            <option value="">Not set</option>
+            {ranges.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+            {f.location && !ranges.some(r => r.name === f.location) && <option value={f.location}>{f.location} (old entry)</option>}
+          </select>
+        </label>
         <label>Plan / notes<textarea rows={4} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} placeholder="Drills, courses of fire, uniform, report time…" /></label>
         {err && <p className="alert">{err}</p>}
         <div className="formActions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>

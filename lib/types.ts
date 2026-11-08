@@ -34,6 +34,8 @@ export type Member = {
   eic_badge: EicBadge | null;
 };
 
+export type Range = { id: string; name: string; created_at: string };
+
 export type EicBadge = 'bronze' | 'silver' | 'gold';
 export const EIC_LABEL: Record<EicBadge, string> = { bronze: 'Bronze EIC', silver: 'Silver EIC', gold: 'Gold EIC' };
 
