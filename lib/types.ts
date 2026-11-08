@@ -115,8 +115,5 @@ export type MatchTeamMember = { team_id: string; member_id: string };
 export const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: 'Air Force enlisted', ranks: ['AB', 'Amn', 'A1C', 'SrA', 'SSgt', 'TSgt', 'MSgt', 'SMSgt', 'CMSgt'] },
   { label: 'Air Force officer', ranks: ['2d Lt', '1st Lt', 'Capt', 'Maj', 'Lt Col', 'Col', 'Brig Gen', 'Maj Gen', 'Lt Gen', 'Gen'] },
-  { label: 'Army enlisted', ranks: ['PVT', 'PV2', 'PFC', 'SPC', 'CPL', 'SGT', 'SSG', 'SFC', 'MSG', '1SG', 'SGM', 'CSM'] },
-  { label: 'Army warrant officer', ranks: ['WO1', 'CW2', 'CW3', 'CW4', 'CW5'] },
-  { label: 'Army officer', ranks: ['2LT', '1LT', 'CPT', 'MAJ', 'LTC', 'COL', 'BG', 'MG', 'LTG', 'GEN'] },
   { label: 'Other', ranks: ['Civilian'] },
 ];
