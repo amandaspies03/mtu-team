@@ -38,9 +38,3 @@ export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
   );
 }
 
-export function weaponSummary(members: Member[], kind: Kind) {
-  const key = col(kind);
-  const used = new Set(members.map(m => m[key]).filter((n): n is number => n != null));
-  const open = Array.from({ length: WEAPON_COUNT[kind] }, (_, i) => i + 1).filter(n => !used.has(n));
-  return { used: used.size, total: WEAPON_COUNT[kind], open };
-}

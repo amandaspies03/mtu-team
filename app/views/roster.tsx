@@ -6,7 +6,7 @@ import { TEAM_STATUSES } from '../../lib/types';
 import { downloadCsv, fiscalYear, fullName, milDate, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { MemberForm } from './member-form';
-import { WeaponSelect, weaponSummary } from './weapon-select';
+import { WeaponSelect } from './weapon-select';
 import { EmailComposer } from './email';
 import { PageTitle, Tag } from './ui';
 
@@ -18,7 +18,6 @@ export default function Roster() {
   const [status, setStatus] = useState('current');
   const [adding, setAdding] = useState(false);
   const [emailing, setEmailing] = useState(false);
-  const pistols = weaponSummary(members, 'pistol'), rifles = weaponSummary(members, 'rifle');
   const today = todayISO();
   const fy = fiscalYear(today);
 
@@ -54,10 +53,6 @@ export default function Roster() {
           <option value="all">Everyone</option>
         </select></label>
         <span className="formNote">{rows.length} shown</span>
-      </div>
-      <div className="weaponBar">
-        <span><b>Pistols</b> {pistols.used}/{pistols.total} assigned{pistols.open.length > 0 && <small> · open: {pistols.open.join(', ')}</small>}</span>
-        <span><b>Rifles</b> {rifles.used}/{rifles.total} assigned{rifles.open.length > 0 && <small> · open: {rifles.open.join(', ')}</small>}</span>
       </div>
       <div className="tableWrap"><table className="roster">
         <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Pistol #</th><th>Rifle #</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
