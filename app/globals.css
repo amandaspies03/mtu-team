@@ -482,3 +482,16 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .award.silver { background: #e6e8ea; color: #4a5258; }
 .award.gold { background: #f6e9c6; color: #7a5a10; }
 .muted { color: var(--muted); }
+.scoring summary { display: flex; align-items: baseline; gap: 12px; cursor: pointer; }
+.scoring summary small { color: var(--muted); }
+.scoreGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 14px; align-items: start; }
+.scoreSteps { padding-left: 22px; margin: 12px 0; line-height: 1.6; }
+.scoreSteps li { margin: 5px 0; }
+.scoring .callout { border-left: 3px solid var(--brass); background: var(--brass-soft); padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: 13.5px; margin: 8px 0; }
+.scoreImages { display: grid; gap: 16px; }
+.scoreImages figure { margin: 0; }
+.scoreImages img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; display: block; }
+.scoreImages figure:first-child:not(:last-child) img { max-width: 300px; margin: 0 auto; }
+.scoreImages figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
+@media (max-width: 900px) { .scoreGrid { grid-template-columns: 1fr; } }
+@media print { .scoring { display: block; } }

@@ -187,3 +187,73 @@ export const MATCH_CALLS: MatchCall[] = [
     ],
   },
 ];
+
+// ---- How to score (from the NGMTC scorecards in the Match Call Booklet) ----
+
+export type Scoring = {
+  target?: { src: string; caption: string };
+  scorecard: { src: string; caption: string };
+  table?: string[][];
+  steps: string[];
+  notes: string[];
+};
+
+const FIG11_STEPS_STAGE1 = [
+  'Stage 1 (anti-body armor): for each target, first check for a hit in the facial area. No facial hit = that target scores zero, even with body hits.',
+  'If the target has a facial hit, write the facial hits in the "Facial Area" row (×5) and the body hits in the ring rows: 5, 4, 3, 2.',
+  'Count a maximum of 3 hits per target. Extra facial hits beyond the first are worth only 2 points each.',
+  'Multiply each row by its factor and add them up for the Stage 1 sub total (max 60).',
+];
+const FIG11_STEPS_STAGE2 = [
+  'Stage 2 (quick-fire): no facial requirement. Record body hits by ring — 5, 4, 3, 2 — and fill in "hits per target."',
+  'Count a maximum of 6 hits per target.',
+  'Multiply each row by its factor and add them up for the Stage 2 sub total (max 120).',
+  'Add both sub totals, then subtract 5 points for each late shot or penalty. Max total 180.',
+];
+const FIG11_TABLE = [['Zone', 'Points'], ['Facial area (required in Stage 1)', '5'], ['Extra facial hits (Stage 1)', '2 each'], ['Body ring 5', '5'], ['Body ring 4', '4'], ['Body ring 3', '3'], ['Body ring 2', '2']];
+const SIGN_OFF = 'The scorer prints their name and signs to certify the score; the shooter signs to concur. Don\'t paste targets until both agree.';
+
+export const MATCH_SCORING: Record<string, Scoring> = {
+  PI2210: {
+    scorecard: { src: '/match/scorecard-pi2210.png', caption: 'NGMTC Form PI2210 scorecard' },
+    table: [['Ring', 'Points'], ['X', '5 (also counted as an X)'], ['5', '5'], ['4', '4'], ['3', '3'], ['2', '2']],
+    steps: [
+      'After Stage 2, pass your scorecard to the shooter on your right. The far-end shooter is scored by a block officer.',
+      'For each target (1–4), write how many hits are in each ring: X, 5, 4, 3, 2. A target counts a maximum of 5 hits per block.',
+      'Add across each row into "Hits," multiply by the factor (X ×5, 5 ×5, 4 ×4, 3 ×3, 2 ×2), and add the rows for the Stages 1 & 2 sub total (max 100).',
+      'Verify with the shooter, then paste the targets. Repeat the same process in the Stages 3 & 4 block after the last stage (max 100).',
+      'Subtract 5 points for each late shot or penalty.',
+      'Write the total with the number of Xs, e.g. "176-6X." Max 200.',
+    ],
+    notes: ['Ties are broken by X count.', SIGN_OFF],
+  },
+  'RIFLE EIC': {
+    target: { src: '/match/target-rifle-eic.png', caption: '25 yd Rifle EIC combat target' },
+    scorecard: { src: '/match/scorecard-rifle-eic.png', caption: 'NGMTC Form RI3210 scorecard' },
+    table: [['Ring', 'Points'], ['Center (X)', '10, and counted as an X'], ['9', '9'], ['8', '8'], ['7', '7'], ['6', '6'], ['Miss', '0 (visible misses are marked)']],
+    steps: [
+      'Each stage has its own row on the card: Stage 1 standing, 2 kneeling, 3 sitting, and Stage 4 prone across two rows (20 shots).',
+      'Write the value of every shot in its own box (6–10 by ring, 0 for a miss). A shot touching a line gets the higher ring.',
+      'Add each row into "Total."',
+      'Count every hit in the center ring and write it in "Total # of X\'s."',
+      'Add the stage totals for the match total, written with the X count, e.g. "474-32X."',
+    ],
+    notes: [
+      'The team scores Rifle EIC out of 500 (50 shots × 10). The printed RI3210 card says "max possible score 250" — ask the match director which scale the match is using.',
+      'Ties are broken by X count.',
+      SIGN_OFF,
+    ],
+  },
+  PI2250: {
+    scorecard: { src: '/match/scorecard-pi2250.png', caption: 'NGMTC Form PI2250 scorecard' },
+    table: FIG11_TABLE,
+    steps: [...FIG11_STEPS_STAGE1, ...FIG11_STEPS_STAGE2],
+    notes: ['PT2350 is a paper match built from the combined PI2250 scores.', SIGN_OFF],
+  },
+  RI3020: {
+    scorecard: { src: '/match/scorecard-ri3020.png', caption: 'NGMTC Form RI3020 scorecard' },
+    table: FIG11_TABLE,
+    steps: [...FIG11_STEPS_STAGE1, ...FIG11_STEPS_STAGE2],
+    notes: ['Block officers tell shooters about late shots and which exposure they happened in — those come off at 5 points each.', SIGN_OFF],
+  },
+};

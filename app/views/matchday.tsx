@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
-import { MATCH_CALLS, type Stage } from '../../lib/tower';
+import { MATCH_CALLS, MATCH_SCORING, type Stage } from '../../lib/tower';
 import { PageTitle } from './ui';
 
 let audio: AudioContext | null = null;
@@ -87,6 +87,7 @@ export default function MatchDay() {
   const [sound, setSound] = useState(true);
   const match = MATCH_CALLS.find(m => m.code === code)!;
   const stage = match.stages[si];
+  const scoring = MATCH_SCORING[match.code];
 
   useEffect(() => {
     // Keep the screen awake while running a line.
@@ -138,6 +139,24 @@ export default function MatchDay() {
           <div><h3>End of match</h3><ol className="calls">{match.closing.map((c, i) => <li key={i}>{c}</li>)}</ol></div>
         ) : <button className="primary" onClick={() => setSi(si + 1)}>Next: {match.stages[si + 1].name}</button>}
       </section>
+
+      {scoring && (
+        <details className="panel scoring" open={false}>
+          <summary><h2>How to score</h2><small>{match.title} scorecard{scoring.target ? ' and target' : ''}</small></summary>
+          <div className="scoreGrid">
+            <div>
+              {scoring.table && <table className="guideTable"><thead><tr>{scoring.table[0].map(c => <th key={c}>{c}</th>)}</tr></thead>
+                <tbody>{scoring.table.slice(1).map(r => <tr key={r[0]}>{r.map((c, i) => <td key={i}>{c}</td>)}</tr>)}</tbody></table>}
+              <ol className="scoreSteps">{scoring.steps.map((t, i) => <li key={i}>{t}</li>)}</ol>
+              {scoring.notes.map((n, i) => <p key={i} className="callout">{n}</p>)}
+            </div>
+            <div className="scoreImages">
+              {scoring.target && <figure><a href={scoring.target.src} target="_blank" rel="noopener"><img src={scoring.target.src} alt={scoring.target.caption} loading="lazy" /></a><figcaption>{scoring.target.caption}</figcaption></figure>}
+              <figure><a href={scoring.scorecard.src} target="_blank" rel="noopener"><img src={scoring.scorecard.src} alt={scoring.scorecard.caption} loading="lazy" /></a><figcaption>{scoring.scorecard.caption} · tap to enlarge</figcaption></figure>
+            </div>
+          </div>
+        </details>
+      )}
     </div>
   );
 }
