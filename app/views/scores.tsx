@@ -1,8 +1,11 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, Pencil, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import type { Member } from '../../lib/types';
 import { useTeam } from '../../lib/data';
 import type { Score } from '../../lib/types';
+
+const matches = (m: Member | undefined, q: string) => !q.trim() || (!!m && `${m.last_name} ${m.first_name ?? ''} ${m.rank ?? ''} ${m.unit ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
 import { displayName, downloadCsv, fiscalYear, fullName, milDate, scoreText, todayISO } from '../../lib/util';
 import { Empty, Modal, PageTitle, Sparkline, Tag } from './ui';
 
@@ -35,6 +38,7 @@ function Leaderboard() {
   const [code, setCode] = useState('PISTOL_EIC');
   const [period, setPeriod] = useState('all');
   const [current, setCurrent] = useState(true);
+  const [q, setQ] = useState('');
   const course = courses.find(c => c.code === code);
   const today = todayISO();
   const fy = fiscalYear(today);
@@ -71,11 +75,12 @@ function Leaderboard() {
           <option value="all">All time</option><option value="fy">FY{String(fy).slice(2)}</option><option value="lastfy">FY{String(fy - 1).slice(2)}</option><option value="12m">Last 12 months</option>
         </select></label>
         <label className="check"><input type="checkbox" checked={current} onChange={e => setCurrent(e.target.checked)} /> Current roster only</label>
+        <label className="search"><Search size={16} /><input placeholder="Search shooters…" value={q} onChange={e => setQ(e.target.value)} aria-label="Search shooters" /></label>
       </div>
       {rows.length === 0 ? <Empty title="No scores for this filter">{current ? 'Try including everyone, or a longer period.' : 'Scores entered for this course will rank here.'}</Empty> : (
         <div className="tableWrap"><table className="board">
           <thead><tr><th>#</th><th><span className="sr">Compare</span></th><th>Shooter</th><th className="num">Best</th><th className="num">Average</th><th className="num">Fired</th><th>Last</th><th>Trend</th></tr></thead>
-          <tbody>{rows.map((r, i) => (
+          <tbody>{rows.map((r, i) => matches(r.m, q) && (
             <tr key={r.m!.id} className={`${r.m!.id === me.member_id ? 'meRow' : ''} ${selected.includes(r.m!.id) ? 'picked' : ''}`}>
               <td>{i + 1}</td>
               <td className="pick"><label className="pickBox" style={selected.includes(r.m!.id) ? { background: colorOf(r.m!.id), borderColor: colorOf(r.m!.id) } : undefined}>
@@ -92,6 +97,7 @@ function Leaderboard() {
         </table></div>
       )}
       <p className="formNote">Ties are broken by X count. Tick up to {SERIES_COLORS.length} shooters to compare them below.</p>
+      {q && rows.every(r => !matches(r.m, q)) && <p className="formNote">No one on this leaderboard matches “{q}”.</p>}
 
       {rows.length > 0 && (
         <div className="compare">
@@ -244,21 +250,42 @@ function EnterScores({ onDone }: { onDone: () => void }) {
               </tr>
             );
           })}
-          <tr><td colSpan={4}>
-            <div className="row">
-              <select value="" onChange={e => e.target.value && setEntries([...entries, newEntry(e.target.value)])}>
-                <option value="">+ Add a shooter…</option>
-                {current.filter(m => !has.has(m.id)).map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
-              </select>
-              {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
-            </div>
-          </td></tr>
         </tbody>
       </table></div>
+      <div className="row addRow">
+              <ShooterPicker pool={current.filter(m => !has.has(m.id))} onPick={id => setEntries([...entries, newEntry(id)])} />
+              {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
+            </div>
       <p className="formNote">Shot the same course more than once today? Use + on a shooter’s row to add another score for them.</p>
       {err && <p className="alert">{err}</p>}
       <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : filled === 1 ? 'Save 1 score' : `Save ${filled || ''} scores`}</button></div>
     </section>
+  );
+}
+
+function ShooterPicker({ pool, onPick }: { pool: Member[]; onPick: (id: string) => void }) {
+  const [q, setQ] = useState('');
+  const [hi, setHi] = useState(0);
+  const found = q.trim() ? pool.filter(m => matches(m, q)).slice(0, 8) : [];
+  function pick(id: string) { onPick(id); setQ(''); setHi(0); }
+  return (
+    <div className="picker">
+      <label className="search"><Search size={16} /><input placeholder="Add a shooter — type a name…" value={q} aria-label="Search shooters to add"
+        onChange={e => { setQ(e.target.value); setHi(0); }}
+        onKeyDown={e => {
+          if (e.key === 'ArrowDown') { e.preventDefault(); setHi(Math.min(hi + 1, found.length - 1)); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(Math.max(hi - 1, 0)); }
+          else if (e.key === 'Enter' && found[hi]) { e.preventDefault(); pick(found[hi].id); }
+          else if (e.key === 'Escape') setQ('');
+        }} /></label>
+      {q.trim() && <div className="pickerList" role="listbox">
+        {found.length === 0 ? <p className="formNote">No match.</p> : found.map((m, i) => (
+          <button key={m.id} role="option" aria-selected={i === hi} className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onClick={() => pick(m.id)}>
+            {fullName(m)} <small className="sub">{[m.rank, m.team_status].filter(Boolean).join(' · ')}</small>
+          </button>
+        ))}
+      </div>}
+    </div>
   );
 }
 
@@ -311,7 +338,7 @@ function ScoreLog() {
   const [who, setWho] = useState('');
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState<Score | null>(null);
-  const list = [...scores].filter(s => (!code || s.course_code === code) && (!who || s.member_id === who))
+  const list = [...scores].filter(s => (!code || s.course_code === code) && matches(memberById(s.member_id), who))
     .sort((a, b) => (b.shot_on ?? '0') > (a.shot_on ?? '0') ? 1 : (b.shot_on ?? '0') < (a.shot_on ?? '0') ? -1 : (b.created_at > a.created_at ? 1 : -1));
   const cname = (c: string) => courses.find(x => x.code === c)?.name ?? c;
   async function del(s: Score) {
@@ -323,7 +350,7 @@ function ScoreLog() {
     <section className="panel">
       <div className="filters">
         <label>Course<select value={code} onChange={e => setCode(e.target.value)}><option value="">All courses</option>{courses.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}</select></label>
-        <label>Shooter<select value={who} onChange={e => setWho(e.target.value)}><option value="">Everyone</option>{members.filter(m => scores.some(s => s.member_id === m.id)).map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}</select></label>
+        <label className="search"><Search size={16} /><input placeholder="Search shooters…" value={who} onChange={e => setWho(e.target.value)} aria-label="Search shooters" /></label>
         <button className="secondary" onClick={() => downloadCsv(`MTU scores ${todayISO()}.csv`, [['Date', 'Session', 'Last', 'First', 'Course', 'Score', 'X', 'As recorded'], ...list.map(s => { const m = memberById(s.member_id); return [s.shot_on, s.session_label, m?.last_name, m?.first_name, cname(s.course_code), s.total, s.x_count, s.raw]; })])}><Download size={15} /> CSV</button>
       </div>
       {err && <p className="alert">{err}</p>}
