@@ -16,6 +16,7 @@ export default function Roster() {
   const { isStaff, members, compliance, attendance, events } = useTeam();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('current');
+  const inactiveCount = members.filter(m => m.team_status === 'Inactive').length;
   const [adding, setAdding] = useState(false);
   const [emailing, setEmailing] = useState(false);
   const today = todayISO();
@@ -48,11 +49,11 @@ export default function Roster() {
       <div className="filters">
         <label className="search"><Search size={16} /><input placeholder="Search name, rank, unit…" value={q} onChange={e => setQ(e.target.value)} /></label>
         <label><select value={status} onChange={e => setStatus(e.target.value)}>
-          <option value="current">Current (Active, New, Tryout)</option>
+          <option value="current">All except inactive</option>
           {TEAM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          <option value="all">Everyone</option>
+          <option value="all">Everyone, including inactive</option>
         </select></label>
-        <span className="formNote">{rows.length} shown</span>
+        <span className="formNote">{rows.length} shown{status === 'current' && inactiveCount > 0 && <> · {inactiveCount} inactive hidden <button className="linkBtn" onClick={() => setStatus('Inactive')}>Show inactive</button></>}</span>
       </div>
       <div className="tableWrap"><table className="roster">
         <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Pistol #</th><th>Rifle #</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
