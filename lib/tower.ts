@@ -230,10 +230,10 @@ export const MATCH_SCORING: Record<string, Scoring> = {
   'RIFLE EIC': {
     target: { src: '/match/target-rifle-eic.png', caption: '25 yd Rifle EIC combat target' },
     scorecard: { src: '/match/scorecard-rifle-eic.png', caption: 'NGMTC Form RI3210 scorecard' },
-    table: [['Ring', 'Points'], ['Center (X)', '10, and counted as an X'], ['9', '9'], ['8', '8'], ['7', '7'], ['6', '6'], ['Miss', '0 (visible misses are marked)']],
+    table: [['Ring', 'Points'], ['Center (X)', '10, and counted as an X'], ['9', '9'], ['8', '8'], ['7', '7'], ['6', '0 — a 6 counts as a miss'], ['Off the target', '0 (visible misses are marked)']],
     steps: [
       'Each stage has its own row on the card: Stage 1 standing, 2 kneeling, 3 sitting, and Stage 4 prone across two rows (20 shots).',
-      'Write the value of every shot in its own box (6–10 by ring, 0 for a miss). A shot touching a line gets the higher ring.',
+      'Write the value of every shot in its own box (7–10 by ring; a 6 or anything outside it is a miss and scores 0). A shot touching a line gets the higher ring.',
       'Add each row into "Total."',
       'Count every hit in the center ring and write it in "Total # of X\'s."',
       'Add the stage totals for the match total, written with the X count, e.g. "474-32X."',

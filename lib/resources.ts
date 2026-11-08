@@ -375,6 +375,7 @@ Each stage is worth 50 points.
 - Weapons on safe with no round chambered during all movement.
 - Command to listen for: "WATCH, MOVE, AND SHOOT."
 - Prone is 20 rounds in 60 seconds — know how you'll reload before you get there.
+- Scoring: the center ring is an X (10 points), then 9, 8 and 7. **A hit in the 6 ring counts as a miss** and scores 0.
 
 > The full tower commands and a stage timer are on the Match day page.`,
         },
