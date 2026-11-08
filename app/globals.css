@@ -398,3 +398,12 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
   .calAdd { margin: 0 0 0 auto; }
   .filters .segmented { margin-left: 0; }
 }
+
+.dateJump { position: relative; }
+.dateJump .calTitle { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 7px; color: var(--ink); }
+.dateJump .calTitle:hover { background: #f1f0e8; }
+.jumpPop { position: absolute; z-index: 15; top: calc(100% + 6px); left: 0; width: 300px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; box-shadow: 0 14px 40px #1f2b2425; }
+.jumpRow { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+.jumpPop label { margin-bottom: 10px; font-size: 12px; }
+.jumpPop .formActions { padding-top: 10px; margin-top: 0; }
+@media (max-width: 820px) { .jumpPop { position: fixed; left: 16px; right: 16px; top: 120px; width: auto; } }

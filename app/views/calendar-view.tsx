@@ -1,5 +1,6 @@
 'use client';
-import { ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import type { TeamEvent } from '../../lib/types';
 import { eventRange, kindLabel, todayISO } from '../../lib/util';
@@ -57,7 +58,7 @@ export function CalendarView({ events, mode, cursor, setCursor, setMode, onAdd }
           <button className="secondary" onClick={() => setCursor(today)}>Today</button>
           <button className="iconBtn" aria-label="Previous" onClick={() => setCursor(shiftCursor(cursor, mode, -1))}><ChevronLeft size={18} /></button>
           <button className="iconBtn" aria-label="Next" onClick={() => setCursor(shiftCursor(cursor, mode, 1))}><ChevronRight size={18} /></button>
-          <h2 className="calTitle">{cursorTitle(cursor, mode)}</h2>
+          <DateJump cursor={cursor} mode={mode} setCursor={setCursor} years={events.map(e => +e.start_date.slice(0, 4))} />
         </div>
         <div className="segmented" role="group" aria-label="Calendar range">
           {(['month', 'week', 'day'] as CalMode[]).map(m => <button key={m} className={mode === m ? 'on' : ''} onClick={() => setMode(m)}>{m[0].toUpperCase() + m.slice(1)}</button>)}
@@ -129,5 +130,49 @@ export function CalendarView({ events, mode, cursor, setCursor, setMode, onAdd }
         );
       })()}
     </section>
+  );
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** Click the calendar title to jump straight to any month, year or date. */
+function DateJump({ cursor, mode, setCursor, years }: { cursor: string; mode: CalMode; setCursor: (c: string) => void; years: number[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const d = toDate(cursor);
+  const thisYear = new Date().getFullYear();
+  const lo = Math.min(thisYear - 5, ...years), hi = Math.max(thisYear + 3, ...years);
+  const yearOpts = Array.from({ length: hi - lo + 1 }, (_, i) => hi - i);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+
+  const setYM = (y: number, m: number) => {
+    const last = new Date(y, m + 1, 0).getDate();
+    setCursor(iso(new Date(y, m, Math.min(d.getDate(), last))));
+  };
+
+  return (
+    <div className="dateJump" ref={ref}>
+      <button className="calTitle" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {cursorTitle(cursor, mode)} <ChevronDown size={16} />
+      </button>
+      {open && (
+        <div className="jumpPop" role="dialog" aria-label="Go to date">
+          <div className="jumpRow">
+            <label>Month<select value={d.getMonth()} onChange={e => setYM(d.getFullYear(), +e.target.value)}>{MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}</select></label>
+            <label>Year<select value={d.getFullYear()} onChange={e => setYM(+e.target.value, d.getMonth())}>{yearOpts.map(y => <option key={y} value={y}>{y}</option>)}</select></label>
+          </div>
+          <label>Exact date<input type="date" value={cursor} onChange={e => e.target.value && setCursor(e.target.value)} /></label>
+          <div className="formActions"><button className="primary" onClick={() => setOpen(false)}>Done</button></div>
+        </div>
+      )}
+    </div>
   );
 }
