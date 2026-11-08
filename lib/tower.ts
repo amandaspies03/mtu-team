@@ -1,4 +1,4 @@
-// Condensed from the 2024 MTU Match Call Booklet (EIC, Reflexive Fire, Anti-Body Armor).
+// Condensed from the 2024 MTU Match Call Booklet (Rifle EIC, Pistol EIC, Reflexive Fire, Anti-Body Armor).
 
 export type Stage = {
   name: string;
@@ -55,6 +55,17 @@ const RIFLE_CLEAR = [
   'BLOCK OFFICERS, SIGNAL WHEN THE LINE IS CLEAR.',
 ];
 
+const RIFLE_EIC_LOAD = [
+  'SECURE A MAGAZINE… LOAD… MAKE READY.',
+  'WEAPONS ON SAFE…',
+  'WATCH, MOVE, AND SHOOT. WATCH, MOVE, AND SHOOT.',
+];
+const RIFLE_EIC_CLEAR = [
+  'CEASE FIRE… CEASE FIRE… CEASE FIRE.',
+  'BLOCK OFFICERS, INSPECT AND CLEAR ALL WEAPONS AND MAGAZINES. ENSURE ALL WEAPONS ARE GREEN AND CLEAR. COLLECT UNUSED AMMO.',
+  'IS THE FIRING LINE CLEAR? CLEAR ON THE RIGHT? CLEAR ON THE LEFT? THE FIRING LINE IS CLEAR.',
+];
+
 const PISTOL_BRIEF =
   'THIS IS YOUR SAFETY BRIEFING. FOLLOW ALL COMMANDS FROM THE TOWER. KEEP YOUR WEAPON POINTED DOWN RANGE WHEN UNHOLSTERED. DO NOT LOAD YOUR WEAPON UNTIL INSTRUCTED TO DO SO. DO NOT HOLSTER YOUR WEAPON UNTIL CLEARED BY A RANGE SAFETY. IF YOU HAVE A MALFUNCTION, YOU MUST APPLY IMMEDIATE ACTION, PROPERLY AND IN A TIMELY FASHION. THIS IS A NO ALIBI MATCH. EVERYONE IS A SAFETY. IF YOU SEE AN UNSAFE ACT, YOU MAY CALL A CEASE-FIRE. IF YOUR WEAPON CANNOT BE CLEARED SAFELY, STOP AND ENSURE THE LINE SAFETY IS AWARE OF THE PROBLEM AND THEY WILL ASSIST YOU.';
 
@@ -95,6 +106,30 @@ export const MATCH_CALLS: MatchCall[] = [
       'HAND YOUR SCORECARDS TO THE SHOOTER ON YOUR RIGHT. FAR-END SHOOTER HANDS SCORECARD TO RANGE STAFF.',
       'REMOVE ALL TARGETS, RETRIEVE EQUIPMENT AT THE 30 YARD LINE, EXIT TO THE LEFT AND PROCEED TO THE SCORING AREA.',
     ],
+  },
+  {
+    code: 'RIFLE EIC',
+    title: 'Rifle EIC',
+    weapon: 'Rifle',
+    rounds: 50,
+    maxPoints: 500,
+    safetyBrief:
+      'THIS IS YOUR SAFETY BRIEFING. KEEP YOUR WEAPONS POINTED DOWN RANGE AT ALL TIMES. FOLLOW ALL COMMANDS FROM CENTER LINE. DO NOT LOAD YOUR WEAPON UNTIL INSTRUCTED TO DO SO. THIS IS A NO ALIBI MATCH. IF YOU HAVE A MALFUNCTION, YOU MUST APPLY IMMEDIATE OR REMEDIAL ACTION PROPERLY AND IN A TIMELY FASHION. IF THE WEAPON CANNOT BE CLEARED SAFELY, STOP AND ENSURE THAT THE LINE SAFETY KNOWS OF THE PROBLEM AND CAN GET THE WEAPON CLEARED SAFELY. BLOCK OFFICERS AND SHOOTERS, ENSURE WEAPONS ARE ON SAFE AND WITHOUT A ROUND IN THE CHAMBER DURING ALL MOVEMENT STAGES.',
+    setup: [
+      'Ensure each shooter has one 10-round magazine loaded for Stage 1.',
+      'Allow 5 seconds between each command.',
+    ],
+    stages: [
+      { name: 'Stage 1', distance: '25 yd', position: 'Standing', shots: '10 (1 mag)', exposures: [60],
+        sequence: '10 shots to target #1.', commands: RIFLE_EIC_LOAD, afterStage: RIFLE_EIC_CLEAR },
+      { name: 'Stage 2', distance: '25 yd', position: 'Kneeling', shots: '10', exposures: [45],
+        sequence: '10 shots to target #2.', commands: RIFLE_EIC_LOAD, afterStage: RIFLE_EIC_CLEAR },
+      { name: 'Stage 3', distance: '25 yd', position: 'Sitting', shots: '10', exposures: [45],
+        sequence: '10 shots to target #3.', commands: RIFLE_EIC_LOAD, afterStage: RIFLE_EIC_CLEAR },
+      { name: 'Stage 4', distance: '25 yd', position: 'Prone', shots: '20', exposures: [60],
+        sequence: '20 shots to target #4.', commands: RIFLE_EIC_LOAD, afterStage: RIFLE_EIC_CLEAR },
+    ],
+    closing: ['This completes the firing for the Rifle EIC.'],
   },
   {
     code: 'PI2250',

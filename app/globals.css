@@ -306,3 +306,4 @@ details summary { cursor: pointer; font-size: 13px; color: var(--info); margin-t
 a.primary { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
 a.disabledLink { opacity: .5; pointer-events: none; }
 @media (max-width: 820px) { .weaponSelect { width: 70px; font-size: 16px; } }
+a.secondary { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }

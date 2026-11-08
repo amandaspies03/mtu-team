@@ -103,7 +103,7 @@ export default function MatchDay() {
         Tower commands and stage timer from the 2024 Match Call Booklet. Allow about 5 seconds between each command.
       </PageTitle>
       <div className="tabs">
-        {MATCH_CALLS.map(m => <button key={m.code} className={m.code === code ? 'on' : ''} onClick={() => { setCode(m.code); setSi(0); }}>{m.title} <small>{m.code}</small></button>)}
+        {MATCH_CALLS.map(m => <button key={m.code} className={m.code === code ? 'on' : ''} onClick={() => { setCode(m.code); setSi(0); }}>{m.title} {/\d/.test(m.code) && <small>{m.code}</small>}</button>)}
       </div>
       <div className="stats">
         <div><strong>{match.rounds}</strong><span>rounds</span></div>

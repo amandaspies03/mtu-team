@@ -91,11 +91,12 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
         </div>
         <label>Subject<input value={subject} onChange={e => setSubject(e.target.value)} /></label>
         <label>Message<textarea rows={12} value={body} onChange={e => setBody(e.target.value)} /></label>
-        <p className="formNote">This opens a new message in your own email app with everyone in BCC, so you review it and hit Send yourself. {tooLong && 'This message is long; some email apps cut off long links, so if it opens incomplete, use the copy buttons instead.'}</p>
+        <p className="formNote">Nothing is sent from this site. Start a new message in Outlook, then copy and paste: addresses into BCC, the subject, then the message. Addresses are separated with semicolons so Outlook accepts them as-is. “Open in email app” does the same in one click on computers that allow it{tooLong ? ', but this message may be too long for it' : ''}.</p>
         <div className="formActions">
-          <button type="button" className="secondary" disabled={!to.length} onClick={() => copy('addresses', to.join('; '))}><Copy size={15} /> {copied === 'addresses' ? 'Copied' : 'Copy addresses'}</button>
-          <button type="button" className="secondary" onClick={() => copy('message', `${subject}\n\n${body}`)}><Copy size={15} /> {copied === 'message' ? 'Copied' : 'Copy message'}</button>
-          <a className={`primary${to.length ? '' : ' disabledLink'}`} href={to.length ? mailto : undefined} aria-disabled={!to.length}><Mail size={15} /> Open in email app</a>
+          <a className={`secondary${to.length ? '' : ' disabledLink'}`} href={to.length ? mailto : undefined} aria-disabled={!to.length}><Mail size={15} /> Open in email app</a>
+          <button type="button" className="primary" disabled={!to.length} onClick={() => copy('addresses', to.join('; '))}><Copy size={15} /> {copied === 'addresses' ? 'Copied' : '1. Copy addresses'}</button>
+          <button type="button" className="primary" onClick={() => copy('subject', subject)}><Copy size={15} /> {copied === 'subject' ? 'Copied' : '2. Copy subject'}</button>
+          <button type="button" className="primary" onClick={() => copy('message', body)}><Copy size={15} /> {copied === 'message' ? 'Copied' : '3. Copy message'}</button>
         </div>
       </div>
     </Modal>
