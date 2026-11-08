@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { CalendarPlus, Plus } from 'lucide-react';
+import { CalendarDays, CalendarPlus, List, Plus } from 'lucide-react';
+import { CalendarView, type CalMode } from './calendar-view';
 import { downloadIcs } from '../../lib/ics';
 import { useTeam } from '../../lib/data';
 import { EVENT_KINDS, type TeamEvent } from '../../lib/types';
@@ -10,10 +11,10 @@ import { Empty, Modal, PageTitle, Rsvp, Tag } from './ui';
 
 const kindTone = { practice: 'good', match: 'brass', tryout: 'info', qual: 'warn', cleaning: 'neutral', meeting: 'neutral', other: 'neutral' } as const;
 
-export function EventForm({ event, onClose }: { event?: TeamEvent; onClose: () => void }) {
+export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; onClose: () => void; initialDate?: string }) {
   const { sb, reload } = useTeam();
   const [f, setF] = useState({
-    title: event?.title ?? 'MTU Practice', kind: event?.kind ?? 'practice', start_date: event?.start_date ?? '', end_date: event?.end_date ?? '',
+    title: event?.title ?? 'MTU Practice', kind: event?.kind ?? 'practice', start_date: event?.start_date ?? initialDate ?? '', end_date: event?.end_date ?? '',
     location: event?.location ?? '', notes: event?.notes ?? '',
   });
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
@@ -50,9 +51,16 @@ export function EventForm({ event, onClose }: { event?: TeamEvent; onClose: () =
 
 export default function Events() {
   const { isStaff, events, attendance } = useTeam();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
   const [kind, setKind] = useState('');
   const today = todayISO();
+  const pref = (k: string, d: string) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
+  const save = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } };
+  const [view, setViewState] = useState<'list' | 'calendar'>(() => pref('mtu-cal-view', 'list') as 'list' | 'calendar');
+  const [mode, setModeState] = useState<CalMode>(() => pref('mtu-cal-mode', 'month') as CalMode);
+  const [cursor, setCursor] = useState(today);
+  const setView = (v: 'list' | 'calendar') => { setViewState(v); save('mtu-cal-view', v); };
+  const setMode = (m: CalMode) => { setModeState(m); save('mtu-cal-mode', m); };
   const list = events.filter(e => !kind || e.kind === kind);
   const upcoming = list.filter(e => (e.end_date ?? e.start_date) >= today);
   const past = list.filter(e => (e.end_date ?? e.start_date) < today).reverse();
@@ -70,12 +78,19 @@ export default function Events() {
 
   return (
     <div>
-      <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={<>{upcoming.length > 0 && <button className="secondary" onClick={() => downloadIcs('MTU upcoming events.ics', upcoming)}><CalendarPlus size={15} /> Add all upcoming to my calendar</button>}{isStaff && <button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add event</button>}</>}>
+      <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={<>{upcoming.length > 0 && <button className="secondary" onClick={() => downloadIcs('MTU upcoming events.ics', upcoming)}><CalendarPlus size={15} /> Add all upcoming to my calendar</button>}{isStaff && <button className="primary" onClick={() => setAdding('')}><Plus size={15} /> Add event</button>}</>}>
         Practices, tryouts and matches. Open one to see who’s going, track 336s and orders, and log ammo issued.
       </PageTitle>
       <div className="filters">
         <label><select value={kind} onChange={e => setKind(e.target.value)}><option value="">All types</option>{EVENT_KINDS.map(k => <option key={k} value={k}>{kindLabel[k]}</option>)}</select></label>
+        <div className="segmented" role="group" aria-label="View">
+          <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}><List size={15} /> List</button>
+          <button className={view === 'calendar' ? 'on' : ''} onClick={() => setView('calendar')}><CalendarDays size={15} /> Calendar</button>
+        </div>
       </div>
+      {view === 'calendar' ? (
+        <CalendarView events={list} mode={mode} setMode={setMode} cursor={cursor} setCursor={setCursor} onAdd={isStaff ? d => setAdding(d) : undefined} />
+      ) : <>
       <section className="panel">
         <div className="sectionTitle"><h2>Upcoming</h2></div>
         {upcoming.length === 0 ? <Empty title="Nothing scheduled">{isStaff ? 'Add the next practice so shooters can RSVP and get their 336s in.' : 'Check back soon.'}</Empty> : upcoming.map(e => row(e, false))}
@@ -86,7 +101,8 @@ export default function Events() {
           {byFy[+fy].map(e => row(e, true))}
         </section>
       ))}
-      {adding && <EventForm onClose={() => setAdding(false)} />}
+      </>}
+      {adding !== null && <EventForm initialDate={adding || undefined} onClose={() => setAdding(null)} />}
     </div>
   );
 }
