@@ -1,0 +1,135 @@
+'use client';
+import { useState } from 'react';
+import { ArrowLeft, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
+import { useTeam } from '../../lib/data';
+import { ORDERS_LABEL } from '../../lib/types';
+import { displayName, eventRange, expiryState, kindLabel, milDate, scoreText } from '../../lib/util';
+import { go } from '../app-shell';
+import { ComplianceForm, MemberForm } from './member-form';
+import { Empty, ExpiryTag, Modal, Sparkline, Tag } from './ui';
+
+export default function MemberView({ id }: { id: string }) {
+  const { sb, isStaff, me, memberById, compliance, attendance, events, scores, courses, profiles, reload } = useTeam();
+  const m = memberById(id);
+  const [editing, setEditing] = useState(false), [editComp, setEditComp] = useState(false), [deleting, setDeleting] = useState(false), [err, setErr] = useState('');
+  if (!m) return <Empty title="Shooter not found"><button className="linkBtn" onClick={() => go('roster')}>Back to roster</button></Empty>;
+  const isMe = me.member_id === m.id;
+  const c = compliance.find(x => x.member_id === m.id);
+  const att = attendance.filter(a => a.member_id === m.id)
+    .map(a => ({ a, e: events.find(e => e.id === a.event_id)! })).filter(x => x.e)
+    .sort((x, y) => (y.e.start_date > x.e.start_date ? 1 : -1));
+  const mine = scores.filter(s => s.member_id === m.id);
+  const byCourse = courses.map(co => {
+    const list = mine.filter(s => s.course_code === co.code);
+    const totals = list.filter(s => s.total != null);
+    const best = totals.reduce<typeof totals[number] | null>((b, s) => (!b || s.total! > b.total! || (s.total === b.total && (s.x_count ?? 0) > (b.x_count ?? 0)) ? s : b), null);
+    const dated = totals.filter(s => s.shot_on);
+    const avg = totals.length ? totals.reduce((t, s) => t + Number(s.total), 0) / totals.length : null;
+    return { co, list, best, avg, trend: dated.map(s => Number(s.total)) };
+  }).filter(x => x.list.length);
+  const ammo = att.reduce((t, { a }) => ({ r: t.r + (a.ammo_556 ?? 0), p: t.p + (a.ammo_9mm ?? 0) }), { r: 0, p: 0 });
+  const linked = profiles.find(p => p.member_id === m.id);
+
+  async function remove() {
+    setErr('');
+    const { error } = await sb.from('members').delete().eq('id', m!.id);
+    if (error) { setErr(error.message); return; }
+    await reload();
+    go('roster');
+  }
+
+  return (
+    <div>
+      <button className="back" onClick={() => history.length > 1 ? history.back() : go('roster')}><ArrowLeft size={14} /> Back</button>
+      <div className="pageTitle">
+        <div>
+          <div className="eyebrow">{[m.unit, m.duty_status, m.staff_role].filter(Boolean).join(' · ').toUpperCase() || 'SHOOTER'}</div>
+          <h1>{displayName(m)}</h1>
+          <div className="row">
+            <Tag tone={m.team_status === 'Active' ? 'good' : m.team_status === 'New' ? 'info' : 'neutral'}>{m.team_status}</Tag>
+            {isMe && <Tag tone="brass">This is you</Tag>}
+            {isStaff && (linked ? <Tag tone="info">Has login ({linked.email})</Tag> : <Tag>No login linked</Tag>)}
+          </div>
+        </div>
+        {isStaff && <div className="titleActions">
+          <button className="secondary" onClick={() => setEditing(true)}><Pencil size={15} /> Edit</button>
+          <button className="secondary danger" onClick={() => setDeleting(true)}><Trash2 size={15} /> Remove</button>
+        </div>}
+      </div>
+
+      <div className="grid2">
+        <section className="panel">
+          <div className="sectionTitle"><h2>Contact</h2></div>
+          <dl className="facts">
+            <dt>Email</dt><dd>{m.email ? <a href={`mailto:${m.email}`}><Mail size={13} /> {m.email}</a> : '—'}</dd>
+            <dt>Phone</dt><dd>{m.phone ? <a href={`tel:${m.phone}`}><Phone size={13} /> {m.phone}</a> : '—'}</dd>
+            <dt>Ammo issued</dt><dd>{ammo.r} rds 5.56 · {ammo.p} rds 9mm (all time)</dd>
+            {m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
+          </dl>
+        </section>
+        {(isStaff || isMe) && (
+          <section className="panel">
+            <div className="sectionTitle"><h2>Quals &amp; paperwork</h2>{isStaff && <button onClick={() => setEditComp(true)}>Update</button>}</div>
+            <dl className="facts">
+              <dt>Handgun AFQC</dt><dd><ExpiryTag date={c?.handgun_qual_exp ?? null} state={expiryState(c?.handgun_qual_exp)} />{c?.handgun_qual_date && <small> qualified {milDate(c.handgun_qual_date)}</small>}</dd>
+              <dt>Rifle AFQC</dt><dd><ExpiryTag date={c?.rifle_qual_exp ?? null} state={expiryState(c?.rifle_qual_exp)} />{c?.rifle_qual_date && <small> qualified {milDate(c.rifle_qual_date)}</small>}</dd>
+              <dt>DD 2760</dt><dd>{c?.lautenberg_date ? `Signed ${milDate(c.lautenberg_date)}` : <Tag>Not on file</Tag>}</dd>
+              <dt>Range waiver</dt><dd>{c?.range_waiver_date ? `Signed ${milDate(c.range_waiver_date)}` : '—'}</dd>
+              <dt>Team van</dt><dd>{c?.gov_license ? `Licensed${c.gov_license_date ? ' ' + milDate(c.gov_license_date) : ''}` : 'Not licensed'}{c?.vco ? ' · VCO' : ''}</dd>
+              {c?.notes && <><dt>Notes</dt><dd className="pre">{c.notes}</dd></>}
+            </dl>
+          </section>
+        )}
+      </div>
+
+      <section className="panel">
+        <div className="sectionTitle"><h2>Scores</h2><button onClick={() => go('scores')}>Enter / view all</button></div>
+        {byCourse.length === 0 ? <Empty title="No scores yet" /> : (
+          <div className="courseCards">
+            {byCourse.map(({ co, list, best, avg, trend }) => (
+              <div key={co.code} className="courseCard">
+                <div className="eyebrow">{co.weapon.toUpperCase()}</div>
+                <h3>{co.name}</h3>
+                {best ? <div className="bigNum">{scoreText(best.total, best.x_count)}<small>best{co.max_score ? ` / ${co.max_score}` : ''}</small></div>
+                  : <div className="bigNum">{list[list.length - 1].raw ?? '—'}<small>latest</small></div>}
+                <div className="row"><small>{list.length} fired{avg ? ` · avg ${avg.toFixed(0)}` : ''}</small><Sparkline values={trend.slice(-12)} max={co.max_score} /></div>
+                <details><summary>History</summary>
+                  <ul className="mini">{[...list].reverse().map(s => <li key={s.id}><span>{s.shot_on ? milDate(s.shot_on) : s.session_label}</span><b>{scoreText(s.total, s.x_count, s.raw)}</b></li>)}</ul>
+                </details>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="sectionTitle"><h2>Attendance</h2><span className="formNote">{att.filter(x => x.a.status === 'attended').length} attended</span></div>
+        {att.length === 0 ? <Empty title="No practices recorded" /> : (
+          <div className="tableWrap"><table>
+            <thead><tr><th>Date</th><th>Event</th><th>Status</th><th>Orders</th><th className="num">5.56</th><th className="num">9mm</th><th>Note</th></tr></thead>
+            <tbody>{att.map(({ a, e }) => (
+              <tr key={a.id} className="clickable" onClick={() => go('event', e.id)}>
+                <td>{eventRange(e)}</td><td>{e.title} <small className="sub">{kindLabel[e.kind]}</small></td>
+                <td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
+                <td>{a.status === 'planned' || a.orders_status !== 'none' ? ORDERS_LABEL[a.orders_status] : '—'}</td><td className="num">{a.ammo_556 ?? ''}</td><td className="num">{a.ammo_9mm ?? ''}</td><td>{[a.transport, a.note].filter(Boolean).join(' · ')}</td>
+              </tr>))}</tbody>
+          </table></div>
+        )}
+      </section>
+
+      {editing && <MemberForm member={m} onClose={() => setEditing(false)} />}
+      {editComp && <ComplianceForm memberId={m.id} current={c} onClose={() => setEditComp(false)} />}
+      {deleting && (
+        <Modal title="Remove from roster?" onClose={() => setDeleting(false)}>
+          <p>This permanently deletes {displayName(m)} along with their scores and attendance history. To keep their history, set their team status to <b>Alumni</b> instead.</p>
+          {err && <p className="alert">{err}</p>}
+          <div className="formActions">
+            <button className="secondary" onClick={() => setDeleting(false)}>Cancel</button>
+            <button className="secondary" onClick={() => { setDeleting(false); setEditing(true); }}>Mark as Alumni instead</button>
+            <button className="primary dangerBg" onClick={remove}>Delete permanently</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

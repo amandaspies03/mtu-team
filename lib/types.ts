@@ -1,0 +1,112 @@
+export type Role = 'staff' | 'shooter';
+export type TeamStatus = 'Active' | 'New' | 'Tryout' | 'Reserve' | 'Alumni';
+export const TEAM_STATUSES: TeamStatus[] = ['Active', 'New', 'Tryout', 'Reserve', 'Alumni'];
+export const DUTY_STATUSES = ['AGR', 'Traditional', 'Technician', 'DSG', 'Civilian', 'Other'] as const;
+
+export type Profile = {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  role: Role;
+  approved: boolean;
+  member_id: string | null;
+  created_at: string;
+};
+
+export type Member = {
+  id: string;
+  last_name: string;
+  first_name: string | null;
+  rank: string | null;
+  unit: string | null;
+  duty_status: string | null;
+  team_status: TeamStatus;
+  staff_role: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+};
+
+export type Compliance = {
+  member_id: string;
+  handgun_qual_date: string | null;
+  handgun_qual_exp: string | null;
+  rifle_qual_date: string | null;
+  rifle_qual_exp: string | null;
+  lautenberg_date: string | null;
+  range_waiver_date: string | null;
+  gov_license: boolean;
+  gov_license_date: string | null;
+  vco: boolean;
+  notes: string | null;
+};
+
+export type EventKind = 'practice' | 'match' | 'tryout' | 'qual' | 'cleaning' | 'meeting' | 'other';
+export const EVENT_KINDS: EventKind[] = ['practice', 'match', 'tryout', 'qual', 'cleaning', 'meeting', 'other'];
+
+export type TeamEvent = {
+  id: string;
+  title: string;
+  kind: EventKind;
+  start_date: string;
+  end_date: string | null;
+  location: string | null;
+  notes: string | null;
+  aar: string | null;
+};
+
+export type AttendanceStatus = 'planned' | 'attended' | 'absent' | 'excused';
+export type OrdersStatus = 'none' | 'submitted' | 'cut' | 'signed' | 'not_required';
+export const ORDERS_LABEL: Record<OrdersStatus, string> = {
+  none: 'No 336 yet',
+  submitted: '336 submitted',
+  cut: 'Orders cut',
+  signed: 'Signed in AROWS',
+  not_required: 'Not required',
+};
+
+export type Attendance = {
+  id: string;
+  event_id: string;
+  member_id: string;
+  status: AttendanceStatus;
+  orders_status: OrdersStatus;
+  transport: string | null;
+  ammo_556: number | null;
+  ammo_9mm: number | null;
+  note: string | null;
+};
+
+export type Course = {
+  code: string;
+  name: string;
+  weapon: 'Pistol' | 'Rifle';
+  max_score: number | null;
+  has_x: boolean;
+  sort: number;
+};
+
+export type Score = {
+  id: string;
+  member_id: string;
+  course_code: string;
+  event_id: string | null;
+  shot_on: string | null;
+  session_label: string | null;
+  total: number | null;
+  x_count: number | null;
+  raw: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type MatchTeam = {
+  id: string;
+  event_id: string;
+  name: string;
+  nickname: string | null;
+  captain_id: string | null;
+};
+export type MatchTeamMember = { team_id: string; member_id: string };
+
+export type Link = { id: string; title: string; url: string; category: string | null };
