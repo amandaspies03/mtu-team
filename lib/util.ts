@@ -79,3 +79,14 @@ export function downloadCsv(name: string, rows: (string | number | null | undefi
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/** Formats US phone input as XXX-XXX-XXXX while typing (drops a leading country code 1). */
+export function formatPhone(input: string) {
+  let d = input.replace(/\D/g, '');
+  if (d.length === 11 && d.startsWith('1')) d = d.slice(1);
+  d = d.slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+}
+export const PHONE_PATTERN = '\\d{3}-\\d{3}-\\d{4}';

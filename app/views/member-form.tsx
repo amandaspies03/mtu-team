@@ -3,12 +3,17 @@ import { useState } from 'react';
 import { useTeam } from '../../lib/data';
 import { DUTY_STATUSES, RANK_GROUPS, TEAM_STATUSES, type Compliance, type Member } from '../../lib/types';
 import { Modal } from './ui';
+import { formatPhone, PHONE_PATTERN } from '../../lib/util';
 
 const blank = { last_name: '', first_name: '', rank: '', unit: '', duty_status: '', team_status: 'New', staff_role: '', cell_phone: '', mil_email: '', personal_email: '', notes: '' };
 
 export function MemberForm({ member, onClose, onSaved }: { member?: Member; onClose: () => void; onSaved?: (id: string) => void }) {
   const { sb, reload } = useTeam();
-  const [f, setF] = useState<Record<string, string>>(() => member ? Object.fromEntries(Object.keys(blank).map(k => [k, (member as unknown as Record<string, string | null>)[k] ?? ''])) : { ...blank });
+  const [f, setF] = useState<Record<string, string>>(() => {
+    if (!member) return { ...blank };
+    const v = Object.fromEntries(Object.keys(blank).map(k => [k, (member as unknown as Record<string, string | null>)[k] ?? '']));
+    return { ...v, cell_phone: formatPhone(v.cell_phone) };
+  });
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
@@ -46,7 +51,7 @@ export function MemberForm({ member, onClose, onSaved }: { member?: Member; onCl
             <select value={f.team_status} onChange={set('team_status')}>{TEAM_STATUSES.map(s => <option key={s}>{s}</option>)}</select>
           </label>
           <label>Staff role<input value={f.staff_role} onChange={set('staff_role')} placeholder="OIC, NCOIC, Instructor…" /></label>
-          <label>Cell phone<input type="tel" autoComplete="off" value={f.cell_phone} onChange={set('cell_phone')} placeholder="316-555-0100" /></label>
+          <label>Cell phone<input type="tel" inputMode="numeric" autoComplete="off" value={f.cell_phone} onChange={e => setF({ ...f, cell_phone: formatPhone(e.target.value) })} placeholder="XXX-XXX-XXXX" pattern={PHONE_PATTERN} title="Format: XXX-XXX-XXXX" maxLength={12} /></label>
           <label>Military email<input type="email" autoComplete="off" value={f.mil_email} onChange={set('mil_email')} placeholder="first.last.1@us.af.mil" /></label>
           <label>Personal email<input type="email" autoComplete="off" value={f.personal_email} onChange={set('personal_email')} /></label>
         </div>
