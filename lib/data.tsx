@@ -45,11 +45,12 @@ const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: nu
 /** Everyone gets event basics; staff also get plan, AAR, ammo and prep details. */
 async function loadEvents(sb: SupabaseClient, isStaff: boolean): Promise<TeamEvent[]> {
   const base = await all<Pick<TeamEvent, 'id' | 'title' | 'kind' | 'start_date' | 'end_date' | 'location'>>(sb.from('events').select(EVENT_PUBLIC).order('start_date'));
-  if (!isStaff) return base.map(e => ({ ...EVENT_STAFF_BLANK, ...e }));
+  const pub = (e: typeof base[number]) => ({ id: e.id, title: e.title, kind: e.kind, start_date: e.start_date, end_date: e.end_date, location: e.location });
+  if (!isStaff) return base.map(e => ({ ...EVENT_STAFF_BLANK, ...pub(e) }));
   const { data, error } = await sb.rpc('event_staff_details');
   if (error) throw new Error(error.message);
   const extra = new Map((data as (typeof EVENT_STAFF_BLANK & { id: string })[]).map(d => [d.id, d]));
-  return base.map(e => ({ ...EVENT_STAFF_BLANK, ...extra.get(e.id), ...e }));
+  return base.map(e => ({ ...EVENT_STAFF_BLANK, ...extra.get(e.id), ...pub(e) }));
 }
 
 const MEMBER_BLANK = { unit: null, duty_status: null, staff_role: null, cell_phone: null, mil_email: null, personal_email: null, pistol_no: null, rifle_no: null, notes: null, gov20_pistol: false, gov20_rifle: false, chiefs50: false, eic_badge: null };

@@ -86,7 +86,7 @@ function Leaderboard() {
               <td className="pick"><label className="pickBox" style={selected.includes(r.m!.id) ? { background: colorOf(r.m!.id), borderColor: colorOf(r.m!.id) } : undefined}>
                 <input type="checkbox" checked={selected.includes(r.m!.id)} disabled={!selected.includes(r.m!.id) && selected.length >= SERIES_COLORS.length} onChange={() => toggle(r.m!.id)} aria-label={`Compare ${displayName(r.m)}`} />
               </label></td>
-              <td><a href={`#member/${r.m!.id}`}>{displayName(r.m)}</a></td>
+              <td>{isStaff ? <a href={`#member/${r.m!.id}`}>{displayName(r.m)}</a> : displayName(r.m)}</td>
               <td className="num"><b>{scoreText(r.best.total, r.best.x_count)}</b>{course?.max_score && <small className="sub">{Math.round((Number(r.best.total) / course.max_score) * 100)}%</small>}</td>
               <td className="num">{r.avg.toFixed(1)}</td>
               <td className="num">{r.n}</td>
@@ -373,7 +373,7 @@ function ScoreLog() {
           <tr key={s.id}>
             <td>{s.shot_on ? milDate(s.shot_on) : <Tag>Undated</Tag>}</td>
             <td>{s.session_label ?? '—'}</td>
-            <td><a href={`#member/${s.member_id}`}>{fullName(memberById(s.member_id))}</a></td>
+            <td>{isStaff ? <a href={`#member/${s.member_id}`}>{fullName(memberById(s.member_id))}</a> : fullName(memberById(s.member_id))}</td>
             <td>{cname(s.course_code)}</td>
             <td className="num">{scoreText(s.total, s.x_count, s.raw)}</td>
             <td><small>{s.raw}</small></td>

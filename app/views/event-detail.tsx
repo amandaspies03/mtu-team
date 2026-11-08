@@ -14,7 +14,7 @@ import { Empty, Modal, Rsvp, Tag } from './ui';
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
 export default function EventView({ id }: { id: string }) {
-  const { sb, isStaff, events, attendance, memberById, members, teams, teamMembers, reload } = useTeam();
+  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload } = useTeam();
   const e = events.find(x => x.id === id);
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
@@ -76,6 +76,34 @@ export default function EventView({ id }: { id: string }) {
   function copyRoster() {
     const lines = [`${e!.title} – ${eventRange(e!)}${e!.location ? ` @ ${e!.location}` : ''}`, ...going.map(({ a, m }) => `${fullName(m)}${a.transport ? ` (${a.transport})` : ''}`)];
     navigator.clipboard.writeText(lines.join('\n')).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+
+  if (!isStaff) {
+    const mine = rows.find(r => r.a.member_id === me.member_id);
+    const myRifle = memberById(me.member_id)?.rifle_no;
+    return (
+      <div className="eventPage">
+        <button className="back" onClick={() => history.length > 1 ? history.back() : go('events')}><ArrowLeft size={14} /> Back</button>
+        <div className="pageTitle">
+          <div>
+            <div className="eyebrow">{kindLabel[e.kind].toUpperCase()} · {eventRange(e)}</div>
+            <h1>{e.title}</h1>
+            <p>{e.location || 'Location TBD'}</p>
+            {!past && <Rsvp event={e} />}
+          </div>
+          <div className="titleActions">
+            {!past && <button className="secondary" onClick={() => downloadIcs(`MTU ${e.title} ${e.start_date}.ics`, [e])}><CalendarPlus size={15} /> Add to calendar</button>}
+          </div>
+        </div>
+        <section className="panel">
+          <div className="sectionTitle"><h2>Your details</h2></div>
+          <dl className="facts">
+            <dt>Your status</dt><dd>{mine ? (mine.a.status === 'planned' ? 'Going' : mine.a.status === 'absent' ? 'Not going' : mine.a.status === 'attended' ? 'Attended' : 'Excused') : past ? 'Not on the roster' : 'No RSVP yet'}</dd>
+            {myRifle != null && <><dt>Your rifle</dt><dd>Rifle #{myRifle}</dd></>}
+          </dl>
+        </section>
+      </div>
+    );
   }
 
   return (

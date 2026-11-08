@@ -3,7 +3,7 @@ import { AwardsSelect } from './awards-select';
 import { useState } from 'react';
 import { ArrowLeft, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import { displayName, eventRange, expiryState, kindLabel, milDate, scoreText } from '../../lib/util';
+import { displayName, eventRange, expiryState, formatPhone, kindLabel, milDate, PHONE_PATTERN, scoreText } from '../../lib/util';
 import { go } from '../app-shell';
 import { ComplianceForm, MemberForm } from './member-form';
 import { Empty, ExpiryTag, Modal, Sparkline, Tag } from './ui';
@@ -11,6 +11,7 @@ import { Empty, ExpiryTag, Modal, Sparkline, Tag } from './ui';
 export default function MemberView({ id }: { id: string }) {
   const { sb, isStaff, me, memberById, compliance, attendance, events, scores, courses, profiles, reload } = useTeam();
   const m = memberById(id);
+  const [editContact, setEditContact] = useState(false);
   const [editing, setEditing] = useState(false), [editComp, setEditComp] = useState(false), [deleting, setDeleting] = useState(false), [err, setErr] = useState('');
   if (!m) return <Empty title="Shooter not found"><button className="linkBtn" onClick={() => go('roster')}>Back to roster</button></Empty>;
   const isMe = me.member_id === m.id;
@@ -59,13 +60,13 @@ export default function MemberView({ id }: { id: string }) {
 
       <div className="grid2">
         <section className="panel">
-          <div className="sectionTitle"><h2>Contact</h2></div>
+          <div className="sectionTitle"><h2>Contact</h2>{isMe && !isStaff && <button onClick={() => setEditContact(true)}>Update</button>}</div>
           <dl className="facts">
             <dt>Cell phone</dt><dd>{m.cell_phone ? <a href={`tel:${m.cell_phone}`}><Phone size={13} /> {m.cell_phone}</a> : '—'}</dd>
             <dt>Military email</dt><dd>{m.mil_email ? <a href={`mailto:${m.mil_email}`}><Mail size={13} /> {m.mil_email}</a> : '—'}</dd>
             <dt>Personal email</dt><dd>{m.personal_email ? <a href={`mailto:${m.personal_email}`}><Mail size={13} /> {m.personal_email}</a> : '—'}</dd>
             <dt>Team weapons</dt><dd>Pistol {m.pistol_no != null ? `#${m.pistol_no}` : 'unassigned'} · Rifle {m.rifle_no != null ? `#${m.rifle_no}` : 'unassigned'}</dd>
-            {m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
+            {isStaff && m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
           </dl>
         </section>
         {(isStaff || isMe) && (
@@ -84,7 +85,7 @@ export default function MemberView({ id }: { id: string }) {
       </div>
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Scores</h2><button onClick={() => go('scores')}>Enter / view all</button></div>
+        <div className="sectionTitle"><h2>Scores</h2><button onClick={() => go('scores')}>{isStaff ? 'Enter / view all' : 'Leaderboards'}</button></div>
         {byCourse.length === 0 ? <Empty title="No scores yet" /> : (
           <div className="courseCards">
             {byCourse.map(({ co, list, best, avg, trend }) => (
@@ -118,6 +119,7 @@ export default function MemberView({ id }: { id: string }) {
         )}
       </section>
 
+      {editContact && <ContactForm member={m} onClose={() => setEditContact(false)} />}
       {editing && <MemberForm member={m} onClose={() => setEditing(false)} />}
       {editComp && <ComplianceForm memberId={m.id} current={c} onClose={() => setEditComp(false)} />}
       {deleting && (
@@ -132,5 +134,32 @@ export default function MemberView({ id }: { id: string }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+/** Shooters update their own phone and emails. Everything else on their entry is staff-managed. */
+function ContactForm({ member, onClose }: { member: import('../../lib/types').Member; onClose: () => void }) {
+  const { sb, reload } = useTeam();
+  const [f, setF] = useState({ cell: member.cell_phone ?? '', mil: member.mil_email ?? '', personal: member.personal_email ?? '' });
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    const { error } = await sb.rpc('update_my_contact', { p_cell_phone: f.cell.trim(), p_mil_email: f.mil.trim(), p_personal_email: f.personal.trim() });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    await reload(); onClose();
+  }
+  return (
+    <Modal title="Update my contact info" onClose={onClose}>
+      <form className="form" onSubmit={save}>
+        <label>Cell phone<input inputMode="tel" pattern={PHONE_PATTERN} placeholder="316-555-0100" value={f.cell} onChange={e => setF({ ...f, cell: formatPhone(e.target.value) })} /></label>
+        <label>Military email<input type="email" value={f.mil} onChange={e => setF({ ...f, mil: e.target.value })} /></label>
+        <label>Personal email<input type="email" value={f.personal} onChange={e => setF({ ...f, personal: e.target.value })} /></label>
+        <p className="formNote">Quals, paperwork, weapon numbers and team status are kept up to date by staff.</p>
+        {err && <p className="alert">{err}</p>}
+        <div className="formActions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
+      </form>
+    </Modal>
   );
 }

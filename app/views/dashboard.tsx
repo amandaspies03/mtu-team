@@ -31,6 +31,27 @@ export default function Dashboard() {
   const recent = [...scores].filter(s => s.shot_on).sort((a, b) => (b.shot_on! > a.shot_on! ? 1 : -1)).slice(0, 8);
   const course = (c: string) => courses.find(x => x.code === c)?.name ?? c;
 
+  // Shooter-only numbers: just their own attendance.
+  const myAttended = attendance.filter(a => a.member_id === me.member_id && a.status === 'attended')
+    .map(a => events.find(e => e.id === a.event_id)).filter(e => e && e.kind === 'practice');
+  const myFyPractices = myAttended.filter(e => fiscalYear(e!.start_date) === fy).length;
+  const myAllPractices = myAttended.length;
+
+  // Where this shooter ranks on each course, by best score among current shooters.
+  const currentIds = new Set(members.filter(m => ['Active', 'New', 'Tryout'].includes(m.team_status)).map(m => m.id));
+  const standings = courses.flatMap(c => {
+    const best = new Map<string, { t: number; x: number; s: typeof scores[number] }>();
+    scores.filter(s => s.course_code === c.code && s.total != null && (currentIds.has(s.member_id) || s.member_id === me.member_id)).forEach(s => {
+      const cur = best.get(s.member_id), t = Number(s.total), x = s.x_count ?? 0;
+      if (!cur || t > cur.t || (t === cur.t && x > cur.x)) best.set(s.member_id, { t, x, s });
+    });
+    const ranked = [...best.entries()].sort((a, b) => b[1].t - a[1].t || b[1].x - a[1].x);
+    const i = ranked.findIndex(([id]) => id === me.member_id);
+    if (i < 0) return [];
+    const mineB = ranked[i][1].s, topB = ranked[0][1].s;
+    return [{ code: c.code, name: c.name, rank: i + 1, of: ranked.length, best: scoreText(mineB.total, mineB.x_count, mineB.raw), top: scoreText(topB.total, topB.x_count, topB.raw) }];
+  });
+
   return (
     <div>
       <div className="heading">
@@ -60,23 +81,32 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="stats">
+      {!isStaff && (
+        <div className="stats">
+          <div><CalendarDays size={18} /><strong>{myFyPractices}</strong><span>practices attended in FY{String(fy).slice(2)}</span></div>
+          <div><ClipboardCheck size={18} /><strong>{myAllPractices}</strong><span>practices attended, all time</span></div>
+          <div><Target size={18} /><strong>{scores.filter(s => s.member_id === me.member_id).length}</strong><span>of my scores on record</span></div>
+        </div>
+      )}
+
+      {isStaff && <div className="stats">
         <div><Users size={18} /><strong>{active.length}</strong><span>active &amp; new shooters</span></div>
         <div><CalendarDays size={18} /><strong>{fyPractices.length}</strong><span>FY{String(fy).slice(2)} events so far</span></div>
         <div><ClipboardCheck size={18} /><strong>{fyPractices.length ? (fyAttendance / fyPractices.length).toFixed(1) : (lastFy.length ? (lastFyAtt / lastFy.length).toFixed(1) : '—')}</strong><span>avg shooters per {fyPractices.length ? 'event' : `event (FY${String(fy - 1).slice(2)})`}</span></div>
         <div><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span></div>
-      </div>
+      </div>}
 
       <div className="grid2">
         <section className="panel">
           <div className="sectionTitle"><h2>Upcoming</h2><button onClick={() => go('events')}>Full calendar</button></div>
           {upcoming.length === 0 ? <Empty title="No upcoming events" /> : upcoming.map(e => {
             const planned = attendance.filter(a => a.event_id === e.id && a.status === 'planned').length;
+            const mineA = attendance.find(a => a.event_id === e.id && a.member_id === me.member_id);
             return (
               <button key={e.id} className="listRow" onClick={() => go('event', e.id)}>
                 <div className="dateBlock"><b>{e.start_date.slice(8)}</b><span>{new Date(e.start_date + 'T12:00').toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span></div>
                 <div className="grow"><strong>{e.title}</strong><small>{kindLabel[e.kind]}{e.location ? ` · ${e.location}` : ''}</small></div>
-                <Tag>{planned} going</Tag>
+                {isStaff ? <Tag>{planned} going</Tag> : mineA ? <Tag tone={mineA.status === 'planned' ? 'info' : 'neutral'}>{mineA.status === 'planned' ? 'You’re going' : mineA.status === 'absent' ? 'Not going' : mineA.status}</Tag> : <Tag>No RSVP</Tag>}
               </button>
             );
           })}
@@ -115,6 +145,22 @@ export default function Dashboard() {
           </section>
         )}
       </div>
+
+      {!isStaff && standings.length > 0 && (
+        <section className="panel">
+          <div className="sectionTitle"><h2>How I stack up</h2><button onClick={() => go('scores')}>Leaderboards</button></div>
+          <div className="standings">
+            {standings.map(st => (
+              <div key={st.code} className="standing">
+                <span className="formNote">{st.name}</span>
+                <strong>#{st.rank} <small>of {st.of}</small></strong>
+                <span>Best {st.best} · team best {st.top}</span>
+              </div>
+            ))}
+          </div>
+          <p className="formNote">Ranked by best score among current shooters. Ties go to X count.</p>
+        </section>
+      )}
 
       {isStaff && (
         <section className="panel">

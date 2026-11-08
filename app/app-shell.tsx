@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -104,7 +104,9 @@ function Workspace() {
   const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; match?: string[] }[] = [
     { view: 'dashboard', label: 'Dashboard', icon: <Gauge size={18} /> },
     { view: 'events', label: 'Calendar', icon: <CalendarDays size={18} />, match: ['event'] },
-    { view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] },
+    ...(isStaff
+      ? [{ view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] }]
+      : [{ view: 'me', label: 'My profile', icon: <UserRound size={18} />, match: ['member'] }]),
     { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
@@ -114,8 +116,9 @@ function Workspace() {
 
   let body: React.ReactNode;
   switch (route.view) {
-    case 'roster': body = <Roster />; break;
-    case 'member': body = <MemberView id={route.id!} />; break;
+    case 'roster': body = isStaff ? <Roster /> : <Dashboard />; break;
+    case 'me': body = me.member_id ? <MemberView id={me.member_id} /> : <Dashboard />; break;
+    case 'member': body = isStaff || route.id === me.member_id ? <MemberView id={route.id!} /> : <Dashboard />; break;
     case 'events': body = <Events />; break;
     case 'event': body = <EventView id={route.id!} />; break;
     case 'scores': body = <Scores />; break;

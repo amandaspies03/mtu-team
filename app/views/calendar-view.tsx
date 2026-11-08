@@ -47,7 +47,7 @@ export function CalendarView({ events, mode, cursor, setCursor, setMode, onAdd }
   events: TeamEvent[]; mode: CalMode; cursor: string;
   setCursor: (c: string) => void; setMode: (m: CalMode) => void; onAdd?: (date: string) => void;
 }) {
-  const { attendance } = useTeam();
+  const { attendance, isStaff } = useTeam();
   const today = todayISO();
   const openDay = (day: string) => { setCursor(day); setMode('day'); };
 
@@ -122,7 +122,7 @@ export function CalendarView({ events, mode, cursor, setCursor, setMode, onAdd }
                   <h3>{e.title}</h3>
                   {e.location && <p><MapPin size={13} /> {e.location}</p>}
                   {e.notes && <p className="pre dayNotes">{e.notes}</p>}
-                  <small>{going} {e.start_date < today ? 'on roster' : 'going'}</small>
+                  {isStaff && <small>{going} {e.start_date < today ? 'on roster' : 'going'}</small>}
                 </button>
               );
             })}
