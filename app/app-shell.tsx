@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CalendarDays, Crosshair, Gauge, Link2, LogOut, ShieldCheck, Timer, Users, Target } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, LogOut, ShieldCheck, Timer, Users, Target } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -14,7 +14,7 @@ import EventView from './views/event-detail';
 import Scores from './views/scores';
 import MatchDay from './views/matchday';
 import Admin from './views/admin';
-import Links from './views/links';
+import Resources from './views/resources';
 import AuthScreen from './views/auth';
 
 export type Route = { view: string; id?: string };
@@ -102,7 +102,7 @@ function Workspace() {
     { view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] },
     { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
-    { view: 'links', label: 'Files & links', icon: <Link2 size={18} /> },
+    { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'admin', label: 'Access', icon: <ShieldCheck size={18} />, staff: true },
   ];
 
@@ -114,7 +114,7 @@ function Workspace() {
     case 'event': body = <EventView id={route.id!} />; break;
     case 'scores': body = <Scores />; break;
     case 'matchday': body = <MatchDay />; break;
-    case 'links': body = <Links />; break;
+    case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;
     default: body = <Dashboard />;
   }

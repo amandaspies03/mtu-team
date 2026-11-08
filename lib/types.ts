@@ -110,4 +110,3 @@ export type MatchTeam = {
 };
 export type MatchTeamMember = { team_id: string; member_id: string };
 
-export type Link = { id: string; title: string; url: string; category: string | null };
