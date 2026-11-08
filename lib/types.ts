@@ -74,6 +74,7 @@ export type TeamEvent = {
   ammo_draw_requested_on: string | null;
   ammo_draw_556: number | null;
   ammo_draw_9mm: number | null;
+  groupme_posted_at: string | null;
 };
 
 /** Practice prep checklist. Van driver counts as done when ticked or a driver is picked. */

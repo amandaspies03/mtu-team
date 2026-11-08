@@ -11,12 +11,12 @@ const mil = (d: string) => `${d.slice(8, 10)} ${MON[+d.slice(5, 7) - 1]} ${d.sli
 
 export async function POST(req: Request) {
   const botId = process.env.GROUPME_BOT_ID;
-  if (!botId) return Response.json({ ok: false, skipped: 'GroupMe is not set up yet' }, { status: 200 });
+  if (!botId) return Response.json({ ok: false, error: 'GroupMe is not set up yet' }, { status: 503 });
 
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return Response.json({ error: 'Not signed in' }, { status: 401 });
   const body = await req.json().catch(() => null) as { type?: string; eventId?: string } | null;
-  if (body?.type !== 'event_created' || typeof body.eventId !== 'string') return Response.json({ error: 'Bad request' }, { status: 400 });
+  if (body?.type !== 'event' || typeof body.eventId !== 'string') return Response.json({ error: 'Bad request' }, { status: 400 });
 
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -44,5 +44,7 @@ export async function POST(req: Request) {
     body: JSON.stringify({ bot_id: botId, text }),
   });
   if (!res.ok) return Response.json({ ok: false, error: `GroupMe returned ${res.status}` }, { status: 502 });
-  return Response.json({ ok: true });
+  const postedAt = new Date().toISOString();
+  await sb.from('events').update({ groupme_posted_at: postedAt }).eq('id', e.id);
+  return Response.json({ ok: true, postedAt });
 }

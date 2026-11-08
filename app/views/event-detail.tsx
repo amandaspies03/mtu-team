@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, MessageCircle, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { PREP_ITEMS, prepDone, type Attendance, type AttendanceStatus } from '../../lib/types';
 import { WeaponSelect } from './weapon-select';
@@ -19,6 +19,7 @@ export default function EventView({ id }: { id: string }) {
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
   const [err, setErr] = useState(''), [copied, setCopied] = useState(false);
+  const [posting, setPosting] = useState(false), [posted, setPosted] = useState('');
   if (!e) return <Empty title="Event not found"><button className="linkBtn" onClick={() => go('events')}>Back to calendar</button></Empty>;
   const past = (e.end_date ?? e.start_date) < todayISO();
   const rows = attendance.filter(a => a.event_id === e.id)
@@ -62,6 +63,16 @@ export default function EventView({ id }: { id: string }) {
     if (error) { setErr(error.message); return; }
     await reload(); go('events');
   }
+  async function postToGroupMe() {
+    if (!confirm(`Post "${e!.title}" to the 184th MTU GroupMe? Everyone in the group will see it.${e!.groupme_posted_at ? ' (It was already posted once.)' : ''}`)) return;
+    setPosting(true); setErr(''); setPosted('');
+    const { data: sess } = await sb.auth.getSession();
+    const res = await fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sess.session?.access_token ?? ''}` }, body: JSON.stringify({ type: 'event', eventId: e!.id }) }).catch(() => null);
+    const out = res ? await res.json().catch(() => ({})) : {};
+    setPosting(false);
+    if (!res?.ok) { setErr(out.error ?? 'Could not post to GroupMe.'); return; }
+    setPosted('Posted to GroupMe.'); await reload();
+  }
   function copyRoster() {
     const lines = [`${e!.title} – ${eventRange(e!)}${e!.location ? ` @ ${e!.location}` : ''}`, ...going.map(({ a, m }) => `${fullName(m)}${a.transport ? ` (${a.transport})` : ''}`)];
     navigator.clipboard.writeText(lines.join('\n')).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
@@ -78,6 +89,7 @@ export default function EventView({ id }: { id: string }) {
           {!isStaff && !past && <Rsvp event={e} />}
         </div>
         <div className="titleActions noPrint">
+          {isStaff && !past && <button className="secondary" disabled={posting} onClick={postToGroupMe}><MessageCircle size={15} /> {posting ? 'Posting…' : e.groupme_posted_at ? 'Post to GroupMe again' : 'Post to GroupMe'}</button>}
           {isStaff && <button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email</button>}
           {!past && <button className="secondary" onClick={() => downloadIcs(`MTU ${e.title} ${e.start_date}.ics`, [e])}><CalendarPlus size={15} /> Add to calendar</button>}
           <button className="secondary" onClick={copyRoster}><ClipboardCopy size={15} /> {copied ? 'Copied' : 'Copy roster'}</button>
@@ -87,6 +99,7 @@ export default function EventView({ id }: { id: string }) {
         </div>
       </div>
       {err && <p className="alert">{err}</p>}
+      {isStaff && (posted || e.groupme_posted_at) && <p className="formNote">{posted || `Posted to GroupMe ${new Date(e.groupme_posted_at!).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}.`}</p>}
 
       <div className="stats">
         <div><strong>{going.length}</strong><span>{past ? 'on roster' : 'going'}</span></div>
