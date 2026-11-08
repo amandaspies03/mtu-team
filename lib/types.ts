@@ -28,7 +28,13 @@ export type Member = {
   pistol_no: number | null;
   rifle_no: number | null;
   notes: string | null;
+  gov20: boolean;
+  chiefs50: boolean;
+  eic_badge: EicBadge | null;
 };
+
+export type EicBadge = 'bronze' | 'silver' | 'gold';
+export const EIC_LABEL: Record<EicBadge, string> = { bronze: 'Bronze EIC', silver: 'Silver EIC', gold: 'Gold EIC' };
 
 export type Compliance = {
   member_id: string;

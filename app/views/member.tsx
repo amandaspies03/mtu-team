@@ -1,4 +1,5 @@
 'use client';
+import { AwardsSelect } from './awards-select';
 import { useState } from 'react';
 import { ArrowLeft, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
 import { useTeam } from '../../lib/data';
@@ -45,6 +46,7 @@ export default function MemberView({ id }: { id: string }) {
           <h1>{displayName(m)}</h1>
           <div className="row">
             <Tag tone={m.team_status === 'Active' ? 'good' : m.team_status === 'New' ? 'info' : 'neutral'}>{m.team_status}</Tag>
+            <AwardsSelect member={m} />
             {isMe && <Tag tone="brass">This is you</Tag>}
             {isStaff && (linked ? <Tag tone="info">Has login ({linked.email})</Tag> : <Tag>No login linked</Tag>)}
           </div>
