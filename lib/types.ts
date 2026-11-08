@@ -58,24 +58,27 @@ export type TeamEvent = {
   aar: string | null;
   ammo_556: number | null;
   ammo_9mm: number | null;
+  prep_ammo_draw: boolean;
+  prep_placard: boolean;
+  prep_van_driver: boolean;
+  van_driver_id: string | null;
 };
 
+/** Practice prep checklist. Van driver counts as done when ticked or a driver is picked. */
+export const PREP_ITEMS = [
+  { key: 'prep_ammo_draw', label: 'Ammo draw requested' },
+  { key: 'prep_placard', label: 'Explosive placard' },
+  { key: 'prep_van_driver', label: 'Van driver identified' },
+] as const;
+export const prepDone = (e: TeamEvent) => PREP_ITEMS.filter(i => (i.key === 'prep_van_driver' ? e.prep_van_driver || !!e.van_driver_id : e[i.key])).length;
+
 export type AttendanceStatus = 'planned' | 'attended' | 'absent' | 'excused';
-export type OrdersStatus = 'none' | 'submitted' | 'cut' | 'signed' | 'not_required';
-export const ORDERS_LABEL: Record<OrdersStatus, string> = {
-  none: 'No 336 yet',
-  submitted: '336 submitted',
-  cut: 'Orders cut',
-  signed: 'Signed in AROWS',
-  not_required: 'Not required',
-};
 
 export type Attendance = {
   id: string;
   event_id: string;
   member_id: string;
   status: AttendanceStatus;
-  orders_status: OrdersStatus;
   transport: string | null;
   note: string | null;
 };

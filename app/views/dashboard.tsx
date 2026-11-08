@@ -2,7 +2,7 @@
 import { AlertTriangle, CalendarDays, ClipboardCheck, Target, Users } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { complianceIssues, daysUntil, displayName, eventRange, fiscalYear, fullName, kindLabel, milDate, scoreText, todayISO } from '../../lib/util';
-import { ORDERS_LABEL } from '../../lib/types';
+import { PREP_ITEMS, prepDone } from '../../lib/types';
 import { go } from '../app-shell';
 import { Empty, Rsvp, Tag } from './ui';
 
@@ -25,9 +25,7 @@ export default function Dashboard() {
     .map(m => ({ m, issues: complianceIssues(compliance.find(c => c.member_id === m.id)) }))
     .filter(x => x.issues.some(i => i.state === 'expired' || i.state === 'soon'));
 
-  const ordersOpen = upcoming.flatMap(e => attendance
-    .filter(a => a.event_id === e.id && a.status === 'planned' && (a.orders_status === 'none' || a.orders_status === 'submitted'))
-    .map(a => ({ e, a, m: memberById(a.member_id) })));
+  const prepOpen = upcoming.filter(e => e.kind === 'practice' && prepDone(e) < PREP_ITEMS.length);
 
   const mine = scores.filter(s => s.member_id === me.member_id).slice(-6).reverse();
   const recent = [...scores].filter(s => s.shot_on).sort((a, b) => (b.shot_on! > a.shot_on! ? 1 : -1)).slice(0, 8);
@@ -87,12 +85,12 @@ export default function Dashboard() {
         {isStaff ? (
           <section className="panel">
             <div className="sectionTitle"><h2>Needs attention</h2></div>
-            {alerts.length === 0 && ordersOpen.length === 0 && <Empty title="All clear">No expiring quals or open orders for upcoming events.</Empty>}
-            {ordersOpen.slice(0, 8).map(({ e, a, m }) => (
-              <button key={a.id} className="listRow" onClick={() => go('event', e.id)}>
+            {alerts.length === 0 && prepOpen.length === 0 && <Empty title="All clear">No expiring quals or unfinished practice prep.</Empty>}
+            {prepOpen.slice(0, 8).map(e => (
+              <button key={e.id} className="listRow" onClick={() => go('event', e.id)}>
                 <ClipboardCheck size={16} />
-                <div className="grow"><strong>{fullName(m)}</strong><small>{e.title} · {eventRange(e)}</small></div>
-                <Tag tone="warn">{ORDERS_LABEL[a.orders_status]}</Tag>
+                <div className="grow"><strong>{e.title}</strong><small>{eventRange(e)} · prep checklist</small></div>
+                <Tag tone="warn">{prepDone(e)}/{PREP_ITEMS.length} done</Tag>
               </button>
             ))}
             {alerts.slice(0, 10).map(({ m, issues }) => (

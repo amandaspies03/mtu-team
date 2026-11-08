@@ -4,7 +4,7 @@ import { CalendarDays, CalendarPlus, List, Plus } from 'lucide-react';
 import { CalendarView, type CalMode } from './calendar-view';
 import { downloadIcs } from '../../lib/ics';
 import { useTeam } from '../../lib/data';
-import { EVENT_KINDS, type TeamEvent } from '../../lib/types';
+import { EVENT_KINDS, PREP_ITEMS, prepDone, type TeamEvent } from '../../lib/types';
 import { eventRange, fiscalYear, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { Empty, Modal, PageTitle, Rsvp, Tag } from './ui';
@@ -74,6 +74,7 @@ export default function Events() {
       <div className="dateBlock"><b>{e.start_date.slice(8)}</b><span>{new Date(e.start_date + 'T12:00').toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span></div>
       <div className="grow"><strong>{e.title}</strong><small>{eventRange(e)}{e.location ? ` · ${e.location}` : ''}</small></div>
       <Tag tone={kindTone[e.kind]}>{kindLabel[e.kind]}</Tag>
+      {!isPast && isStaff && e.kind === 'practice' && <Tag tone={prepDone(e) === PREP_ITEMS.length ? 'good' : 'warn'}>Prep {prepDone(e)}/{PREP_ITEMS.length}</Tag>}
       {isPast ? <Tag>{count(e, 'attended')} attended</Tag> : (isStaff ? <Tag tone="info">{count(e, 'planned')} going</Tag> : <span onClick={x => x.stopPropagation()}><Rsvp event={e} /></span>)}
     </div>
   );
@@ -81,7 +82,7 @@ export default function Events() {
   return (
     <div>
       <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={<>{upcoming.length > 0 && <button className="secondary" onClick={() => downloadIcs('MTU upcoming events.ics', upcoming)}><CalendarPlus size={15} /> Add all upcoming to my calendar</button>}{isStaff && <button className="primary" onClick={() => setAdding('')}><Plus size={15} /> Add event</button>}</>}>
-        Practices, tryouts and matches. Open one to see who’s going, track 336s and orders, and log ammo issued.
+        Practices, tryouts and matches. Open one to see who’s going, run the practice prep checklist, and log ammo issued.
       </PageTitle>
       <div className="filters">
         <label><select value={kind} onChange={e => setKind(e.target.value)}><option value="">All types</option>{EVENT_KINDS.map(k => <option key={k} value={k}>{kindLabel[k]}</option>)}</select></label>
@@ -95,7 +96,7 @@ export default function Events() {
       ) : <>
       <section className="panel">
         <div className="sectionTitle"><h2>Upcoming</h2></div>
-        {upcoming.length === 0 ? <Empty title="Nothing scheduled">{isStaff ? 'Add the next practice so shooters can RSVP and get their 336s in.' : 'Check back soon.'}</Empty> : upcoming.map(e => row(e, false))}
+        {upcoming.length === 0 ? <Empty title="Nothing scheduled">{isStaff ? 'Add the next practice so shooters can RSVP.' : 'Check back soon.'}</Empty> : upcoming.map(e => row(e, false))}
       </section>
       {Object.keys(byFy).sort().reverse().map(fy => (
         <section key={fy} className="panel">

@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import { ORDERS_LABEL, type Attendance, type AttendanceStatus, type OrdersStatus } from '../../lib/types';
+import { PREP_ITEMS, prepDone, type Attendance, type AttendanceStatus } from '../../lib/types';
+import { WeaponSelect } from './weapon-select';
 import { displayName, eventRange, fullName, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { EventForm } from './events';
@@ -25,6 +26,7 @@ export default function EventView({ id }: { id: string }) {
     .sort((x, y) => STATUSES.indexOf(x.a.status) - STATUSES.indexOf(y.a.status) || fullName(x.m).localeCompare(fullName(y.m)));
   const going = rows.filter(r => r.a.status === 'planned' || r.a.status === 'attended');
   const evTeams = teams.filter(t => t.event_id === e.id);
+  const isPractice = e.kind === 'practice';
 
   function AmmoStat({ label, field }: { label: string; field: 'ammo_556' | 'ammo_9mm' }) {
     const value = e![field];
@@ -37,7 +39,7 @@ export default function EventView({ id }: { id: string }) {
       </div>
     );
   }
-  async function saveEvent(change: Record<string, number | null>) {
+  async function saveEvent(change: Record<string, number | boolean | string | null>) {
     setErr('');
     const { error } = await sb.from('events').update(change).eq('id', e!.id);
     if (error) setErr(error.message); else await reload();
@@ -88,23 +90,46 @@ export default function EventView({ id }: { id: string }) {
 
       <div className="stats">
         <div><strong>{going.length}</strong><span>{past ? 'on roster' : 'going'}</span></div>
-        <div><strong>{going.filter(r => r.a.orders_status === 'cut' || r.a.orders_status === 'signed' || r.a.orders_status === 'not_required').length}/{going.length}</strong><span>orders ready</span></div>
+        {isPractice && isStaff && <div><strong>{prepDone(e)}/{PREP_ITEMS.length}</strong><span>prep done</span></div>}
         {AmmoStat({ label: "5.56", field: "ammo_556" })}
         {AmmoStat({ label: "9mm", field: "ammo_9mm" })}
       </div>
 
+      {isPractice && isStaff && (
+        <section className="panel prep">
+          <div className="sectionTitle"><h2>Prep checklist</h2><span className="formNote">{prepDone(e) === PREP_ITEMS.length ? 'All set' : `${PREP_ITEMS.length - prepDone(e)} to go`}</span></div>
+          <div className="prepList">
+            {PREP_ITEMS.map(i => {
+              const done = i.key === 'prep_van_driver' ? e.prep_van_driver || !!e.van_driver_id : e[i.key];
+              return (
+                <div key={i.key} className={`prepItem ${done ? 'done' : ''}`}>
+                  <label className="check"><input type="checkbox" checked={done} onChange={x => saveEvent(i.key === 'prep_van_driver' && !x.target.checked ? { prep_van_driver: false, van_driver_id: null } : { [i.key]: x.target.checked })} /> {i.label}</label>
+                  {i.key === 'prep_van_driver' && (
+                    <select aria-label="Van driver" value={e.van_driver_id ?? ''} onChange={x => saveEvent({ van_driver_id: x.target.value || null, prep_van_driver: !!x.target.value || e.prep_van_driver })}>
+                      <option value="">Who’s driving?</option>
+                      {[...going.map(r => r.m!).filter(Boolean), ...members.filter(m => m.team_status !== 'Inactive' && !going.some(r => r.a.member_id === m.id))]
+                        .map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {e.notes && <section className="panel"><div className="sectionTitle"><h2>Plan</h2></div><p className="pre">{e.notes}</p></section>}
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Roster &amp; orders</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
+        <div className="sectionTitle"><h2>Roster</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
         {rows.length === 0 ? <Empty title="No one on the roster yet">{isStaff ? 'Add shooters, or have them RSVP from their dashboard.' : 'Be the first to RSVP.'}</Empty> : (
           <div className="tableWrap"><table className="attTable">
-            <thead><tr><th>Shooter</th><th>Status</th><th>336 / orders</th><th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
+            <thead><tr><th>Shooter</th><th>Status</th>{isPractice && <th>Rifle #</th>}<th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
             <tbody>{rows.map(({ a, m }) => isStaff ? (
               <tr key={a.id}>
                 <td><a href={`#member/${a.member_id}`}>{fullName(m)}</a>{m?.unit && <small className="sub">{m.unit}</small>}</td>
                 <td><select value={a.status} onChange={x => patch(a, { status: x.target.value as AttendanceStatus })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td>
-                <td><select value={a.orders_status} onChange={x => patch(a, { orders_status: x.target.value as OrdersStatus })}>{Object.entries(ORDERS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
+                {isPractice && <td>{m ? <WeaponSelect member={m} kind="rifle" /> : '—'}</td>}
                 <td><input defaultValue={a.transport ?? ''} placeholder="Van, POV, ammo truck…" onBlur={x => x.target.value !== (a.transport ?? '') && patch(a, { transport: x.target.value || null })} /></td>
                 <td><input defaultValue={a.note ?? ''} onBlur={x => x.target.value !== (a.note ?? '') && patch(a, { note: x.target.value || null })} /></td>
                 <td className="noPrint"><button className="iconBtn" aria-label={`Remove ${fullName(m)}`} onClick={() => remove(a)}><X size={15} /></button></td>
@@ -112,22 +137,10 @@ export default function EventView({ id }: { id: string }) {
             ) : (
               <tr key={a.id}>
                 <td>{fullName(m)}</td><td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                <td>{ORDERS_LABEL[a.orders_status]}</td><td>{a.transport}</td><td>{a.note}</td>
+                {isPractice && <td>{m?.rifle_no ?? '—'}</td>}<td>{a.transport}</td><td>{a.note}</td>
               </tr>
             ))}</tbody>
           </table></div>
-        )}
-        {isStaff && !past && (
-          <details className="noPrint"><summary>336 / orders routing reminder</summary>
-            <ol className="steps">
-              <li>Member tells their supervisor and the NCOIC which practices they can attend.</li>
-              <li>NCOIC updates the AT/ST tracking sheet.</li>
-              <li>Member completes the ANG 336 from the MTU template with supervisor signature and sends it to the NCOIC for day allocation.</li>
-              <li>Unit CSS signs as Authorizing Official and drafts orders in AROWS.</li>
-              <li>Orders cut NLT 2 weeks before practice. Member brings a printed copy — no orders, no weapons.</li>
-              <li>Member signs the order in AROWS after the practice.</li>
-            </ol>
-          </details>
         )}
       </section>
 

@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Mail, Pencil, Phone, Trash2 } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import { ORDERS_LABEL } from '../../lib/types';
 import { displayName, eventRange, expiryState, kindLabel, milDate, scoreText } from '../../lib/util';
 import { go } from '../app-shell';
 import { ComplianceForm, MemberForm } from './member-form';
@@ -106,12 +105,12 @@ export default function MemberView({ id }: { id: string }) {
         <div className="sectionTitle"><h2>Attendance</h2><span className="formNote">{att.filter(x => x.a.status === 'attended').length} attended</span></div>
         {att.length === 0 ? <Empty title="No practices recorded" /> : (
           <div className="tableWrap"><table>
-            <thead><tr><th>Date</th><th>Event</th><th>Status</th><th>Orders</th><th>Note</th></tr></thead>
+            <thead><tr><th>Date</th><th>Event</th><th>Status</th><th>Note</th></tr></thead>
             <tbody>{att.map(({ a, e }) => (
               <tr key={a.id} className="clickable" onClick={() => go('event', e.id)}>
                 <td>{eventRange(e)}</td><td>{e.title} <small className="sub">{kindLabel[e.kind]}</small></td>
                 <td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                <td>{a.status === 'planned' || a.orders_status !== 'none' ? ORDERS_LABEL[a.orders_status] : '—'}</td><td>{[a.transport, a.note].filter(Boolean).join(' · ')}</td>
+                <td>{[a.transport, a.note].filter(Boolean).join(' · ')}</td>
               </tr>))}</tbody>
           </table></div>
         )}

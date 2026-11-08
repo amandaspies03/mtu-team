@@ -6,14 +6,13 @@ import type { Member, TeamEvent } from '../../lib/types';
 import { displayName, eventRange, fullName, kindLabel } from '../../lib/util';
 import { Modal } from './ui';
 
-type Template = 'reminder' | 'roster' | 'orders' | 'blank';
-type Audience = 'going' | 'orders' | 'team' | 'everyone';
+type Template = 'reminder' | 'roster' | 'blank';
+type Audience = 'going' | 'team' | 'everyone';
 type AddressPref = 'mil' | 'personal' | 'both';
 
 const TEMPLATE_LABEL: Record<Template, string> = {
   reminder: 'Practice / match reminder',
   roster: 'Roster for this event',
-  orders: '336 / orders reminder',
   blank: 'Blank message',
 };
 
@@ -29,7 +28,6 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
   const sender = memberById(me.member_id);
   const rows = event ? attendance.filter(a => a.event_id === event.id) : [];
   const going = rows.filter(a => a.status === 'planned' || a.status === 'attended');
-  const ordersOpen = going.filter(a => a.orders_status === 'none' || a.orders_status === 'submitted');
 
   const [template, setTemplate] = useState<Template>(event ? 'reminder' : 'blank');
   const [audience, setAudience] = useState<Audience>(event ? 'team' : 'team');
@@ -39,10 +37,9 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
   const recipients = useMemo(() => {
     const current = members.filter(m => ['Active', 'New', 'Tryout'].includes(m.team_status));
     if (audience === 'going') return going.map(a => memberById(a.member_id)).filter(Boolean) as Member[];
-    if (audience === 'orders') return ordersOpen.map(a => memberById(a.member_id)).filter(Boolean) as Member[];
     if (audience === 'everyone') return members.filter(m => m.team_status !== 'Inactive');
     return current;
-  }, [audience, members, going, ordersOpen, memberById]);
+  }, [audience, members, going, memberById]);
   const to = [...new Set(recipients.flatMap(m => addresses(m, pref)))];
   const missing = recipients.filter(m => addresses(m, pref).length === 0);
 
@@ -53,8 +50,7 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
     setTemplate(t);
     const d = buildDraft(t, event, going.map(a => ({ a, m: memberById(a.member_id) })), sender);
     setSubject(d.subject); setBody(d.body);
-    if (t === 'orders') setAudience('orders');
-    else if (t === 'roster') setAudience('going');
+    if (t === 'roster') setAudience('going');
   }
 
   const mailto = `mailto:?bcc=${encodeURIComponent(to.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -73,7 +69,6 @@ export function EmailComposer({ event, onClose }: { event?: TeamEvent; onClose: 
           <label>Send to
             <select value={audience} onChange={e => setAudience(e.target.value as Audience)}>
               {event && <option value="going">Shooters going ({going.length})</option>}
-              {event && <option value="orders">Going, orders not cut ({ordersOpen.length})</option>}
               <option value="team">Current team: Active, New, Tryout</option>
               <option value="everyone">Everyone except inactive</option>
             </select>
@@ -117,15 +112,9 @@ function buildDraft(t: Template, e: TeamEvent | undefined, going: { a: { transpo
       body: `Team,\n\nHere is the roster for ${e.title} on ${when}.${where}\n\n${list || '(No one on the roster yet)'}${plan}\n\nIf you're not on this list and plan to attend, or you can no longer make it, let me know ASAP.${sign}`,
     };
   }
-  if (t === 'orders') {
-    return {
-      subject: `ACTION: Orders for MTU ${kindLabel[e.kind]} ${when}`,
-      body: `Team,\n\nOur records show your orders for ${e.title} on ${when} are not cut yet. Orders need to be cut NLT 2 weeks before the practice, and you must bring a printed copy. No orders, no weapons.\n\n1. Complete the ANG 336 from the MTU template and get your supervisor's signature.\n2. Send it to the NCOIC for day allocation.\n3. Have your CSS draft the orders in AROWS.\n\nReply once your orders are cut.${sign}`,
-    };
-  }
   return {
     subject: `Reminder: MTU ${kindLabel[e.kind]} ${when}`,
-    body: `Team,\n\nReminder: ${e.title} is on ${when}.${where}${plan}\n\nPlease RSVP on the team site (${site}) so we can plan ammo and transportation, and make sure your orders are cut and printed. No orders, no weapons.${sign}`,
+    body: `Team,\n\nReminder: ${e.title} is on ${when}.${where}${plan}\n\nPlease RSVP on the team site (${site}) so we can plan ammo and transportation.${sign}`,
   };
 }
 

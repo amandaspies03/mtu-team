@@ -23,7 +23,7 @@ export function buildIcs(events: TeamEvent[], site: string) {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//184th MTU//Team Manager//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
   for (const e of events) {
-    const desc = [e.notes, `Details and RSVP: ${site}/#event/${e.id}`, 'Bring printed orders. No orders, no weapons.'].filter(Boolean).join('\n\n');
+    const desc = [e.notes, `Details and RSVP: ${site}/#event/${e.id}`].filter(Boolean).join('\n\n');
     lines.push('BEGIN:VEVENT', `UID:${e.id}@mtu-team`, `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${ymd(e.start_date)}`, `DTEND;VALUE=DATE:${nextDay(e.end_date ?? e.start_date)}`,
       `SUMMARY:${esc(`184th MTU: ${e.title}`)}`, ...(e.location ? [`LOCATION:${esc(e.location)}`] : []),

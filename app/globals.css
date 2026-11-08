@@ -443,3 +443,9 @@ table.entry tr.again td { border-top-color: transparent; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 table.entry th.courseHead { text-align: center; border-bottom: 2px solid var(--brass); white-space: nowrap; }
 table.entry tbody td:first-child, table.entry thead tr:first-child th:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; }
+.prepList { display: grid; gap: 8px; }
+.prepItem { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.prepItem.done { background: var(--good-bg); border-color: #c7dcc2; }
+.prepItem .check { flex: 1; min-width: 200px; font-weight: 500; }
+.prepItem select { max-width: 260px; }
+.prepItem .check { margin: 0; } .prepItem { min-height: 56px; }
