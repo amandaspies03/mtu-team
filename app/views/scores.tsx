@@ -253,39 +253,16 @@ function EnterScores({ onDone }: { onDone: () => void }) {
         </tbody>
       </table></div>
       <div className="row addRow">
-              <ShooterPicker pool={current.filter(m => !has.has(m.id))} onPick={id => setEntries([...entries, newEntry(id)])} />
+              <select value="" onChange={e => e.target.value && setEntries([...entries, newEntry(e.target.value)])}>
+          <option value="">+ Add a shooter…</option>
+          {current.filter(m => !has.has(m.id)).map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+        </select>
               {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
             </div>
       <p className="formNote">Shot the same course more than once today? Use + on a shooter’s row to add another score for them.</p>
       {err && <p className="alert">{err}</p>}
       <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : filled === 1 ? 'Save 1 score' : `Save ${filled || ''} scores`}</button></div>
     </section>
-  );
-}
-
-function ShooterPicker({ pool, onPick }: { pool: Member[]; onPick: (id: string) => void }) {
-  const [q, setQ] = useState('');
-  const [hi, setHi] = useState(0);
-  const found = q.trim() ? pool.filter(m => matches(m, q)).slice(0, 8) : [];
-  function pick(id: string) { onPick(id); setQ(''); setHi(0); }
-  return (
-    <div className="picker">
-      <label className="search"><Search size={16} /><input placeholder="Add a shooter — type a name…" value={q} aria-label="Search shooters to add"
-        onChange={e => { setQ(e.target.value); setHi(0); }}
-        onKeyDown={e => {
-          if (e.key === 'ArrowDown') { e.preventDefault(); setHi(Math.min(hi + 1, found.length - 1)); }
-          else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(Math.max(hi - 1, 0)); }
-          else if (e.key === 'Enter' && found[hi]) { e.preventDefault(); pick(found[hi].id); }
-          else if (e.key === 'Escape') setQ('');
-        }} /></label>
-      {q.trim() && <div className="pickerList" role="listbox">
-        {found.length === 0 ? <p className="formNote">No match.</p> : found.map((m, i) => (
-          <button key={m.id} role="option" aria-selected={i === hi} className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onClick={() => pick(m.id)}>
-            {fullName(m)} <small className="sub">{[m.rank, m.team_status].filter(Boolean).join(' · ')}</small>
-          </button>
-        ))}
-      </div>}
-    </div>
   );
 }
 
