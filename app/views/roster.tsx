@@ -1,11 +1,13 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Download, Plus, Search } from 'lucide-react';
+import { Download, Mail, Plus, Search } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { TEAM_STATUSES } from '../../lib/types';
 import { downloadCsv, fiscalYear, fullName, milDate, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { MemberForm } from './member-form';
+import { WeaponSelect, weaponSummary } from './weapon-select';
+import { EmailComposer } from './email';
 import { PageTitle, Tag } from './ui';
 
 const statusTone = { Active: 'good', New: 'info', Tryout: 'brass', Reserve: 'neutral', Alumni: 'neutral' } as const;
@@ -15,6 +17,8 @@ export default function Roster() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('current');
   const [adding, setAdding] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const pistols = weaponSummary(members, 'pistol'), rifles = weaponSummary(members, 'rifle');
   const today = todayISO();
   const fy = fiscalYear(today);
 
@@ -31,15 +35,15 @@ export default function Roster() {
 
   function exportCsv() {
     downloadCsv(`MTU roster ${today}.csv`, [
-      ['Last', 'First', 'Rank', 'Unit', 'Duty status', 'Team status', 'Staff role', 'Cell phone', 'Military email', 'Personal email', 'DD2760', 'Van license', `FY${String(fy).slice(2)} practices`, 'Last practice'],
-      ...rows.map(({ m, c, last, fyCount }) => [m.last_name, m.first_name, m.rank, m.unit, m.duty_status, m.team_status, m.staff_role, m.cell_phone, m.mil_email, m.personal_email, c?.lautenberg_date, c?.gov_license ? 'Y' : '', fyCount, last]),
+      ['Last', 'First', 'Rank', 'Unit', 'Duty status', 'Team status', 'Staff role', 'Pistol #', 'Rifle #', 'Cell phone', 'Military email', 'Personal email', 'DD2760', 'Van license', `FY${String(fy).slice(2)} practices`, 'Last practice'],
+      ...rows.map(({ m, c, last, fyCount }) => [m.last_name, m.first_name, m.rank, m.unit, m.duty_status, m.team_status, m.staff_role, m.pistol_no, m.rifle_no, m.cell_phone, m.mil_email, m.personal_email, c?.lautenberg_date, c?.gov_license ? 'Y' : '', fyCount, last]),
     ]);
   }
 
   return (
     <div>
       <PageTitle eyebrow="TEAM" title="Roster"
-        actions={isStaff && <><button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button><button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add shooter</button></>}>
+        actions={isStaff && <><button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email team</button><button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button><button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add shooter</button></>}>
         Everyone on the team. Contact info is for team coordination only.
       </PageTitle>
       <div className="filters">
@@ -51,8 +55,12 @@ export default function Roster() {
         </select></label>
         <span className="formNote">{rows.length} shown</span>
       </div>
+      <div className="weaponBar">
+        <span><b>Pistols</b> {pistols.used}/{pistols.total} assigned{pistols.open.length > 0 && <small> · open: {pistols.open.join(', ')}</small>}</span>
+        <span><b>Rifles</b> {rifles.used}/{rifles.total} assigned{rifles.open.length > 0 && <small> · open: {rifles.open.join(', ')}</small>}</span>
+      </div>
       <div className="tableWrap"><table className="roster">
-        <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
+        <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Pistol #</th><th>Rifle #</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
         <tbody>
           {rows.map(({ m, c, last, fyCount }) => (
             <tr key={m.id} onClick={() => go('member', m.id)} className="clickable">
@@ -60,6 +68,8 @@ export default function Roster() {
               <td>{m.rank ?? '—'}</td>
               <td>{m.unit ?? '—'}</td>
               <td><Tag tone={statusTone[m.team_status]}>{m.team_status}</Tag></td>
+              <td><WeaponSelect member={m} kind="pistol" /></td>
+              <td><WeaponSelect member={m} kind="rifle" /></td>
               <td className="nowrap">{m.cell_phone ? <a href={`tel:${m.cell_phone}`} onClick={e => e.stopPropagation()}>{m.cell_phone}</a> : '—'}</td>
               <td>{m.mil_email ? <a href={`mailto:${m.mil_email}`} onClick={e => e.stopPropagation()}>{m.mil_email}</a> : '—'}</td>
               <td>{m.personal_email ? <a href={`mailto:${m.personal_email}`} onClick={e => e.stopPropagation()}>{m.personal_email}</a> : '—'}</td>
@@ -69,6 +79,7 @@ export default function Roster() {
           ))}
         </tbody>
       </table></div>
+      {emailing && <EmailComposer onClose={() => setEmailing(false)} />}
       {adding && <MemberForm onClose={() => setAdding(false)} onSaved={id => go('member', id)} />}
     </div>
   );

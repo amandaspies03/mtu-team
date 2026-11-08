@@ -25,6 +25,8 @@ export type Member = {
   cell_phone: string | null;
   mil_email: string | null;
   personal_email: string | null;
+  pistol_no: number | null;
+  rifle_no: number | null;
   notes: string | null;
 };
 
@@ -117,3 +119,6 @@ export const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: 'Air Force officer', ranks: ['2d Lt', '1st Lt', 'Capt', 'Maj', 'Lt Col', 'Col', 'Brig Gen', 'Maj Gen', 'Lt Gen', 'Gen'] },
   { label: 'Other', ranks: ['Civilian'] },
 ];
+
+/** Team weapon inventory: numbers 1–N for each type. */
+export const WEAPON_COUNT = { pistol: 24, rifle: 24 } as const;

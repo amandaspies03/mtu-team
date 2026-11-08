@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { ArrowLeft, ClipboardCopy, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, ClipboardCopy, Mail, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { ORDERS_LABEL, type Attendance, type AttendanceStatus, type OrdersStatus } from '../../lib/types';
 import { displayName, eventRange, fullName, kindLabel, scoreText, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { EventForm } from './events';
+import { EmailComposer } from './email';
 import { Empty, Modal, Rsvp, Tag } from './ui';
 
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
@@ -13,7 +14,7 @@ const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'
 export default function EventView({ id }: { id: string }) {
   const { sb, isStaff, events, attendance, memberById, members, scores, courses, teams, teamMembers, reload } = useTeam();
   const e = events.find(x => x.id === id);
-  const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
   const [err, setErr] = useState(''), [copied, setCopied] = useState(false);
   if (!e) return <Empty title="Event not found"><button className="linkBtn" onClick={() => go('events')}>Back to calendar</button></Empty>;
@@ -60,6 +61,7 @@ export default function EventView({ id }: { id: string }) {
           {!isStaff && !past && <Rsvp event={e} />}
         </div>
         <div className="titleActions noPrint">
+          {isStaff && <button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email</button>}
           <button className="secondary" onClick={copyRoster}><ClipboardCopy size={15} /> {copied ? 'Copied' : 'Copy roster'}</button>
           <button className="secondary" onClick={() => window.print()}><Printer size={15} /> Print</button>
           {isStaff && <button className="secondary" onClick={() => setEditing(true)}><Pencil size={15} /> Edit</button>}
@@ -140,6 +142,7 @@ export default function EventView({ id }: { id: string }) {
       )}
 
       {editing && <EventForm event={e} onClose={() => setEditing(false)} />}
+      {emailing && <EmailComposer event={e} onClose={() => setEmailing(false)} />}
       {adding && <AddShooters eventId={e.id} past={past} existing={rows.map(r => r.a.member_id)} onClose={() => setAdding(false)} members={members} />}
       {deleting && (
         <Modal title="Delete this event?" onClose={() => setDeleting(false)}>
