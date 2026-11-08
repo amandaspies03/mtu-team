@@ -39,6 +39,33 @@ async function all<T>(q: PromiseLike<{ data: T[] | null; error: { message: strin
   return data ?? [];
 }
 
+const EVENT_PUBLIC = 'id, title, kind, start_date, end_date, location';
+const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null };
+
+/** Everyone gets event basics; staff also get plan, AAR, ammo and prep details. */
+async function loadEvents(sb: SupabaseClient, isStaff: boolean): Promise<TeamEvent[]> {
+  const base = await all<Pick<TeamEvent, 'id' | 'title' | 'kind' | 'start_date' | 'end_date' | 'location'>>(sb.from('events').select(EVENT_PUBLIC).order('start_date'));
+  if (!isStaff) return base.map(e => ({ ...EVENT_STAFF_BLANK, ...e }));
+  const { data, error } = await sb.rpc('event_staff_details');
+  if (error) throw new Error(error.message);
+  const extra = new Map((data as (typeof EVENT_STAFF_BLANK & { id: string })[]).map(d => [d.id, d]));
+  return base.map(e => ({ ...EVENT_STAFF_BLANK, ...extra.get(e.id), ...e }));
+}
+
+const MEMBER_BLANK = { unit: null, duty_status: null, staff_role: null, cell_phone: null, mil_email: null, personal_email: null, pistol_no: null, rifle_no: null, notes: null, gov20_pistol: false, gov20_rifle: false, chiefs50: false, eic_badge: null };
+
+/** Staff get the full roster. Shooters get their own full entry plus everyone's names (for leaderboards). */
+async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member[]> {
+  if (isStaff) return all<Member>(sb.from('members').select('*').order('last_name').order('first_name'));
+  const [names, mine] = await Promise.all([
+    sb.rpc('team_names').then(({ data, error }) => { if (error) throw new Error(error.message); return (data ?? []) as Pick<Member, 'id' | 'rank' | 'first_name' | 'last_name' | 'team_status'>[]; }),
+    all<Member>(sb.from('members').select('*')),
+  ]);
+  const own = new Map(mine.map(m => [m.id, m]));
+  return names.map(n => own.get(n.id) ?? ({ ...MEMBER_BLANK, ...n } as Member))
+    .sort((a, b) => a.last_name.localeCompare(b.last_name) || (a.first_name ?? '').localeCompare(b.first_name ?? ''));
+}
+
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'reload' | 'memberById' | 'loading' | 'error'>>({
@@ -51,9 +78,9 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
     setError('');
     try {
       const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges] = await Promise.all([
-        all<Member>(sb.from('members').select('*').order('last_name').order('first_name')),
+        loadMembers(sb, isStaff),
         all<Compliance>(sb.from('member_compliance').select('*')),
-        all<TeamEvent>(sb.from('events').select('*').order('start_date')),
+        loadEvents(sb, isStaff),
         all<Attendance>(sb.from('attendance').select('*')),
         all<Course>(sb.from('courses').select('*').order('sort')),
         all<Score>(sb.from('scores').select('*').order('shot_on', { ascending: true, nullsFirst: true }).limit(10000)),
