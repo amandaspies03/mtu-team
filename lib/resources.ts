@@ -48,9 +48,7 @@ Sight alignment errors are angular, so they grow with distance. A tiny tilt at 2
 
 ## A few numbers worth knowing
 - 1 minute of angle (MOA) is about 1 inch per 100 yards.
-- Sights, scopes and wind calls are all measured in MOA.
-
-> Shoot through the center of your glasses lens — even safety glasses. Looking through the edge bends light and throws off your sight alignment, with pistol and rifle alike.`,
+- Sights, scopes and wind calls are all measured in MOA.`,
         },
         {
           id: 'pistol-grip-sights',
@@ -207,8 +205,7 @@ General rules:
 
 - If you don't have an M16- or M18-pattern firearm, an airsoft or BB version works. The trigger will feel different, but the grip, sights and manipulation carry over.
 - Treat a training gun like a real one, every time.
-- Good things to dry fire: trigger wall presses, holster draws, reloads, and getting into kneeling and prone.
-- Ask the staff about the team's MantisX challenge — search "184th MTU" in the app.`,
+- Good things to dry fire: trigger wall presses, holster draws, reloads, and getting into kneeling and prone.`,
         },
       ],
     },
@@ -233,7 +230,7 @@ General rules:
 | Helmet | Through LRS | Optional — no bump helmets at matches |
 | Canteen | Yes | Optional: 3 L+ hydration bladder |
 | Gear belt | No | **The first upgrade to consider** |
-| Plate carrier | Plates through LRS | Lightweight carrier if you'll shoot Nationals |
+| Plate carrier | Plates through LRS | Optional — plates aren't currently required |
 | Gloves | No | Optional |
 
 > Don't spend $200 on sunglasses. Gear gets lost and left on ranges.`,
@@ -275,12 +272,12 @@ That lets you take off all your gear at once while your pants stay up. Look at M
         {
           id: 'armor-helmet-gloves',
           title: 'Plate carrier, helmet and gloves',
-          summary: 'What Nationals requires and what to look for.',
+          summary: 'What to look for if you buy your own.',
           body: `## Plate carrier
-- Not required for most matches, but **required with plates at Nationals.**
-- Many experienced shooters use a plate carrier instead of an LBV.
-- Get a lightweight one — Nationals is a week long. Make sure it fits a 10×12" (full-size) plate.
-- Plates can come from LRS.
+- **Plates aren't required at matches right now**, and may not be in the future. Check each match program.
+- Many experienced shooters use a plate carrier instead of an LBV to carry rifle mags.
+- If you buy one, get a lightweight carrier — Nationals is a week long. If you want the option of plates later, make sure it fits a 10×12" (full-size) plate.
+- Plates can come from LRS if a match ever requires them.
 
 ## Helmet
 - LRS provides helmets. Issued helmets are heavier, so adjust yours and wear it in short increments beforehand to avoid headaches and neck fatigue.
@@ -452,7 +449,7 @@ Recent programs included: EIC rifle and pistol, Reflexive Fire / Anti-Body Armor
 ## Bring
 - **5 pistol magazines and 5 rifle magazines**
 - Your holster
-- Food and water — no meals are provided and there's no formal lunch break
+- Food and water — meals aren't provided and there's no formal lunch break
 
 > The match program changes every year. Read the current one before you go.`,
         },
@@ -489,7 +486,7 @@ Pistols, 10 rounds each, 3-second exposures. The tower calls a dot (for example 
 
 - EIC badges are earned at regional and national matches.
 - The 184th Invitational registers through PractiScore. Make a free account first, then sign up from the match's registration link. If you don't have a full team, register anyway — we'll group you at the match.
-- Matches require DTS authorization in addition to orders.`,
+- You must be in a military status (orders) for every match. DTS authorization isn't required.`,
         },
       ],
     },
@@ -735,7 +732,7 @@ Bring questions. Every shooter on the team started where you are.`,
 - **Bring printed proof of your orders.** No orders, no weapons.
 - Orders can't be created after the fact. If they aren't approved in time, you can't shoot.
 - MTU staff can't look up your orders. Making sure they're done is on you and your supervisor.
-- No travel pay for practices (no DTS). Matches need DTS authorization in addition to orders.
+- No travel pay for practices (no DTS). Matches don't require DTS either, but you must be in a status.
 - Practices are an 8-hour duty period.
 
 ## ST routing, step by step
@@ -792,10 +789,10 @@ In FY23, MTU shooters earned 10 of the 20 spots.`,
         {
           id: 'match-travel',
           title: 'Traveling to matches',
-          summary: 'Orders, DTS, and what to pack.',
-          body: `- Matches require **orders and a DTS authorization.** Start early.
-- Nationals (WPW) is a week long. Pack light where you can, and remember plates are required there.
-- Bring your own food for long range days — meals often aren't provided.
+          summary: 'Status, food, and what to pack.',
+          body: `- You must be **in a military status (orders)** for every match. DTS authorization isn't required. Start your orders early.
+- Nationals (WPW) is a week long. Pack light where you can.
+- **Meals are never provided at matches** — plan to bring your own food and water. The exception is the 184th Invitational we host, where a food truck sometimes shows up to sell food. Nationals also sometimes has a food-truck day.
 - Read the match program before you go: check-in times, required equipment, and the courses of fire.
 - Bring spare magazines and pack your gear so nothing falls off when you run or go prone.`,
         },
