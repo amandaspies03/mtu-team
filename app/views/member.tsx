@@ -64,7 +64,7 @@ export default function MemberView({ id }: { id: string }) {
             <dt>Cell phone</dt><dd>{m.cell_phone ? <a href={`tel:${m.cell_phone}`}><Phone size={13} /> {m.cell_phone}</a> : '—'}</dd>
             <dt>Military email</dt><dd>{m.mil_email ? <a href={`mailto:${m.mil_email}`}><Mail size={13} /> {m.mil_email}</a> : '—'}</dd>
             <dt>Personal email</dt><dd>{m.personal_email ? <a href={`mailto:${m.personal_email}`}><Mail size={13} /> {m.personal_email}</a> : '—'}</dd>
-            <dt>Team weapons</dt><dd>Pistol #{m.pistol_no ?? '—'} · Rifle #{m.rifle_no ?? '—'}</dd>
+            <dt>Team weapons</dt><dd>Pistol {m.pistol_no != null ? `#${m.pistol_no}` : 'unassigned'} · Rifle {m.rifle_no != null ? `#${m.rifle_no}` : 'unassigned'}</dd>
             {m.notes && <><dt>Notes</dt><dd className="pre">{m.notes}</dd></>}
           </dl>
         </section>

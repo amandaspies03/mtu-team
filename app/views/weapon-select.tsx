@@ -13,7 +13,7 @@ export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
   const [err, setErr] = useState('');
   const key = col(kind);
   const current = member[key];
-  if (!isStaff) return <span>{current ?? '—'}</span>;
+  if (!isStaff) return <span className={current == null ? 'muted' : ''}>{current ?? 'Unassigned'}</span>;
   const holder = (n: number) => members.find(m => m.id !== member.id && m[key] === n);
 
   async function change(v: string) {
@@ -27,7 +27,7 @@ export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
   return (
     <span className="weaponCell" onClick={e => e.stopPropagation()}>
       <select aria-label={`${kind === 'pistol' ? 'Pistol' : 'Rifle'} number for ${member.last_name}`} className="weaponSelect" value={current ?? ''} disabled={busy} onChange={e => change(e.target.value)}>
-        <option value="">—</option>
+        <option value="">Unassigned</option>
         {Array.from({ length: WEAPON_COUNT[kind] }, (_, i) => i + 1).map(n => {
           const h = holder(n);
           return <option key={n} value={n} disabled={!!h}>{n}{h ? ` · ${h.last_name}` : ''}</option>;

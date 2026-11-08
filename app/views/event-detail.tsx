@@ -147,7 +147,7 @@ export default function EventView({ id }: { id: string }) {
             ) : (
               <tr key={a.id}>
                 <td>{fullName(m)}</td><td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                {isPractice && <td>{m?.rifle_no ?? '—'}</td>}<td>{a.transport}</td><td>{a.note}</td>
+                {isPractice && <td>{m?.rifle_no ?? <span className="muted">Unassigned</span>}</td>}<td>{a.transport}</td><td>{a.note}</td>
               </tr>
             ))}</tbody>
           </table></div>

@@ -318,11 +318,11 @@ details summary { cursor: pointer; font-size: 13px; color: var(--info); margin-t
 .weaponBar { display: flex; gap: 22px; flex-wrap: wrap; font-size: 13px; margin: -4px 0 12px; color: var(--ink); }
 .weaponBar small { color: var(--muted); }
 .weaponCell { display: inline-flex; flex-direction: column; gap: 2px; }
-.weaponSelect { width: 74px; padding: 5px 6px; font-size: 13px; }
+.weaponSelect { width: 116px; padding: 5px 6px; font-size: 13px; }
 .recipientCount { display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 13px; margin-bottom: 14px; }
 a.primary { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
 a.disabledLink { opacity: .5; pointer-events: none; }
-@media (max-width: 820px) { .weaponSelect { width: 70px; font-size: 16px; } }
+@media (max-width: 820px) { .weaponSelect { width: 128px; font-size: 16px; } }
 a.secondary { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
 
 .authCard.wideCard { max-width: 640px; }
