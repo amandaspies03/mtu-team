@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { ORDERS_LABEL, type Attendance, type AttendanceStatus, type OrdersStatus } from '../../lib/types';
-import { displayName, eventRange, fullName, kindLabel, scoreText, todayISO } from '../../lib/util';
+import { displayName, eventRange, fullName, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { EventForm } from './events';
 import { EmailComposer } from './email';
@@ -13,7 +13,7 @@ import { Empty, Modal, Rsvp, Tag } from './ui';
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
 export default function EventView({ id }: { id: string }) {
-  const { sb, isStaff, events, attendance, memberById, members, scores, courses, teams, teamMembers, reload } = useTeam();
+  const { sb, isStaff, events, attendance, memberById, members, teams, teamMembers, reload } = useTeam();
   const e = events.find(x => x.id === id);
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
@@ -24,7 +24,6 @@ export default function EventView({ id }: { id: string }) {
     .map(a => ({ a, m: memberById(a.member_id) }))
     .sort((x, y) => STATUSES.indexOf(x.a.status) - STATUSES.indexOf(y.a.status) || fullName(x.m).localeCompare(fullName(y.m)));
   const going = rows.filter(r => r.a.status === 'planned' || r.a.status === 'attended');
-  const evScores = scores.filter(s => s.event_id === e.id);
   const evTeams = teams.filter(t => t.event_id === e.id);
 
   function AmmoStat({ label, field }: { label: string; field: 'ammo_556' | 'ammo_9mm' }) {
@@ -143,18 +142,6 @@ export default function EventView({ id }: { id: string }) {
           </div>
         ) : e.aar ? <p className="pre">{e.aar}</p> : <p className="formNote">No AAR yet.</p>}
       </section>
-
-      {evScores.length > 0 && (
-        <section className="panel">
-          <div className="sectionTitle"><h2>Scores fired</h2></div>
-          <div className="tableWrap"><table>
-            <thead><tr><th>Shooter</th><th>Course</th><th className="num">Score</th></tr></thead>
-            <tbody>{[...evScores].sort((a, b) => a.course_code.localeCompare(b.course_code) || Number(b.total ?? 0) - Number(a.total ?? 0)).map(s => (
-              <tr key={s.id}><td>{displayName(memberById(s.member_id))}</td><td>{courses.find(c => c.code === s.course_code)?.name}</td><td className="num">{scoreText(s.total, s.x_count, s.raw)}</td></tr>
-            ))}</tbody>
-          </table></div>
-        </section>
-      )}
 
       {editing && <EventForm event={e} onClose={() => setEditing(false)} />}
       {emailing && <EmailComposer event={e} onClose={() => setEmailing(false)} />}

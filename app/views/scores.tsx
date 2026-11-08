@@ -1,10 +1,10 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Download, Save, Trash2 } from 'lucide-react';
+import { Download, Pencil, Save, Trash2, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import type { Score } from '../../lib/types';
-import { displayName, downloadCsv, eventRange, fiscalYear, fullName, milDate, scoreText, todayISO } from '../../lib/util';
-import { Empty, PageTitle, Sparkline, Tag } from './ui';
+import { displayName, downloadCsv, fiscalYear, fullName, milDate, scoreText, todayISO } from '../../lib/util';
+import { Empty, Modal, PageTitle, Sparkline, Tag } from './ui';
 
 type Tab = 'board' | 'enter' | 'log';
 
@@ -82,37 +82,36 @@ function Leaderboard() {
   );
 }
 
+function sessionLabels(scores: Score[]) {
+  return [...new Set(scores.map(s => s.session_label).filter((x): x is string => !!x))].sort();
+}
+
 function EnterScores({ onDone }: { onDone: () => void }) {
-  const { sb, events, attendance, members, courses, reload } = useTeam();
-  const today = todayISO();
-  const recentEvents = events.filter(e => e.start_date <= today).slice(-15).reverse();
-  const [eventId, setEventId] = useState(recentEvents[0]?.id ?? '');
-  const ev = events.find(e => e.id === eventId);
-  const [date, setDate] = useState(ev?.start_date ?? today);
-  const [code, setCode] = useState('PISTOL_EIC');
+  const { sb, scores, members, courses, reload } = useTeam();
   const [label, setLabel] = useState('');
+  const [date, setDate] = useState(todayISO());
+  const [code, setCode] = useState('PISTOL_EIC');
   const course = courses.find(c => c.code === code);
-  const attendees = attendance.filter(a => a.event_id === eventId && a.status !== 'absent').map(a => a.member_id);
-  const [extra, setExtra] = useState<string[]>([]);
-  const ids = [...new Set([...attendees, ...extra])];
+  const [ids, setIds] = useState<string[]>([]);
   const shooters = members.filter(m => ids.includes(m.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const current = members.filter(m => m.team_status !== 'Inactive');
   const [vals, setVals] = useState<Record<string, { t: string; x: string }>>({});
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
 
-  function pickEvent(id: string) {
-    setEventId(id);
-    const e = events.find(x => x.id === id);
-    if (e) setDate(e.start_date);
-    setVals({});
+  const filled = Object.entries(vals).filter(([id, v]) => ids.includes(id) && v.t !== '').length;
+  function remove(id: string) {
+    setIds(ids.filter(x => x !== id));
+    const v = { ...vals }; delete v[id]; setVals(v);
   }
   async function save() {
     setErr('');
-    const rows = Object.entries(vals).filter(([, v]) => v.t !== '').map(([member_id, v]) => {
+    if (!label.trim()) { setErr('Type the practice or match name.'); return; }
+    const rows = Object.entries(vals).filter(([id, v]) => ids.includes(id) && v.t !== '').map(([member_id, v]) => {
       const total = Number(v.t), x = v.x === '' ? null : Number(v.x);
-      return { member_id, course_code: code, event_id: eventId || null, shot_on: date || null, session_label: label.trim() || null, total, x_count: course?.has_x ? x : null, raw: scoreText(total, course?.has_x ? x : null) };
+      return { member_id, course_code: code, event_id: null, shot_on: date || null, session_label: label.trim(), total, x_count: course?.has_x ? x : null, raw: scoreText(total, course?.has_x ? x : null) };
     });
     if (!rows.length) { setErr('Enter at least one score.'); return; }
-    const bad = rows.find(r => !Number.isFinite(r.total) || r.total < 0 || (course?.max_score != null && r.total > course.max_score) || (r.x_count != null && (r.x_count < 0 || !Number.isInteger(r.x_count))));
+    const bad = rows.find(r => !scoreOk(r.total, r.x_count, course?.max_score));
     if (bad) { setErr(`Check ${fullName(members.find(m => m.id === bad.member_id))}: score must be 0–${course?.max_score ?? '∞'} and X count a whole number.`); return; }
     setBusy(true);
     const { error } = await sb.from('scores').insert(rows);
@@ -126,35 +125,79 @@ function EnterScores({ onDone }: { onDone: () => void }) {
   return (
     <section className="panel">
       <div className="formGrid three">
-        <label>Practice / match<select value={eventId} onChange={e => pickEvent(e.target.value)}>
-          <option value="">Not tied to an event</option>
-          {recentEvents.map(e => <option key={e.id} value={e.id}>{eventRange(e)} · {e.title}</option>)}
-        </select></label>
+        <label>Practice / match<input list="sessionLabels" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Practice, TAG Match, Winston P. Wilson" required /></label>
         <label>Date fired<input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
         <label>Course of fire<select value={code} onChange={e => setCode(e.target.value)}>{courses.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}</select></label>
       </div>
-      <label>Session label <span>optional — e.g. “Mock EIC, relay 2” or “TAG Match”</span><input value={label} onChange={e => setLabel(e.target.value)} /></label>
+      <datalist id="sessionLabels">{sessionLabels(scores).map(l => <option key={l} value={l} />)}</datalist>
       <div className="tableWrap"><table className="entry">
-        <thead><tr><th>Shooter</th><th className="num">Score{course?.max_score ? ` / ${course.max_score}` : ''}</th>{course?.has_x && <th className="num">X count</th>}</tr></thead>
+        <thead><tr><th>Shooter</th><th className="num">Score{course?.max_score ? ` / ${course.max_score}` : ''}</th>{course?.has_x && <th className="num">X count</th>}<th /></tr></thead>
         <tbody>
           {shooters.map(m => (
             <tr key={m.id}>
               <td>{fullName(m)}</td>
               <td className="num"><input className="numIn" type="number" inputMode="numeric" min={0} max={course?.max_score ?? undefined} value={vals[m.id]?.t ?? ''} onChange={e => setVals({ ...vals, [m.id]: { t: e.target.value, x: vals[m.id]?.x ?? '' } })} /></td>
               {course?.has_x && <td className="num"><input className="numIn" type="number" inputMode="numeric" min={0} value={vals[m.id]?.x ?? ''} onChange={e => setVals({ ...vals, [m.id]: { t: vals[m.id]?.t ?? '', x: e.target.value } })} /></td>}
+              <td><button className="iconBtn" aria-label={`Remove ${fullName(m)}`} onClick={() => remove(m.id)}><X size={14} /></button></td>
             </tr>
           ))}
-          <tr><td colSpan={3}>
-            <select value="" onChange={e => e.target.value && setExtra([...extra, e.target.value])}>
-              <option value="">+ Add a shooter who isn’t on the event roster…</option>
-              {members.filter(m => !ids.includes(m.id) && m.team_status !== 'Inactive').map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
-            </select>
+          <tr><td colSpan={4}>
+            <div className="row">
+              <select value="" onChange={e => e.target.value && setIds([...ids, e.target.value])}>
+                <option value="">+ Add a shooter…</option>
+                {current.filter(m => !ids.includes(m.id)).sort((a, b) => fullName(a).localeCompare(fullName(b))).map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+              </select>
+              {current.some(m => !ids.includes(m.id)) && <button className="linkBtn" onClick={() => setIds([...new Set([...ids, ...current.map(m => m.id)])])}>Add everyone not inactive</button>}
+            </div>
           </td></tr>
         </tbody>
       </table></div>
       {err && <p className="alert">{err}</p>}
-      <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : `Save ${Object.values(vals).filter(v => v.t !== '').length || ''} scores`}</button></div>
+      <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : filled === 1 ? 'Save 1 score' : `Save ${filled || ''} scores`}</button></div>
     </section>
+  );
+}
+
+function scoreOk(total: number, x: number | null, max: number | null | undefined) {
+  return Number.isFinite(total) && total >= 0 && (max == null || total <= max) && (x == null || (x >= 0 && Number.isInteger(x)));
+}
+
+function EditScore({ score, onClose }: { score: Score; onClose: () => void }) {
+  const { sb, scores, courses, memberById, reload } = useTeam();
+  const [label, setLabel] = useState(score.session_label ?? '');
+  const [date, setDate] = useState(score.shot_on ?? '');
+  const [code, setCode] = useState(score.course_code);
+  const [t, setT] = useState(score.total == null ? '' : String(score.total));
+  const [x, setX] = useState(score.x_count == null ? '' : String(score.x_count));
+  const course = courses.find(c => c.code === code);
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  async function save() {
+    setErr('');
+    if (t === '') { setErr('Enter a score.'); return; }
+    const total = Number(t), xc = course?.has_x && x !== '' ? Number(x) : null;
+    if (!scoreOk(total, xc, course?.max_score)) { setErr(`Score must be 0–${course?.max_score ?? '∞'} and X count a whole number.`); return; }
+    setBusy(true);
+    const { error } = await sb.from('scores').update({ session_label: label.trim() || null, shot_on: date || null, course_code: code, total, x_count: xc, raw: scoreText(total, xc) }).eq('id', score.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    await reload();
+    onClose();
+  }
+  return (
+    <Modal title={`Edit score · ${fullName(memberById(score.member_id))}`} onClose={onClose}>
+      <div className="form">
+        <label>Practice / match<input list="editSessionLabels" value={label} onChange={e => setLabel(e.target.value)} /></label>
+        <datalist id="editSessionLabels">{sessionLabels(scores).map(l => <option key={l} value={l} />)}</datalist>
+        <div className="formGrid">
+          <label>Date fired<input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
+          <label>Course of fire<select value={code} onChange={e => setCode(e.target.value)}>{courses.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}</select></label>
+          <label>Score{course?.max_score ? ` / ${course.max_score}` : ''}<input type="number" inputMode="numeric" min={0} value={t} onChange={e => setT(e.target.value)} /></label>
+          {course?.has_x && <label>X count<input type="number" inputMode="numeric" min={0} value={x} onChange={e => setX(e.target.value)} /></label>}
+        </div>
+        {err && <p className="alert">{err}</p>}
+        <div className="formActions"><button className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : 'Save'}</button></div>
+      </div>
+    </Modal>
   );
 }
 
@@ -163,6 +206,7 @@ function ScoreLog() {
   const [code, setCode] = useState('');
   const [who, setWho] = useState('');
   const [err, setErr] = useState('');
+  const [editing, setEditing] = useState<Score | null>(null);
   const list = [...scores].filter(s => (!code || s.course_code === code) && (!who || s.member_id === who))
     .sort((a, b) => (b.shot_on ?? '0') > (a.shot_on ?? '0') ? 1 : (b.shot_on ?? '0') < (a.shot_on ?? '0') ? -1 : (b.created_at > a.created_at ? 1 : -1));
   const cname = (c: string) => courses.find(x => x.code === c)?.name ?? c;
@@ -180,18 +224,20 @@ function ScoreLog() {
       </div>
       {err && <p className="alert">{err}</p>}
       <div className="tableWrap"><table>
-        <thead><tr><th>Date</th><th>Shooter</th><th>Course</th><th className="num">Score</th><th>As recorded</th>{isStaff && <th />}</tr></thead>
+        <thead><tr><th>Date</th><th>Practice / match</th><th>Shooter</th><th>Course</th><th className="num">Score</th><th>As recorded</th>{isStaff && <th />}</tr></thead>
         <tbody>{list.slice(0, 400).map(s => (
           <tr key={s.id}>
-            <td>{s.shot_on ? milDate(s.shot_on) : <Tag>{s.session_label ?? 'Undated'}</Tag>}</td>
+            <td>{s.shot_on ? milDate(s.shot_on) : <Tag>Undated</Tag>}</td>
+            <td>{s.session_label ?? '—'}</td>
             <td><a href={`#member/${s.member_id}`}>{fullName(memberById(s.member_id))}</a></td>
             <td>{cname(s.course_code)}</td>
             <td className="num">{scoreText(s.total, s.x_count, s.raw)}</td>
             <td><small>{s.raw}</small></td>
-            {isStaff && <td><button className="iconBtn" aria-label="Delete score" onClick={() => del(s)}><Trash2 size={14} /></button></td>}
+            {isStaff && <td className="rowActions"><button className="iconBtn" aria-label="Edit score" onClick={() => setEditing(s)}><Pencil size={14} /></button><button className="iconBtn" aria-label="Delete score" onClick={() => del(s)}><Trash2 size={14} /></button></td>}
           </tr>
         ))}</tbody>
       </table></div>
+      {editing && <EditScore score={editing} onClose={() => setEditing(null)} />}
       {list.length > 400 && <p className="formNote">Showing the latest 400 of {list.length}. Filter or export to see the rest.</p>}
     </section>
   );
