@@ -27,6 +27,11 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
       ? await sb.from('events').update(row).eq('id', event.id).select('id').single()
       : await sb.from('events').insert(row).select('id').single();
     if (error) { setErr(error.message); setBusy(false); return; }
+    if (!event) {
+      // Announce new events in the team GroupMe. Best effort: a GroupMe hiccup never blocks saving.
+      const { data: sess } = await sb.auth.getSession();
+      fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sess.session?.access_token ?? ''}` }, body: JSON.stringify({ type: 'event_created', eventId: data.id }) }).catch(() => {});
+    }
     await reload();
     onClose();
     if (!event) go('event', data.id);
@@ -48,6 +53,7 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
           </select>
         </label>
         <label>Plan / notes<textarea rows={4} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} placeholder="Drills, courses of fire, uniform, report time…" /></label>
+        {!event && <p className="formNote">Saving posts this event, with an RSVP link, to the 184th MTU GroupMe.</p>}
         {err && <p className="alert">{err}</p>}
         <div className="formActions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
       </form>
