@@ -55,9 +55,6 @@ export const scoreText = (total: number | null, x: number | null, raw?: string |
   return x != null ? `${total}-${x}X` : String(total);
 };
 
-/** Date range of a fiscal year: FY26 = 01 OCT 2025 – 30 SEP 2026. */
-export const fyRange = (fy: number) => `01 OCT ${fy - 1} – 30 SEP ${fy}`;
-
 export const fiscalYear = (iso: string) => {
   const d = parseDate(iso);
   return d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear();

@@ -4,7 +4,7 @@ import { CalendarPlus, Plus } from 'lucide-react';
 import { downloadIcs } from '../../lib/ics';
 import { useTeam } from '../../lib/data';
 import { EVENT_KINDS, type TeamEvent } from '../../lib/types';
-import { eventRange, fiscalYear, fyRange, kindLabel, todayISO } from '../../lib/util';
+import { eventRange, fiscalYear, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { Empty, Modal, PageTitle, Rsvp, Tag } from './ui';
 
@@ -82,7 +82,7 @@ export default function Events() {
       </section>
       {Object.keys(byFy).sort().reverse().map(fy => (
         <section key={fy} className="panel">
-          <div className="sectionTitle"><h2>FY{fy.slice(2)} <small>{fyRange(+fy)}</small></h2><span className="formNote">{byFy[+fy].length} events</span></div>
+          <div className="sectionTitle"><h2>FY{fy.slice(2)}</h2><span className="formNote">{byFy[+fy].length} events</span></div>
           {byFy[+fy].map(e => row(e, true))}
         </section>
       ))}

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import { downloadCsv, eventRange, fiscalYear, fyRange, kindLabel, todayISO } from '../../lib/util';
+import { downloadCsv, eventRange, fiscalYear, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { Empty, PageTitle } from './ui';
 
@@ -33,10 +33,10 @@ export default function AmmoReport() {
     <div>
       <PageTitle eyebrow="CUSTODIAN" title="Ammo report"
         actions={<>
-          <label className="inlineLabel">Fiscal year<select value={fy} onChange={e => setFy(+e.target.value)}>{fys.map(y => <option key={y} value={y}>FY{String(y).slice(2)} ({fyRange(y)})</option>)}</select></label>
+          <label className="inlineLabel">Fiscal year<select value={fy} onChange={e => setFy(+e.target.value)}>{fys.map(y => <option key={y} value={y}>FY{String(y).slice(2)}</option>)}</select></label>
           {rows.length > 0 && <button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button>}
         </>}>
-        Rounds issued for each practice and match. Enter them on the event’s page. Fiscal year runs 01 Oct – 30 Sep.
+        Rounds issued for each practice and match. Enter them on the event’s page. Fiscal year runs 1 Oct – 30 Sep.
       </PageTitle>
       <div className="stats">
         <div><strong>{total.r.toLocaleString()}</strong><span>rds 5.56 issued</span></div>
