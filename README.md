@@ -17,5 +17,7 @@ Same stack as Battle Buddy: Next.js 16 on Vercel, Supabase (Postgres + Auth), Gi
 - Staff access comes only from the staff list (`staff_emails`).
 - Shooters: read the calendar, roster, scores and match-day tools; RSVP for themselves; see only their own quals.
 - Staff: edit everything. All rules are enforced by Postgres row-level security.
+- Every change is recorded in `audit_log` (Admin → Change log). A full snapshot is saved nightly at 08:15 UTC and kept 30 days (Admin → Backups).
+- Sessions sign out after 30 minutes of inactivity; open tabs show a refresh banner after each deploy.
 
 Do not store SSNs, DoD IDs, DOBs, license numbers or weapon serial numbers in this app.

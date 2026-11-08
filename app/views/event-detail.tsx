@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
-import { ArrowLeft, ClipboardCopy, Mail, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, ClipboardCopy, Mail, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { ORDERS_LABEL, type Attendance, type AttendanceStatus, type OrdersStatus } from '../../lib/types';
 import { displayName, eventRange, fullName, kindLabel, scoreText, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { EventForm } from './events';
 import { EmailComposer } from './email';
+import { downloadIcs } from '../../lib/ics';
 import { Empty, Modal, Rsvp, Tag } from './ui';
 
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
@@ -62,6 +63,7 @@ export default function EventView({ id }: { id: string }) {
         </div>
         <div className="titleActions noPrint">
           {isStaff && <button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email</button>}
+          {!past && <button className="secondary" onClick={() => downloadIcs(`MTU ${e.title} ${e.start_date}.ics`, [e])}><CalendarPlus size={15} /> Add to calendar</button>}
           <button className="secondary" onClick={copyRoster}><ClipboardCopy size={15} /> {copied ? 'Copied' : 'Copy roster'}</button>
           <button className="secondary" onClick={() => window.print()}><Printer size={15} /> Print</button>
           {isStaff && <button className="secondary" onClick={() => setEditing(true)}><Pencil size={15} /> Edit</button>}

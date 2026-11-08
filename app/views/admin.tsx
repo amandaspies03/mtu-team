@@ -5,12 +5,14 @@ import { useTeam } from '../../lib/data';
 import type { Invite, Profile } from '../../lib/types';
 import { fullName, milDate } from '../../lib/util';
 import { Empty, PageTitle, Tag } from './ui';
+import ChangeLog from './changelog';
+import Backups from './backups';
 
 const inviteUrl = (i: Invite) => `${window.location.origin}/#invite/${i.token}`;
 const isOpen = (i: Invite) => !i.used_at && new Date(i.expires_at) > new Date();
 const day = (iso: string) => milDate(iso.slice(0, 10));
 
-export default function Admin() {
+function Access() {
   const { sb, me, profiles, members, staffEmails, invites, reload } = useTeam();
   const [err, setErr] = useState('');
   const [copied, setCopied] = useState('');
@@ -60,9 +62,7 @@ export default function Admin() {
 
   return (
     <div>
-      <PageTitle eyebrow="STAFF ONLY" title="Access">
-        Shooters join through invite links; staff sign up with an email on the staff list. Each new account adds the person to the roster automatically.
-      </PageTitle>
+      <p className="formNote tabIntro">Shooters join through invite links; staff sign up with an email on the staff list. Each new account adds the person to the roster automatically.</p>
       {err && <p className="alert">{err}</p>}
 
       <section className="panel">
@@ -151,6 +151,23 @@ export default function Admin() {
           );
         })}
       </section>
+    </div>
+  );
+}
+
+export default function Admin() {
+  const [tab, setTab] = useState<'access' | 'log' | 'backups'>('access');
+  return (
+    <div>
+      <PageTitle eyebrow="STAFF ONLY" title="Admin">Who can get in, what’s changed, and backups of the team’s data.</PageTitle>
+      <div className="tabs">
+        <button className={tab === 'access' ? 'on' : ''} onClick={() => setTab('access')}>Access</button>
+        <button className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>Change log</button>
+        <button className={tab === 'backups' ? 'on' : ''} onClick={() => setTab('backups')}>Backups</button>
+      </div>
+      {tab === 'access' && <Access />}
+      {tab === 'log' && <ChangeLog />}
+      {tab === 'backups' && <Backups />}
     </div>
   );
 }

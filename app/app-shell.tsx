@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, ShieldCheck, Timer, Users, Target } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -14,6 +14,8 @@ import EventView from './views/event-detail';
 import Scores from './views/scores';
 import MatchDay from './views/matchday';
 import Admin from './views/admin';
+import AmmoReport from './views/ammo';
+import { IdleSignOut, UpdateBanner } from './views/session-guards';
 import Resources from './views/resources';
 import AuthScreen from './views/auth';
 import { ChangePassword } from './views/change-password';
@@ -64,7 +66,7 @@ export default function AppShell() {
 
   if (!sb) return <div className="authShell"><div className="authCard"><h1>Setup needed</h1><p>The Supabase URL and publishable key are not configured for this deployment.</p></div></div>;
   if (!ready) return <div className="loadingScreen">Loading…</div>;
-  if (!session || recovery) return <AuthScreen sb={sb} recovery={recovery} onRecovered={() => setRecovery(false)} />;
+  if (!session || recovery) return <><UpdateBanner /><AuthScreen sb={sb} recovery={recovery} onRecovered={() => setRecovery(false)} /></>;
   if (!profile) return (
     <div className="authShell"><div className="authCard">
       <h1>{profileLoaded ? 'No access record' : 'Checking your access…'}</h1>
@@ -85,7 +87,7 @@ export default function AppShell() {
     </div></div>
   );
   if (!profile.member_id) return <CompleteProfile sb={sb} onDone={loadProfile} />;
-  return <TeamProvider sb={sb} me={profile}><Workspace /></TeamProvider>;
+  return <TeamProvider sb={sb} me={profile}><UpdateBanner /><IdleSignOut sb={sb} /><Workspace /></TeamProvider>;
 }
 
 function Workspace() {
@@ -106,7 +108,8 @@ function Workspace() {
     { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
-    { view: 'admin', label: 'Access', icon: <ShieldCheck size={18} />, staff: true },
+    { view: 'ammo', label: 'Ammo', icon: <Package size={18} />, staff: true },
+    { view: 'admin', label: 'Admin', icon: <ShieldCheck size={18} />, staff: true },
   ];
 
   let body: React.ReactNode;
@@ -119,6 +122,7 @@ function Workspace() {
     case 'matchday': body = <MatchDay />; break;
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;
+    case 'ammo': body = isStaff ? <AmmoReport /> : <Dashboard />; break;
     default: body = <Dashboard />;
   }
 

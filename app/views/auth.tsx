@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Crosshair } from 'lucide-react';
 import { blankProfile, ProfileFields, type ProfileInfo } from './profile-fields';
 import { NewPasswordField } from './password-field';
+import { IDLE_FLAG } from './session-guards';
 import { isBreached, passwordError, passwordHelp, passwordOk } from '../../lib/password-policy';
 
 type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
@@ -31,7 +32,10 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
   const [info, setInfo] = useState<ProfileInfo>(blankProfile);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(() => {
+    try { if (sessionStorage.getItem(IDLE_FLAG)) { sessionStorage.removeItem(IDLE_FLAG); return 'You were signed out after 30 minutes of inactivity.'; } } catch { /* ignore */ }
+    return '';
+  });
   const signingUp = mode === 'staff' || mode === 'invite';
 
   useEffect(() => {

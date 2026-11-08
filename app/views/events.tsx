@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { CalendarPlus, Plus } from 'lucide-react';
+import { downloadIcs } from '../../lib/ics';
 import { useTeam } from '../../lib/data';
 import { EVENT_KINDS, type TeamEvent } from '../../lib/types';
 import { eventRange, fiscalYear, kindLabel, todayISO } from '../../lib/util';
@@ -69,7 +70,7 @@ export default function Events() {
 
   return (
     <div>
-      <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={isStaff && <button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add event</button>}>
+      <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={<>{upcoming.length > 0 && <button className="secondary" onClick={() => downloadIcs('MTU upcoming events.ics', upcoming)}><CalendarPlus size={15} /> Add all upcoming to my calendar</button>}{isStaff && <button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add event</button>}</>}>
         Practices, tryouts and matches. Open one to see who’s going, track 336s and orders, and log ammo.
       </PageTitle>
       <div className="filters">

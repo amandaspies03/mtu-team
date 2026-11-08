@@ -324,3 +324,19 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 .pwRules li { display: flex; align-items: center; gap: 5px; }
 .pwRules li.ok { color: var(--good); }
 @media (max-width: 600px) { .pwRules { grid-template-columns: 1fr; } }
+
+.tabIntro { margin: 0 0 14px; }
+.logList { display: grid; }
+.logRow { display: flex; gap: 16px; padding: 12px 4px; border-bottom: 1px solid #efeee7; }
+.logMeta { width: 170px; flex-shrink: 0; display: flex; flex-direction: column; font-size: 12px; }
+.logMeta small { overflow-wrap: anywhere; }
+.logRow .row { gap: 8px; }
+.logRow .tag { margin-left: 0; }
+.logDetails { list-style: none; padding: 0; margin: 6px 0 0; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.logDetails b { color: var(--ink); font-weight: 600; text-transform: capitalize; }
+@media (max-width: 700px) { .logRow { flex-direction: column; gap: 4px; } .logMeta { width: auto; flex-direction: row; gap: 8px; } }
+
+.updateBanner { position: fixed; z-index: 30; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; background: var(--olive); color: #f3efdf; padding: 10px 12px 10px 18px; border-radius: 10px; box-shadow: 0 10px 30px #0003; font-size: 14px; width: max-content; max-width: calc(100vw - 24px); }
+.updateBanner .primary { background: var(--brass); color: var(--olive); padding: 8px 12px; }
+.totalRow td { font-weight: 700; border-top: 2px solid var(--line); }
+.inlineLabel { white-space: nowrap; } .inlineLabel select { width: auto; }
