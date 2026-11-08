@@ -431,4 +431,10 @@ a.secondary { text-decoration: none; display: inline-flex; align-items: center; 
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: 1px; }
 table.entry tr.again td { border-top-color: transparent; }
+.picker { position: relative; flex: 1; min-width: 240px; max-width: 420px; }
+.picker .search { max-width: none; display: block; }
+.pickerList { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 5; padding: 4px; }
+.pickerList button { display: flex; width: 100%; padding: 8px 10px; border-radius: 6px; text-align: left; gap: 8px; align-items: baseline; }
+.pickerList button.on { background: var(--brass-soft); }
+.pickerList .formNote { margin: 6px 10px; }
 .addRow { margin-top: 12px; }
