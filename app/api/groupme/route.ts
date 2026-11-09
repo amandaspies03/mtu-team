@@ -20,6 +20,21 @@ async function post(botId: string, text: string) {
 }
 
 export async function POST(req: Request) {
+  // New team-link sign-up: no session yet (they may still need to confirm their email), so this path
+  // needs no sign-in. claim_signup_notice only answers once per real pending sign-up from the last hour.
+  const raw = await req.clone().json().catch(() => null) as { type?: string; email?: string } | null;
+  if (raw?.type === 'signup' && typeof raw.email === 'string') {
+    const staffBot = process.env.GROUPME_STAFF_BOT_ID;
+    if (!staffBot) return Response.json({ ok: false, skipped: true });
+    const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data } = await anon.rpc('claim_signup_notice', { p_email: raw.email.slice(0, 320) });
+    if (!data) return Response.json({ ok: false, skipped: true });
+    const d = data as { name: string; unit?: string | null };
+    const origin = new URL(req.url).origin;
+    const res = await post(staffBot, `🆕 New sign-up waiting for approval: ${d.name}${d.unit ? ` (${d.unit})` : ''}\nApprove or reject in Admin → Access: ${origin}/#admin`);
+    return Response.json({ ok: res.ok });
+  }
+
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return Response.json({ error: 'Not signed in' }, { status: 401 });
   type Prev = { title?: string; start_date?: string; end_date?: string | null; location?: string | null };

@@ -31,6 +31,13 @@ NCOIC sees it. This uses a separate variable, `GROUPME_STAFF_BOT_ID` (bot "MTU R
 The RSVP button calls `/api/groupme` with `type: 'rsvp'` (see `Rsvp` in `app/views/ui.tsx`). If the
 variable is empty, RSVPs still work and no alert is sent.
 
+## Sign-up alerts to staff
+
+When someone signs up with the **team invite link**, the staff group also gets
+"🆕 New sign-up waiting for approval: SrA Jones (161 IS)" with a link to Admin → Access.
+Same bot/variable as RSVP alerts (`GROUPME_STAFF_BOT_ID`). The sign-up page calls `/api/groupme` with
+`type: 'signup'`; the database function `claim_signup_notice` makes sure each sign-up only alerts once.
+
 ## The event-announcement bots
 
 | Bot name | GroupMe group | Use |

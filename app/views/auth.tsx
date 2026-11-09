@@ -66,6 +66,10 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         const meta = { ...info, ...(mode === 'invite' ? { invite: token } : {}) };
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: meta } });
         if (error) throw (error as { code?: string }).code === 'weak_password' ? new Error(passwordHelp) : error;
+        if (mode === 'invite' && invite?.team) {
+          // Give staff a heads-up in the MTU Staff GroupMe (best effort).
+          fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'signup', email }) }).catch(() => {});
+        }
         if (mode === 'invite') history.replaceState(null, '', window.location.pathname);
         if (!data.session) {
           setNotice('Account created. Check your email for a confirmation link, then sign in.');
