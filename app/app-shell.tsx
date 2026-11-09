@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -21,6 +21,7 @@ import AuthScreen from './views/auth';
 import { ChangePassword } from './views/change-password';
 import { Tutorial } from './views/tutorial';
 import { WhatsNew, UpdatePopup, useUpdates } from './views/whats-new';
+import Support from './views/support';
 import { blankProfile, ProfileFields, type ProfileInfo } from './views/profile-fields';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -126,6 +127,7 @@ function Workspace() {
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },
+    { view: 'support', label: 'Support', icon: <LifeBuoy size={18} /> },
     { view: 'ammo', label: 'Ammo', icon: <Package size={18} />, staff: true },
     { view: 'admin', label: 'Admin', icon: <ShieldCheck size={18} />, staff: true },
   ];
@@ -146,6 +148,7 @@ function Workspace() {
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;
     case 'ammo': body = isStaff ? <AmmoReport /> : <Dashboard />; break;
+    case 'support': body = <Support />; break;
     case 'whatsnew': body = <WhatsNew feed={updates} sb={sb} isStaff={isStaff} />; break;
     default: body = <Dashboard />;
   }

@@ -1,6 +1,7 @@
 // Posts a team notice to the 184th MTU GroupMe group through the "MTU Bot".
 // Event announcements: only signed-in, approved staff, only for an event that exists (GROUPME_BOT_ID).
 // RSVP alerts: any approved member, about their own RSVP only, to the staff group (GROUPME_STAFF_BOT_ID).
+// Support reports: the reporter, once per report, to the "Mtu page bugs" group (GROUPME_SUPPORT_BOT_ID).
 // The bot ID lives in the GROUPME_BOT_ID environment variable and never reaches the browser.
 // Live vs. test group = which bot ID is in that variable. See docs/GROUPME.md before switching.
 import { createClient } from '@supabase/supabase-js';
@@ -74,8 +75,8 @@ export async function POST(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token || token.length > 4096) return Response.json({ error: 'Not signed in' }, { status: 401 });
   type Prev = { title?: string; start_date?: string; end_date?: string | null; location?: string | null };
-  const body = parsed as { type?: string; eventId?: string; previous?: string | null; before?: Prev };
-  if (!['event', 'rsvp', 'change', 'cancel'].includes(body.type ?? '') || typeof body.eventId !== 'string' || !UUID.test(body.eventId)) return Response.json({ error: 'Bad request' }, { status: 400 });
+  const body = parsed as { type?: string; ticketId?: string; eventId?: string; previous?: string | null; before?: Prev };
+  if (!['event', 'rsvp', 'change', 'cancel', 'support'].includes(body.type ?? '') || (body.type !== 'support' && (typeof body.eventId !== 'string' || !UUID.test(body.eventId)))) return Response.json({ error: 'Bad request' }, { status: 400 });
   if (body.previous != null && !['planned', 'absent', 'attended', 'excused'].includes(String(body.previous))) body.previous = null;
   if (body.before !== undefined && (typeof body.before !== 'object' || body.before === null || Array.isArray(body.before))) return Response.json({ error: 'Bad request' }, { status: 400 });
   if (body.before) {
@@ -96,6 +97,25 @@ export async function POST(req: Request) {
   if (!user.user) return Response.json({ error: 'Not signed in' }, { status: 401 });
   const { data: me } = await sb.from('profiles').select('role, approved, member_id').eq('id', user.user.id).single();
   if (!me?.approved) return Response.json({ error: 'Not approved' }, { status: 403 });
+
+  // Support report: posts once to the "Mtu page bugs" group (GROUPME_SUPPORT_BOT_ID). Only the reporter can trigger it,
+  // only within 10 minutes of filing, and only once (claim_support_notice enforces all three).
+  if (body.type === 'support') {
+    const supportBot = process.env.GROUPME_SUPPORT_BOT_ID;
+    if (!supportBot || typeof body.ticketId !== 'string' || !UUID.test(body.ticketId)) return json({ ok: false, skipped: true });
+    const { data: t } = await sb.rpc('claim_support_notice', { p_ticket: body.ticketId });
+    if (!t) return json({ ok: false, skipped: true });
+    const d = t as { kind: string; message: string; page: string | null; shots: number; who: string };
+    const icon = d.kind === 'bug' ? '🐞 Bug' : d.kind === 'feedback' ? '💡 Feedback' : '❓ Question';
+    const text = [
+      `${icon} from ${clean(d.who, 60)}${d.page ? ` · ${clean(d.page, 40)}` : ''}`,
+      clean(d.message, 600) + (d.message.length > 600 ? '…' : ''),
+      d.shots ? `📷 ${d.shots} screenshot${d.shots === 1 ? '' : 's'} attached` : '',
+      `Open: ${SITE}/#support`,
+    ].filter(Boolean).join('\n');
+    const res = await post(supportBot, text);
+    return json({ ok: res.ok });
+  }
 
   // RSVP alert for the NCOIC/staff group. Any approved member triggers it for their own RSVP only.
   if (body.type === 'rsvp') {

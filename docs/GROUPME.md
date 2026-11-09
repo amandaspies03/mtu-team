@@ -38,6 +38,15 @@ When someone signs up with the **team invite link**, the staff group also gets
 Same bot/variable as RSVP alerts (`GROUPME_STAFF_BOT_ID`). The sign-up page calls `/api/groupme` with
 `type: 'signup'`; the database function `claim_signup_notice` makes sure each sign-up only alerts once.
 
+## Support reports
+
+When anyone sends a bug report, feedback or a question from the **Support** page, the app posts a
+short summary to the "Mtu page bugs" group: type, who sent it, the page, the message (up to 600
+characters), how many screenshots, and a link to Support. Screenshots stay private in the app
+(Supabase bucket `support`); they are never posted to GroupMe. Variable: `GROUPME_SUPPORT_BOT_ID`
+(bot "MTU Support"). The database function `claim_support_notice` makes sure each report is posted
+once, only by the person who filed it, within 10 minutes of filing.
+
 ## The event-announcement bots
 
 | Bot name | GroupMe group | Use |
@@ -45,6 +54,7 @@ Same bot/variable as RSVP alerts (`GROUPME_STAFF_BOT_ID`). The sign-up page call
 | MTU Events | 184th MTU | **Live** — the real team group. This is the normal setting. |
 | MTU Events (test) | Mtu event test | Testing, so the team group doesn't get spammed. |
 | MTU RSVPs | MTU Staff | RSVP alerts (`GROUPME_STAFF_BOT_ID`), always on. |
+| MTU Support | Mtu page bugs | Support reports (`GROUPME_SUPPORT_BOT_ID`), always on. |
 
 Both bots are managed at https://dev.groupme.com → **Bots** (signed in as the team GroupMe owner).
 Each card there has a "Show bot ID" button.

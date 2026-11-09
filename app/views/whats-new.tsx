@@ -12,7 +12,7 @@ export type Announcement = {
 };
 
 export const UPDATE_TARGETS: Record<string, string> = {
-  dashboard: 'Dashboard', events: 'Calendar', scores: 'Scores', matchday: 'Match day', resources: 'Resources', me: 'My profile',
+  dashboard: 'Dashboard', events: 'Calendar', scores: 'Scores', matchday: 'Match day', resources: 'Resources', me: 'My profile', support: 'Support',
 };
 
 const isLive = (a: Announcement) => !!a.published_at && Date.parse(a.published_at) <= Date.now();
