@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -126,6 +126,10 @@ function Workspace() {
     { view: 'admin', label: 'Admin', icon: <ShieldCheck size={18} />, staff: true },
   ];
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [route.view, route.id]);
+  const currentLabel = nav.find(n => route.view === n.view || n.match?.includes(route.view))?.label ?? 'Dashboard';
+
   let body: React.ReactNode;
   switch (route.view) {
     case 'roster': body = isStaff ? <Roster /> : <Dashboard />; break;
@@ -143,14 +147,20 @@ function Workspace() {
 
   return (
     <div className="shell">
-      <aside className="sidebar">
-        <a className="brand" href="#dashboard">
+      <aside className={`sidebar ${menuOpen ? 'menuOpen' : ''}`}>
+        <a className="brand" href="#dashboard" onClick={() => setMenuOpen(false)}>
           <span className="brandIcon"><Crosshair size={22} /></span>
           <span><b>184th MTU</b><br />Team Manager</span>
         </a>
+        <span className="mobileTitle">{currentLabel}</span>
+        <button className="menuBtn" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        {menuOpen && <div className="menuShade" onClick={() => setMenuOpen(false)} />}
+        <div className="navPanel">
         <nav>
           {nav.filter(n => !n.staff || isStaff).map(n => (
-            <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => go(n.view)}>
+            <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => { setMenuOpen(false); go(n.view); }}>
               {n.icon}<span>{n.label}</span>
             </button>
           ))}
@@ -160,9 +170,10 @@ function Workspace() {
             <strong>{meMember ? displayName(meMember) : me.display_name || me.email}</strong>
             <span>{isStaff ? 'Staff' : previewShooter ? 'Staff · shooter view' : 'Shooter'}</span>
           </div>
-          {realStaff && <button className="signout previewToggle" onClick={() => setPreviewShooter(!previewShooter)}><Eye size={14} /> {previewShooter ? 'Back to staff view' : 'View as shooter'}</button>}
-          <button className="signout" onClick={() => setPwOpen(true)}><KeyRound size={14} /> Change password</button>
+          {realStaff && <button className="signout previewToggle" onClick={() => { setMenuOpen(false); setPreviewShooter(!previewShooter); }}><Eye size={14} /> {previewShooter ? 'Back to staff view' : 'View as shooter'}</button>}
+          <button className="signout" onClick={() => { setMenuOpen(false); setPwOpen(true); }}><KeyRound size={14} /> Change password</button>
           <button className="signout" onClick={() => sb.auth.signOut()}><LogOut size={14} /> Sign out</button>
+        </div>
         </div>
       </aside>
       <main>

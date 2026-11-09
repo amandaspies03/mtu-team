@@ -537,3 +537,22 @@ table.rowEntry .xIn { width: 60px !important; }
 .tourDots button.on { background: var(--olive); width: 20px; border-radius: 6px; }
 .tourActions { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 600px) { .tourShade { padding: 12px; align-items: flex-end; justify-content: center; } }
+/* Navigation: full sidebar on desktop, menu button + drop-down panel on phones */
+.mobileTitle, .menuBtn, .menuShade { display: none; }
+.navPanel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+@media (max-width: 820px) {
+  .sidebar { flex-direction: row; align-items: center; overflow: visible; gap: 12px; }
+  .mobileTitle { display: block; flex: 1; font-weight: 600; font-size: 16px; color: #f3efdf; }
+  .menuBtn { display: grid; place-items: center; color: #f3efdf; width: 44px; height: 44px; border-radius: 10px; }
+  .menuBtn:hover, .sidebar.menuOpen .menuBtn { background: #2c3b31; }
+  .navPanel { display: none; }
+  .sidebar.menuOpen .navPanel { display: flex; position: absolute; top: 100%; left: 0; right: 0; z-index: 30; background: var(--olive); padding: 8px 12px 16px; box-shadow: 0 14px 30px rgba(0,0,0,.3); max-height: calc(100vh - 66px); overflow-y: auto; }
+  .sidebar.menuOpen nav { display: grid; gap: 2px; margin: 0; }
+  .sidebar.menuOpen nav button { width: 100%; justify-content: flex-start; padding: 12px 12px; font-size: 15px; }
+  .sidebar.menuOpen nav button span:not(.navCount) { display: inline; }
+  .sidebar.menuOpen .sideFoot { margin: 10px 0 0; padding-top: 12px; border-top: 1px solid #3a4a3f; display: grid; gap: 4px; }
+  .sidebar.menuOpen .sideFoot .who { display: grid; padding: 0 6px 6px; }
+  .sidebar.menuOpen .sideFoot .previewToggle { display: flex; }
+  .sidebar.menuOpen .signout { padding: 10px 6px; font-size: 14px; }
+  .menuShade { display: block; position: fixed; inset: 66px 0 0 0; background: rgba(15, 20, 16, .4); z-index: 20; }
+}
