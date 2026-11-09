@@ -3,9 +3,19 @@
 Staff can post an upcoming event to GroupMe with the **Post to GroupMe** button on the event page.
 The post includes the date, location and an RSVP link back to the event.
 
+## What gets posted to the team group
+
+- **New event** — staff click **Post to GroupMe** on the event page.
+- **Changed event** — when staff edit an upcoming event's title, date or location, the Edit form shows
+  "Post this change to the team GroupMe" (ticked by default if the event was already posted).
+  The post lists what changed and links back to the event.
+- **Cancelled event** — the Delete dialog has "Post a cancellation notice to the team GroupMe"
+  (ticked by default if the event was already posted). The notice is posted *before* the event is
+  deleted; if the post fails, the event is not deleted.
+
 ## How it works
 
-- `app/api/groupme/route.ts` does the posting. It runs on the server, checks that the caller is
+- `app/api/groupme/route.ts` does the posting (`type`: `event`, `change`, `cancel`, `rsvp`). It runs on the server, checks that the caller is
   signed-in, approved staff, then sends the message through the GroupMe Bots API
   (`POST https://api.groupme.com/v3/bots/post` with `bot_id` + `text`).
 - The button is in `app/views/event-detail.tsx` (`postToGroupMe`). After a successful post the

@@ -22,8 +22,9 @@ async function post(botId: string, text: string) {
 export async function POST(req: Request) {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) return Response.json({ error: 'Not signed in' }, { status: 401 });
-  const body = await req.json().catch(() => null) as { type?: string; eventId?: string; previous?: string | null } | null;
-  if ((body?.type !== 'event' && body?.type !== 'rsvp') || typeof body.eventId !== 'string') return Response.json({ error: 'Bad request' }, { status: 400 });
+  type Prev = { title?: string; start_date?: string; end_date?: string | null; location?: string | null };
+  const body = await req.json().catch(() => null) as { type?: string; eventId?: string; previous?: string | null; before?: Prev } | null;
+  if (!['event', 'rsvp', 'change', 'cancel'].includes(body?.type ?? '') || typeof body?.eventId !== 'string') return Response.json({ error: 'Bad request' }, { status: 400 });
 
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -64,7 +65,28 @@ export async function POST(req: Request) {
   if (!e) return Response.json({ error: 'Event not found' }, { status: 404 });
 
   const origin = new URL(req.url).origin;
-  const when = e.end_date && e.end_date !== e.start_date ? `${mil(e.start_date)} – ${mil(e.end_date)}` : mil(e.start_date);
+  const range = (s: string, en?: string | null) => (en && en !== s ? `${mil(s)} – ${mil(en)}` : mil(s));
+  const when = range(e.start_date, e.end_date);
+  const kind = KIND[e.kind] ?? 'Event';
+
+  // Cancellation: posted just before staff delete the event.
+  if (body.type === 'cancel') {
+    const res = await post(botId, [`🚫 CANCELLED: ${e.title}`, `${when}${e.location ? ` · ${e.location}` : ''}`, `This ${kind.toLowerCase()} has been cancelled.`].join('\n'));
+    return res.ok ? Response.json({ ok: true }) : Response.json({ ok: false, error: `GroupMe returned ${res.status}` }, { status: 502 });
+  }
+
+  // Change: list what changed compared with the values before the edit.
+  if (body.type === 'change') {
+    const b = body.before ?? {};
+    const lines: string[] = [];
+    if (b.title !== undefined && b.title !== e.title) lines.push(`Renamed from "${b.title}"`);
+    if (b.start_date && (b.start_date !== e.start_date || (b.end_date ?? null) !== (e.end_date ?? null))) lines.push(`New date: ${when} (was ${range(b.start_date, b.end_date)})`);
+    if (b.location !== undefined && (b.location ?? null) !== (e.location ?? null)) lines.push(`New location: ${e.location ?? 'TBD'}${b.location ? ` (was ${b.location})` : ''}`);
+    if (!lines.length) return Response.json({ ok: false, skipped: true });
+    const res = await post(botId, [`⚠️ UPDATED ${kind}: ${e.title}`, ...lines, `Check your RSVP: ${origin}/#event/${e.id}`].join('\n'));
+    return res.ok ? Response.json({ ok: true }) : Response.json({ ok: false, error: `GroupMe returned ${res.status}` }, { status: 502 });
+  }
+
   const text = [
     `📅 New ${KIND[e.kind] ?? 'event'}: ${e.title}`,
     `${when}${e.location ? ` · ${e.location}` : ''}`,

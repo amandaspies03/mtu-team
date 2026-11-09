@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarPlus, MessageCircle, ClipboardCopy, Mail, Search, Pe
 import { useTeam } from '../../lib/data';
 import { PREP_ITEMS, prepDone, type Attendance, type AttendanceStatus } from '../../lib/types';
 import { WeaponSelect } from './weapon-select';
+import { groupme } from '../../lib/groupme';
 import { displayName, eventRange, fullName, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
 import { EventForm } from './events';
@@ -20,6 +21,7 @@ export default function EventView({ id }: { id: string }) {
   const [aar, setAar] = useState<string | null>(null);
   const [err, setErr] = useState(''), [copied, setCopied] = useState(false);
   const [posting, setPosting] = useState(false), [posted, setPosted] = useState('');
+  const [announceCancel, setAnnounceCancel] = useState(() => !!events.find(x => x.id === id)?.groupme_posted_at);
   if (!e) return <Empty title="Event not found"><button className="linkBtn" onClick={() => go('events')}>Back to calendar</button></Empty>;
   const past = (e.end_date ?? e.start_date) < todayISO();
   const rows = attendance.filter(a => a.event_id === e.id)
@@ -59,6 +61,11 @@ export default function EventView({ id }: { id: string }) {
     if (error) setErr(error.message); else { setAar(null); await reload(); }
   }
   async function deleteEvent() {
+    setErr('');
+    if (!past && announceCancel) {
+      const r = await groupme(sb, { type: 'cancel', eventId: e!.id });
+      if (!r.ok) { setErr(`GroupMe post failed (${r.error ?? 'unknown error'}). The event was not deleted — untick the GroupMe box to delete without posting.`); setDeleting(false); return; }
+    }
     const { error } = await sb.from('events').delete().eq('id', e!.id);
     if (error) { setErr(error.message); return; }
     await reload(); go('events');
@@ -214,6 +221,7 @@ export default function EventView({ id }: { id: string }) {
       {deleting && (
         <Modal title="Delete this event?" onClose={() => setDeleting(false)}>
           <p>This removes the event, its roster, ammo count and match teams. Scores stay on each shooter’s record.</p>
+          {!past && <label className="check notifyBox"><input type="checkbox" checked={announceCancel} onChange={x => setAnnounceCancel(x.target.checked)} /> Post a cancellation notice to the team GroupMe</label>}
           <div className="formActions"><button className="secondary" onClick={() => setDeleting(false)}>Cancel</button><button className="primary dangerBg" onClick={deleteEvent}>Delete</button></div>
         </Modal>
       )}

@@ -512,3 +512,4 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .rsvpCard .chip.on { background: var(--brass); border-color: var(--brass); color: var(--olive); font-weight: 600; }
 .rsvpCard .chip.on.bad { background: #c86a5a; border-color: #c86a5a; color: #fff; }
 .rsvpCard .tag { font-size: 14px; }
+.notifyBox { background: var(--info-bg); border-radius: 8px; padding: 10px 12px; color: var(--info); font-weight: 500; }

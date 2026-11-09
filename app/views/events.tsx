@@ -7,6 +7,7 @@ import { useTeam } from '../../lib/data';
 import { EVENT_KINDS, PREP_ITEMS, prepDone, type TeamEvent } from '../../lib/types';
 import { eventRange, fiscalYear, kindLabel, todayISO } from '../../lib/util';
 import { go } from '../app-shell';
+import { groupme } from '../../lib/groupme';
 import { Empty, Modal, PageTitle, Rsvp, Tag } from './ui';
 
 const kindTone = { practice: 'good', match: 'brass', tryout: 'info', qual: 'warn', cleaning: 'neutral', meeting: 'neutral', other: 'neutral' } as const;
@@ -18,6 +19,9 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
     location: event ? event.location ?? '' : ranges[0]?.name ?? '', notes: event?.notes ?? '',
   });
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const upcoming = !!event && (event.end_date ?? event.start_date) >= todayISO();
+  const changed = !!event && (f.title.trim() !== event.title || f.start_date !== event.start_date || (f.end_date || null) !== (event.end_date ?? null) || (f.location.trim() || null) !== (event.location ?? null));
+  const [notify, setNotify] = useState(!!event?.groupme_posted_at);
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (f.end_date && f.end_date < f.start_date) { setErr('End date is before the start date.'); return; }
@@ -27,6 +31,10 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
       ? await sb.from('events').update(row).eq('id', event.id).select('id').single()
       : await sb.from('events').insert(row).select('id').single();
     if (error) { setErr(error.message); setBusy(false); return; }
+    if (event && upcoming && changed && notify) {
+      const r = await groupme(sb, { type: 'change', eventId: event.id, before: { title: event.title, start_date: event.start_date, end_date: event.end_date, location: event.location } });
+      if (!r.ok && !r.skipped) alert(`Saved, but the GroupMe post failed: ${r.error ?? 'unknown error'}`);
+    }
     await reload();
     onClose();
     if (!event) go('event', data.id);
@@ -48,6 +56,7 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
           </select>
         </label>
         <label>Plan / notes<textarea rows={4} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} placeholder="Drills, courses of fire, uniform, report time…" /></label>
+        {upcoming && changed && <label className="check notifyBox"><input type="checkbox" checked={notify} onChange={e => setNotify(e.target.checked)} /> Post this change (date, location or title) to the team GroupMe</label>}
         {err && <p className="alert">{err}</p>}
         <div className="formActions"><button type="button" className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
       </form>
