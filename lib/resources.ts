@@ -203,7 +203,7 @@ General rules:
           summary: 'Cheap, safe reps between practices.',
           body: `Two range days a month won't make you a good shooter by themselves. Dry fire fills the gap.
 
-- If you don't have an M16- or M18-pattern firearm, an airsoft or BB version works. The trigger will feel different, but the grip, sights and manipulation carry over.
+- If you don't have an M4 or M18, an airsoft or BB version works. The trigger will feel different, but the grip, sights and manipulation carry over.
 - Treat a training gun like a real one, every time.
 - Good things to dry fire: trigger wall presses, holster draws, reloads, and getting into kneeling and prone.`,
         },
@@ -359,7 +359,7 @@ Each stage is worth 50 points.
           id: 'rifle-eic',
           title: 'Rifle EIC',
           summary: '50 rounds at 25 yards, 4 positions, 500 points.',
-          body: `M16/M4-series rifle, 50 rounds, all at 25 yards, one target per stage.
+          body: `M4-series rifle, 50 rounds, all at 25 yards, one target per stage.
 
 | Stage | Position | Shots | Time |
 | 1 | Standing | 10 | 60 s |
@@ -400,7 +400,7 @@ Each stage is worth 50 points.
           id: 'reflexive-fire',
           title: 'Rifle Reflexive Fire (RI3020)',
           summary: '36 rounds, 2 stages, 180 points. Close-quarters engagements.',
-          body: `M16/M4-series rifle, 36 rounds, 4 Figure 11 targets at 25 yards, standing from the low ready.
+          body: `M4-series rifle, 36 rounds, 4 Figure 11 targets at 25 yards, standing from the low ready.
 
 ## Stage 1 (60 points)
 - One 12-round mag. 4 exposures of 4 seconds, at least 7 seconds apart.
@@ -458,7 +458,7 @@ Recent programs included: EIC rifle and pistol, Reflexive Fire / Anti-Body Armor
           title: 'Team matches: Heritage, Overrun, Last Supper',
           summary: 'What the fun ones look like.',
           body: `## Heritage Match (240 points)
-All iron sights, with an M16A2, M4, M14 and M249 per team. Two teams go head to head: on "fire," run from the base of the hill to the line and knock down targets from 100 to 800 yards in 2 minutes. 10 points per target, and targets reset if you clear your lane. The team captain assigns who shoots what.
+All iron sights, with an M4, M14 and M249 per team. Two teams go head to head: on "fire," run from the base of the hill to the line and knock down targets from 100 to 800 yards in 2 minutes. 10 points per target, and targets reset if you clear your lane. The team captain assigns who shoots what.
 
 ## Overrun (145 points)
 Starts inside a vehicle. Three shooters exit to steel with pistols and one runs the shotgun on cans. Then everyone grabs rifles from the trunk and engages steel at 200 yards from behind barriers, finishing with a single shot on the "matrix" target code you were given at the start (for example A4). Fastest team to clear everything wins.
@@ -529,7 +529,7 @@ Pistols, 10 rounds each, 3-second exposures. The tower calls a dot (for example 
 - Chamber empty
 - Holstered or grounded
 
-## Clearing an M16-type rifle
+## Clearing an M4
 1. Selector on SAFE.
 2. Remove the magazine.
 3. Lock the bolt open with the bolt catch.
@@ -583,7 +583,7 @@ Training doesn't resume until the emergency is over and the RSO says it's safe.`
         },
         {
           id: 'rifle-malfunctions',
-          title: 'Rifle malfunctions (M16A4)',
+          title: 'Rifle malfunctions (M4)',
           summary: 'Tap, rack, reassess — and when not to.',
           body: `## Immediate action
 1. **Tap** — tap the magazine to make sure it's seated.
@@ -665,7 +665,7 @@ The empty case doesn't fully extract and a live round feeds in behind it. Causes
 
 ## Team weapons
 - M18 pistols
-- M16A2s with A4 uppers, and M4s
+- M4s
 - M14s (not used in competition)
 
 ## How it fits together

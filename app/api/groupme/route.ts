@@ -11,6 +11,31 @@ const KIND: Record<string, string> = { practice: 'Practice', match: 'Match', try
 const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const mil = (d: string) => `${d.slice(8, 10)} ${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 
+// Public site address for links in posts. Never built from the request, so a forged Host header can't redirect them.
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://mtu-team.vercel.app').replace(/\/$/, '');
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_BODY = 8_000;
+
+// Text typed by people outside staff (sign-up names) goes to GroupMe as plain words only:
+// no links, no line breaks, no control characters, short.
+const clean = (v: unknown, max: number) => String(v ?? '')
+  .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
+  .replace(/\b(?:https?:\/\/|www\.)\S*/gi, '')
+  .replace(/\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|io|co|gov|mil|us|me|ly|app|xyz|info|biz)\b\S*/gi, '')
+  .replace(/\s+/g, ' ').trim().slice(0, max);
+
+// Best-effort limiter per client address (resets when the server instance recycles).
+const hits = new Map<string, number[]>();
+function limited(req: Request, max: number, windowMs = 60_000) {
+  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+  const now = Date.now(), list = (hits.get(ip) ?? []).filter(t => now - t < windowMs);
+  list.push(now); hits.set(ip, list);
+  if (hits.size > 5000) hits.clear();
+  return list.length > max;
+}
+
+const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
+
 async function post(botId: string, text: string) {
   return fetch('https://api.groupme.com/v3/bots/post', {
     method: 'POST',
@@ -22,24 +47,46 @@ async function post(botId: string, text: string) {
 export async function POST(req: Request) {
   // New team-link sign-up: no session yet (they may still need to confirm their email), so this path
   // needs no sign-in. claim_signup_notice only answers once per real pending sign-up from the last hour.
-  const raw = await req.clone().json().catch(() => null) as { type?: string; email?: string } | null;
-  if (raw?.type === 'signup' && typeof raw.email === 'string') {
+  if (limited(req, 20)) return json({ error: 'Too many requests. Try again in a minute.' }, 429);
+  if (!(req.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) return json({ error: 'Bad request' }, 415);
+  // Only this site's own pages may call this route from a browser.
+  const from = req.headers.get('origin');
+  if (from && from !== SITE && from !== new URL(req.url).origin) return json({ error: 'Forbidden' }, 403);
+  const rawText = await req.text().catch(() => '');
+  if (!rawText || rawText.length > MAX_BODY) return json({ error: 'Bad request' }, 400);
+  let parsed: unknown = null;
+  try { parsed = JSON.parse(rawText); } catch { return json({ error: 'Bad request' }, 400); }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return json({ error: 'Bad request' }, 400);
+  const raw = parsed as { type?: string; email?: string };
+  if (raw.type === 'signup' && typeof raw.email === 'string') {
+    if (limited(req, 3, 10 * 60_000) || raw.email.length > 320 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw.email)) return json({ ok: false, skipped: true });
     const staffBot = process.env.GROUPME_STAFF_BOT_ID;
     if (!staffBot) return Response.json({ ok: false, skipped: true });
     const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data } = await anon.rpc('claim_signup_notice', { p_email: raw.email.slice(0, 320) });
+    const { data } = await anon.rpc('claim_signup_notice', { p_email: raw.email });
     if (!data) return Response.json({ ok: false, skipped: true });
     const d = data as { name: string; unit?: string | null };
-    const origin = new URL(req.url).origin;
-    const res = await post(staffBot, `🆕 New sign-up waiting for approval: ${d.name}${d.unit ? ` (${d.unit})` : ''}\nApprove or reject in Admin → Access: ${origin}/#admin`);
+    const name = clean(d.name, 60) || 'Someone', unit = clean(d.unit, 40);
+    const res = await post(staffBot, `🆕 New sign-up waiting for approval: ${name}${unit ? ` (${unit})` : ''}\nApprove or reject in Admin → Access: ${SITE}/#admin`);
     return Response.json({ ok: res.ok });
   }
 
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-  if (!token) return Response.json({ error: 'Not signed in' }, { status: 401 });
+  if (!token || token.length > 4096) return Response.json({ error: 'Not signed in' }, { status: 401 });
   type Prev = { title?: string; start_date?: string; end_date?: string | null; location?: string | null };
-  const body = await req.json().catch(() => null) as { type?: string; eventId?: string; previous?: string | null; before?: Prev } | null;
-  if (!['event', 'rsvp', 'change', 'cancel'].includes(body?.type ?? '') || typeof body?.eventId !== 'string') return Response.json({ error: 'Bad request' }, { status: 400 });
+  const body = parsed as { type?: string; eventId?: string; previous?: string | null; before?: Prev };
+  if (!['event', 'rsvp', 'change', 'cancel'].includes(body.type ?? '') || typeof body.eventId !== 'string' || !UUID.test(body.eventId)) return Response.json({ error: 'Bad request' }, { status: 400 });
+  if (body.previous != null && !['planned', 'absent', 'attended', 'excused'].includes(String(body.previous))) body.previous = null;
+  if (body.before !== undefined && (typeof body.before !== 'object' || body.before === null || Array.isArray(body.before))) return Response.json({ error: 'Bad request' }, { status: 400 });
+  if (body.before) {
+    const b = body.before;
+    body.before = {
+      title: typeof b.title === 'string' ? b.title.slice(0, 200) : undefined,
+      start_date: typeof b.start_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.start_date) ? b.start_date : undefined,
+      end_date: typeof b.end_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.end_date) ? b.end_date : null,
+      location: typeof b.location === 'string' ? b.location.slice(0, 200) : b.location === null ? null : undefined,
+    };
+  }
 
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -79,7 +126,7 @@ export async function POST(req: Request) {
   const { data: e } = await sb.from('events').select('id, title, kind, start_date, end_date, location').eq('id', body.eventId).single();
   if (!e) return Response.json({ error: 'Event not found' }, { status: 404 });
 
-  const origin = new URL(req.url).origin;
+  const origin = SITE;
   const range = (s: string, en?: string | null) => (en && en !== s ? `${mil(s)} – ${mil(en)}` : mil(s));
   const when = range(e.start_date, e.end_date);
   const kind = KIND[e.kind] ?? 'Event';
