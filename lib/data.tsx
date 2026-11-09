@@ -11,6 +11,9 @@ export type TeamData = {
   realStaff: boolean;
   previewShooter: boolean;
   setPreviewShooter: (on: boolean) => void;
+  tourOpen: boolean;
+  openTour: () => void;
+  closeTour: () => void;
   members: Member[];
   compliance: Compliance[];
   events: TeamEvent[];
@@ -73,7 +76,7 @@ async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member
 
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
-  const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'reload' | 'memberById' | 'loading' | 'error'>>({
+  const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'loading' | 'error'>>({
     members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [],
   });
   const [loading, setLoading] = useState(true);
@@ -129,5 +132,13 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
 
   const memberById = useCallback((id: string | null | undefined) => shown.members.find(m => m.id === id), [shown.members]);
 
-  return <Ctx.Provider value={{ sb, me, isStaff: isStaff && !preview, realStaff: isStaff, previewShooter: preview, setPreviewShooter, ...shown, loading, error, reload, memberById }}>{children}</Ctx.Provider>;
+  // First-login tour for shooters (not staff). Finishing or skipping it is remembered on the account.
+  const [tourOpen, setTourOpen] = useState(() => !isStaff && !me.tutorial_done_at);
+  const openTour = useCallback(() => setTourOpen(true), []);
+  const closeTour = useCallback(() => {
+    setTourOpen(false);
+    if (!isStaff && !me.tutorial_done_at) sb.rpc('mark_tutorial_done').then(() => {}, () => {});
+  }, [isStaff, me.tutorial_done_at, sb]);
+
+  return <Ctx.Provider value={{ sb, me, isStaff: isStaff && !preview, realStaff: isStaff, previewShooter: preview, setPreviewShooter, tourOpen, openTour, closeTour, ...shown, loading, error, reload, memberById }}>{children}</Ctx.Provider>;
 }

@@ -13,6 +13,7 @@ export type Profile = {
   created_at: string;
   pending?: boolean;
   pending_info?: Record<string, string> | null;
+  tutorial_done_at?: string | null;
 };
 
 export type Member = {

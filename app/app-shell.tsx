@@ -19,6 +19,7 @@ import { IdleSignOut, UpdateBanner } from './views/session-guards';
 import Resources from './views/resources';
 import AuthScreen from './views/auth';
 import { ChangePassword } from './views/change-password';
+import { Tutorial } from './views/tutorial';
 import { blankProfile, ProfileFields, type ProfileInfo } from './views/profile-fields';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -102,7 +103,7 @@ export default function AppShell() {
 }
 
 function Workspace() {
-  const { sb, me, isStaff, realStaff, previewShooter, setPreviewShooter, memberById, loading, error, reload } = useTeam();
+  const { sb, me, isStaff, realStaff, previewShooter, setPreviewShooter, memberById, loading, error, reload, tourOpen, closeTour } = useTeam();
   const [route, setRoute] = useState<Route>(parseHash);
   const [pwOpen, setPwOpen] = useState(false);
   useEffect(() => {
@@ -168,6 +169,7 @@ function Workspace() {
         {previewShooter && <div className="previewBar"><Eye size={16} /><span><b>Shooter view.</b> This is what a shooter sees. Anything you change still saves to your real account.</span><button onClick={() => setPreviewShooter(false)}>Back to staff view</button></div>}
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}
+        {!loading && tourOpen && !isStaff && <Tutorial onClose={closeTour} />}
         {pwOpen && <ChangePassword sb={sb} email={me.email ?? ''} onClose={() => setPwOpen(false)} />}
         <footer><span>184th MTU · For official use by team members. Do not store SSNs, DoD IDs, or weapon serial numbers here.</span></footer>
       </main>
