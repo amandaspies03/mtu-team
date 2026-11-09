@@ -623,3 +623,12 @@ table.rowEntry .xIn { width: 60px !important; }
   .ringTable th, .ringTable td { padding: 3px 2px; }
   .stepper.compact input { min-width: 34px; height: 38px; }
 }
+/* Calendar list rows: tags and RSVP sit to the right on wide screens, on their own line under the title on phones */
+.listRow .rowEnd { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.listRow .rowEnd .rsvp { flex-wrap: nowrap; }
+.listRow .rowEnd .chip { white-space: nowrap; }
+@media (max-width: 700px) {
+  .listRow { flex-wrap: wrap; row-gap: 8px; }
+  .listRow .grow strong, .listRow .grow small { overflow-wrap: anywhere; }
+  .listRow .rowEnd { flex-basis: 100%; justify-content: flex-start; padding-left: 60px; }
+}

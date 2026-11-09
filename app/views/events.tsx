@@ -88,10 +88,12 @@ export default function Events() {
     <div key={e.id} className="listRow" role="button" tabIndex={0} onClick={() => go('event', e.id)} onKeyDown={k => k.key === 'Enter' && go('event', e.id)}>
       <div className="dateBlock"><b>{e.start_date.slice(8)}</b><span>{new Date(e.start_date + 'T12:00').toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span></div>
       <div className="grow"><strong>{e.title}</strong><small>{eventRange(e)}{e.location ? ` · ${e.location}` : ''}</small></div>
+      <div className="rowEnd">
       <Tag tone={kindTone[e.kind]}>{kindLabel[e.kind]}</Tag>
       {!isPast && isStaff && e.kind === 'practice' && <Tag tone={prepDone(e) === PREP_ITEMS.length ? 'good' : 'warn'}>Prep {prepDone(e)}/{PREP_ITEMS.length}</Tag>}
       {isStaff ? (isPast ? <Tag>{count(e, 'attended')} attended</Tag> : <><Tag tone="info">{count(e, 'planned')} going</Tag><span onClick={x => x.stopPropagation()}><Rsvp event={e} /></span></>)
         : isPast ? (count(e, 'attended') ? <Tag tone="good">You attended</Tag> : null) : <span onClick={x => x.stopPropagation()}><Rsvp event={e} /></span>}
+      </div>
     </div>
   );
 
