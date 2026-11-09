@@ -7,7 +7,8 @@ import { go } from '../app-shell';
 import { Empty, Rsvp, Tag } from './ui';
 
 export default function Dashboard() {
-  const { me, isStaff, members, events, attendance, compliance, scores, courses, memberById } = useTeam();
+  const { me, isStaff, members, events, attendance, compliance, scores, courses, memberById, profiles } = useTeam();
+  const pendingSignups = profiles.filter(p => p.pending && !p.approved).length;
   const today = todayISO();
   const upcoming = events.filter(e => (e.end_date ?? e.start_date) >= today).slice(0, 5);
   const next = upcoming[0];
@@ -115,7 +116,14 @@ export default function Dashboard() {
         {isStaff ? (
           <section className="panel">
             <div className="sectionTitle"><h2>Needs attention</h2></div>
-            {alerts.length === 0 && prepOpen.length === 0 && <Empty title="All clear">No expiring quals or unfinished practice prep.</Empty>}
+            {pendingSignups > 0 && (
+              <button className="listRow" onClick={() => go('admin')}>
+                <Users size={16} />
+                <div className="grow"><strong>{pendingSignups} sign-up{pendingSignups === 1 ? '' : 's'} waiting for approval</strong><small>From the team invite link · Admin → Access</small></div>
+                <Tag tone="warn">Review</Tag>
+              </button>
+            )}
+            {alerts.length === 0 && prepOpen.length === 0 && pendingSignups === 0 && <Empty title="All clear">No expiring quals or unfinished practice prep.</Empty>}
             {prepOpen.slice(0, 8).map(e => (
               <button key={e.id} className="listRow" onClick={() => go('event', e.id)}>
                 <ClipboardCheck size={16} />

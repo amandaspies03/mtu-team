@@ -11,6 +11,8 @@ export type Profile = {
   approved: boolean;
   member_id: string | null;
   created_at: string;
+  pending?: boolean;
+  pending_info?: Record<string, string> | null;
 };
 
 export type Member = {
@@ -143,4 +145,5 @@ export type StaffEmail = { email: string; added_by: string | null; created_at: s
 export type Invite = {
   id: string; token: string; note: string | null; member_id: string | null; created_by: string | null;
   created_at: string; expires_at: string; used_at: string | null; used_by: string | null;
+  multi_use?: boolean; use_count?: number;
 };

@@ -75,6 +75,17 @@ export default function AppShell() {
       <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
     </div></div>
   );
+  if (!profile.approved && profile.pending) return (
+    <div className="authShell"><div className="authCard">
+      <div className="brandIcon"><Crosshair size={26} /></div>
+      <h1>Waiting for staff approval</h1>
+      <p>Thanks for signing up. MTU staff will approve your account shortly — usually the same day. Once they do, you’ll see the team calendar and can RSVP.</p>
+      <div className="row">
+        <button className="primary" onClick={loadProfile}>Check again</button>
+        <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
+      </div>
+    </div></div>
+  );
   if (!profile.approved) return (
     <div className="authShell"><div className="authCard">
       <div className="brandIcon"><Crosshair size={26} /></div>

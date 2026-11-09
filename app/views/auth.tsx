@@ -26,7 +26,7 @@ function friendly(msg: string, mode: Mode) {
 export default function AuthScreen({ sb, recovery, onRecovered }: { sb: SupabaseClient; recovery: boolean; onRecovered: () => void }) {
   const [token] = useState(inviteFromHash);
   const [mode, setMode] = useState<Mode>(token ? 'invite' : 'signin');
-  const [invite, setInvite] = useState<{ valid: boolean; reason?: string } | null>(null);
+  const [invite, setInvite] = useState<{ valid: boolean; reason?: string; team?: boolean } | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [info, setInfo] = useState<ProfileInfo>(blankProfile);
@@ -95,7 +95,7 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         {mode === 'staff' && <p className="formNote">For MTU staff only. Your email must already be on the staff list.</p>}
         {mode === 'invite' && !invite && <p className="formNote">Checking your invite…</p>}
         {inviteBad && <p className="alert">{invite!.reason}</p>}
-        {mode === 'invite' && invite?.valid && <p className="formNote">Fill in your info below. It goes straight onto the team roster.</p>}
+        {mode === 'invite' && invite?.valid && <p className="formNote">{invite.team ? 'Fill in your info below. MTU staff will approve your account, then you’re on the team roster.' : 'Fill in your info below. It goes straight onto the team roster.'}</p>}
 
         {!inviteBad && (
           <>

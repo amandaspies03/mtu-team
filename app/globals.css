@@ -513,3 +513,6 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .rsvpCard .chip.on.bad { background: #c86a5a; border-color: #c86a5a; color: #fff; }
 .rsvpCard .tag { font-size: 14px; }
 .notifyBox { background: var(--info-bg); border-radius: 8px; padding: 10px 12px; color: var(--info); font-weight: 500; }
+.panel.attention { border-color: #e2c98a; box-shadow: inset 4px 0 0 var(--warn); }
+.teamLink { display: grid; gap: 8px; }
+.teamLink code { display: block; padding: 10px 12px; background: #f1f0e8; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }
