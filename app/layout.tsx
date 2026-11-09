@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Roster, practices, scores and match-day tools for the 184th Marksmanship Training Unit.',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: '184th MTU', statusBarStyle: 'default' },
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/apple-touch-icon.png' },
   robots: { index: false, follow: false },
 };
 

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Crosshair, MessageCircle, Target, Timer, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, Crosshair, MessageCircle, Smartphone, Target, Timer, UserRound } from 'lucide-react';
 import { go } from '../app-shell';
 
 type Step = { icon: React.ReactNode; title: string; body: React.ReactNode; view?: string };
@@ -57,6 +57,10 @@ const STEPS: Step[] = [
     </>,
   },
   {
+    icon: <Smartphone size={22} />, title: 'Put it on your home screen', view: 'dashboard',
+    body: <HomeScreenHelp />,
+  },
+  {
     icon: <MessageCircle size={22} />, title: 'You’re all set', view: 'dashboard',
     body: <>
       <p>Keep an eye on the team GroupMe for new practices and changes. Bring printed orders to every practice — no orders, no weapons.</p>
@@ -64,6 +68,28 @@ const STEPS: Step[] = [
     </>,
   },
 ];
+
+/** Add-to-home-screen steps for the phone they're on (both if we can't tell). */
+function HomeScreenHelp() {
+  const [env, setEnv] = useState<{ ios: boolean; android: boolean; installed: boolean }>({ ios: false, android: false, installed: false });
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const nav = navigator as Navigator & { standalone?: boolean };
+    setEnv({
+      ios: /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document),
+      android: /Android/.test(ua),
+      installed: window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true,
+    });
+  }, []);
+  if (env.installed) return <p>You’re already using the home-screen app. Nice. It opens full screen like any other app.</p>;
+  const iphone = <><b>iPhone (Safari):</b> tap the <b>Share</b> button (square with an arrow), scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.</>;
+  const android = <><b>Android (Chrome):</b> tap the <b>⋮</b> menu, then <b>Add to Home screen</b> (or <b>Install app</b>), then <b>Install</b>.</>;
+  return <>
+    <p>Save the site to your phone so it opens like an app, full screen and one tap away, with the MTU icon.</p>
+    {env.ios ? <p>{iphone}</p> : env.android ? <p>{android}</p> : <><p>{iphone}</p><p>{android}</p></>}
+    <p className="formNote">On iPhone this only works from Safari. If you opened the link inside GroupMe, tap the compass or “Open in Safari” first.</p>
+  </>;
+}
 
 /** First-login walkthrough for shooters. Each step opens the page it describes behind the card. */
 export function Tutorial({ onClose }: { onClose: () => void }) {

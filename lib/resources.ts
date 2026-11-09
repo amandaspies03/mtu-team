@@ -717,6 +717,24 @@ Your supervisor signs it too, and team leadership approves it.
 Bring questions. Every shooter on the team started where you are.`,
         },
         {
+          id: 'home-screen',
+          title: 'Put the site on your phone',
+          summary: 'Save it to your home screen so it opens like an app.',
+          body: `Saving the site to your home screen gives you an MTU icon that opens full screen, like an app. Nothing to download from an app store.
+
+## iPhone
+1. Open the site in **Safari**. If you tapped a link inside GroupMe, use "Open in Safari" first.
+2. Tap the **Share** button (the square with an arrow).
+3. Scroll down and tap **Add to Home Screen**, then **Add**.
+
+## Android
+1. Open the site in **Chrome**.
+2. Tap the **⋮** menu.
+3. Tap **Add to Home screen** (or **Install app**), then **Install**.
+
+> For security the site signs you out after 30 minutes without activity, so you'll sign in again when you come back.`,
+        },
+        {
           id: 'orders-336',
           title: 'Orders and 336s',
           summary: 'You must be in a military status to practice. Here’s how.',
