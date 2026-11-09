@@ -119,7 +119,7 @@ export default function Dashboard() {
             {pendingSignups > 0 && (
               <button className="listRow" onClick={() => go('admin')}>
                 <Users size={16} />
-                <div className="grow"><strong>{pendingSignups} sign-up{pendingSignups === 1 ? '' : 's'} waiting for approval</strong><small>From the team invite link · Admin → Access</small></div>
+                <div className="grow"><strong>{pendingSignups} sign-up{pendingSignups === 1 ? '' : 's'} waiting for approval</strong><small>New accounts · Admin → Access</small></div>
                 <Tag tone="warn">Review</Tag>
               </button>
             )}

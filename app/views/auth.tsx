@@ -7,7 +7,7 @@ import { NewPasswordField } from './password-field';
 import { IDLE_FLAG } from './session-guards';
 import { isBreached, passwordError, passwordHelp, passwordOk } from '../../lib/password-policy';
 
-type Mode = 'signin' | 'staff' | 'invite' | 'forgot' | 'join';
+type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
 
 /** Invite links look like /?invite=TOKEN (survives GroupMe and texting apps). Old #invite/TOKEN links still work. */
 const tokenFrom = (text: string) => (text.match(/invite[/=]([\w-]{12,})/) ?? text.trim().match(/^([\w-]{16,})$/))?.[1] ?? null;
@@ -15,16 +15,15 @@ const inviteFromUrl = () => (typeof window === 'undefined' ? null : tokenFrom(wi
 
 function friendly(msg: string, mode: Mode) {
   if (/database error saving new user/i.test(msg)) {
-    return mode === 'staff'
-      ? 'That email isn’t on the MTU staff list. Shooters: go back and tap “Join with an invite link,” then paste the link staff sent you.'
-      : 'This invite link is no longer valid. Ask MTU staff for a new one.';
+    return mode === 'invite'
+      ? 'This invite link is no longer valid. Go back and tap “Create an account” instead.'
+      : 'We couldn’t create that account. Try again, or contact MTU staff.';
   }
   return msg;
 }
 
 export default function AuthScreen({ sb, recovery, onRecovered }: { sb: SupabaseClient; recovery: boolean; onRecovered: () => void }) {
-  const [token, setToken] = useState(inviteFromUrl);
-  const [pasted, setPasted] = useState('');
+  const [token] = useState(inviteFromUrl);
   const [mode, setMode] = useState<Mode>(token ? 'invite' : 'signin');
   const [invite, setInvite] = useState<{ valid: boolean; reason?: string; team?: boolean } | null>(null);
   const [email, setEmail] = useState('');
@@ -67,7 +66,7 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         const meta = { ...info, ...(mode === 'invite' ? { invite: token } : {}) };
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: meta } });
         if (error) throw (error as { code?: string }).code === 'weak_password' ? new Error(passwordHelp) : error;
-        if (mode === 'invite' && invite?.team) {
+        if (mode === 'staff' || (mode === 'invite' && invite?.team)) {
           // Give staff a heads-up in the MTU Staff GroupMe (best effort).
           fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'signup', email }) }).catch(() => {});
         }
@@ -88,7 +87,7 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
     }
   }
 
-  const title = recovery ? 'Set a new password' : mode === 'staff' ? 'Staff account' : mode === 'invite' || mode === 'join' ? 'Join the team' : mode === 'forgot' ? 'Reset password' : 'Team sign in';
+  const title = recovery ? 'Set a new password' : mode === 'staff' ? 'Create your account' : mode === 'invite' ? 'Join the team' : mode === 'forgot' ? 'Reset password' : 'Team sign in';
   const inviteBad = mode === 'invite' && invite && !invite.valid;
 
   return (
@@ -97,26 +96,12 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         <div className="brandIcon"><Crosshair size={26} /></div>
         <div className="eyebrow">184TH MARKSMANSHIP TRAINING UNIT</div>
         <h1>{title}</h1>
-        {mode === 'staff' && <p className="formNote">For MTU staff only. Your email must already be on the staff list.</p>}
+        {mode === 'staff' && <p className="formNote">Fill in your info below. MTU staff will approve your account and link it to the team roster. (Staff on the MTU staff list get in right away.)</p>}
         {mode === 'invite' && !invite && <p className="formNote">Checking your invite…</p>}
         {inviteBad && <p className="alert">{invite!.reason}</p>}
         {mode === 'invite' && invite?.valid && <p className="formNote">{invite.team ? 'Fill in your info below. MTU staff will approve your account, then you’re on the team roster.' : 'Fill in your info below. It goes straight onto the team roster.'}</p>}
 
-        {mode === 'join' && (
-          <div className="form">
-            <label>Invite link<span>Paste the whole link from GroupMe or your text</span>
-              <input value={pasted} onChange={e => setPasted(e.target.value)} placeholder="https://mtu-team.vercel.app/?invite=…" autoFocus />
-            </label>
-            <button type="button" className="primary wide" onClick={() => {
-              const t = tokenFrom(pasted);
-              if (!t) { setError('That doesn’t look like an invite link. Copy the whole link and try again.'); return; }
-              setError(''); setToken(t); setMode('invite');
-            }}>Continue</button>
-            {error && <p className="alert">{error}</p>}
-          </div>
-        )}
-
-        {!inviteBad && mode !== 'join' && (
+        {!inviteBad && (
           <>
             {signingUp && <ProfileFields value={info} onChange={setInfo} />}
             {!recovery && (
@@ -142,11 +127,10 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
           <div className="authLinks">
             {mode !== 'signin' && <button type="button" onClick={() => { setMode('signin'); setError(''); }}>Back to sign in</button>}
             {mode === 'signin' && <button type="button" onClick={() => { setMode('forgot'); setError(''); }}>Forgot password</button>}
-            {mode === 'signin' && <button type="button" onClick={() => { setMode('join'); setError(''); }}>Join with an invite link</button>}
-            {mode === 'signin' && <button type="button" onClick={() => { setMode('staff'); setError(''); }}>MTU staff: create account</button>}
+            {mode === 'signin' && <button type="button" onClick={() => { setMode('staff'); setError(''); }}>Create an account</button>}
           </div>
         )}
-        {mode === 'signin' && <p className="formNote">New to the team? Tap <b>Join with an invite link</b> and paste the link staff sent you.</p>}
+        {mode === 'signin' && <p className="formNote">New to the team? Tap <b>Create an account</b>. Staff will approve it.</p>}
       </form>
     </div>
   );
