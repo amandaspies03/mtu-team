@@ -68,7 +68,7 @@ export default function Dashboard() {
             <p>{eventRange(next)}{next.location ? ` · ${next.location}` : ''}</p>
             <div className="row">
               <button className="primary" onClick={() => go('event', next.id)}>Open {kindLabel[next.kind].toLowerCase()}</button>
-              {!isStaff && <Rsvp event={next} />}
+              <Rsvp event={next} />
               {isStaff && <span className="formNote">{attendance.filter(a => a.event_id === next.id && a.status === 'planned').length} planning to attend</span>}
             </div>
           </div>

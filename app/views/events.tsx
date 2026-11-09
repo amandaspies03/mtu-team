@@ -81,7 +81,7 @@ export default function Events() {
       <div className="grow"><strong>{e.title}</strong><small>{eventRange(e)}{e.location ? ` · ${e.location}` : ''}</small></div>
       <Tag tone={kindTone[e.kind]}>{kindLabel[e.kind]}</Tag>
       {!isPast && isStaff && e.kind === 'practice' && <Tag tone={prepDone(e) === PREP_ITEMS.length ? 'good' : 'warn'}>Prep {prepDone(e)}/{PREP_ITEMS.length}</Tag>}
-      {isStaff ? (isPast ? <Tag>{count(e, 'attended')} attended</Tag> : <Tag tone="info">{count(e, 'planned')} going</Tag>)
+      {isStaff ? (isPast ? <Tag>{count(e, 'attended')} attended</Tag> : <><Tag tone="info">{count(e, 'planned')} going</Tag><span onClick={x => x.stopPropagation()}><Rsvp event={e} /></span></>)
         : isPast ? (count(e, 'attended') ? <Tag tone="good">You attended</Tag> : null) : <span onClick={x => x.stopPropagation()}><Rsvp event={e} /></span>}
     </div>
   );

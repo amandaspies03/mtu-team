@@ -114,7 +114,7 @@ export default function EventView({ id }: { id: string }) {
           <div className="eyebrow">{kindLabel[e.kind].toUpperCase()} · {eventRange(e)}</div>
           <h1>{e.title}</h1>
           <p>{e.location || 'Location TBD'}</p>
-          {!isStaff && !past && <Rsvp event={e} />}
+          {!past && <Rsvp event={e} />}
         </div>
         <div className="titleActions noPrint">
           {isStaff && !past && <button className="secondary" disabled={posting} onClick={postToGroupMe}><MessageCircle size={15} /> {posting ? 'Posting…' : e.groupme_posted_at ? 'Post to GroupMe again' : 'Post to GroupMe'}</button>}
