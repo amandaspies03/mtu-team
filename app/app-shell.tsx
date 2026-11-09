@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
 import type { Profile } from '../lib/types';
@@ -20,6 +20,7 @@ import Resources from './views/resources';
 import AuthScreen from './views/auth';
 import { ChangePassword } from './views/change-password';
 import { Tutorial } from './views/tutorial';
+import { WhatsNew, UpdatePopup, useUpdates } from './views/whats-new';
 import { blankProfile, ProfileFields, type ProfileInfo } from './views/profile-fields';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -112,8 +113,10 @@ function Workspace() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
   const meMember = memberById(me.member_id);
+  const updates = useUpdates(sb, me.id, isStaff);
+  const popupItem = updates.published.find(a => a.popup && !a.read);
 
-  const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; match?: string[] }[] = [
+  const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; match?: string[]; badge?: number }[] = [
     { view: 'dashboard', label: 'Dashboard', icon: <Gauge size={18} /> },
     { view: 'events', label: 'Calendar', icon: <CalendarDays size={18} />, match: ['event'] },
     ...(isStaff
@@ -122,6 +125,7 @@ function Workspace() {
     { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
+    { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },
     { view: 'ammo', label: 'Ammo', icon: <Package size={18} />, staff: true },
     { view: 'admin', label: 'Admin', icon: <ShieldCheck size={18} />, staff: true },
   ];
@@ -142,6 +146,7 @@ function Workspace() {
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;
     case 'ammo': body = isStaff ? <AmmoReport /> : <Dashboard />; break;
+    case 'whatsnew': body = <WhatsNew feed={updates} sb={sb} isStaff={isStaff} />; break;
     default: body = <Dashboard />;
   }
 
@@ -153,6 +158,7 @@ function Workspace() {
           <span><b>184th MTU</b><br />Team Manager</span>
         </a>
         <span className="mobileTitle">{currentLabel}</span>
+        {updates.unread.length > 0 && !menuOpen && <b className="navBadge menuBadge" aria-hidden="true">{updates.unread.length}</b>}
         <button className="menuBtn" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -161,7 +167,7 @@ function Workspace() {
         <nav>
           {nav.filter(n => !n.staff || isStaff).map(n => (
             <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => { setMenuOpen(false); go(n.view); }}>
-              {n.icon}<span>{n.label}</span>
+              {n.icon}<span>{n.label}</span>{!!n.badge && <b className="navBadge" aria-label={`${n.badge} unread`}>{n.badge}</b>}
             </button>
           ))}
         </nav>
@@ -181,6 +187,9 @@ function Workspace() {
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}
         {!loading && tourOpen && !isStaff && <Tutorial onClose={closeTour} />}
+        {!loading && !(tourOpen && !isStaff) && route.view !== 'whatsnew' && popupItem && (
+          <UpdatePopup item={popupItem} onClose={open => { void updates.markRead([popupItem.id]); if (open) go(popupItem.target ?? 'whatsnew'); }} />
+        )}
         {pwOpen && <ChangePassword sb={sb} email={me.email ?? ''} onClose={() => setPwOpen(false)} />}
         <footer><span>184th MTU · For official use by team members. Do not store SSNs, DoD IDs, or weapon serial numbers here.</span></footer>
       </main>

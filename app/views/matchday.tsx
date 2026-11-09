@@ -1,4 +1,5 @@
 'use client';
+import { Scorecard } from './scorecard';
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { MATCH_CALLS, MATCH_SCORING, type Stage } from '../../lib/tower';
@@ -157,6 +158,7 @@ export default function MatchDay() {
           </div>
         </details>
       )}
+      <Scorecard key={match.code} code={match.code} title={match.title} />
     </div>
   );
 }

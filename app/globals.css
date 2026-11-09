@@ -560,3 +560,66 @@ table.rowEntry .xIn { width: 60px !important; }
 .stats > .statLink { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--radius); color: var(--muted); text-align: left; width: 100%; cursor: pointer; }
 .stats > .statLink:hover { border-color: var(--brass); background: #fbf8ef; }
 .statLink .statArrow { margin-left: auto; color: var(--brass); }
+/* What's new */
+.navBadge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--gold, #c9a227); color: #1f2b24; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.menuBadge { display: none; }
+@media (max-width: 820px) { .menuBadge { display: inline-grid; margin: 0 -6px 0 0; } }
+.updateActions { margin: 0 0 18px; }
+.updateCard .updateMeta { display: flex; align-items: center; gap: 10px; }
+.updateCard .updateMeta .iconBtn { margin-left: auto; }
+.updateCard h2 { margin: 8px 0 0; font-size: 20px; }
+.updateBody { white-space: pre-wrap; line-height: 1.65; overflow-wrap: anywhere; margin: 12px 0 14px; }
+.updateEditor form { display: grid; gap: 14px; }
+.updateEditor textarea { width: 100%; }
+.draftRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.updatePopup { max-width: 480px; }
+.updatePopup .modalHead h2 { margin: 4px 0 0; }
+/* Digital scorecard */
+.scorecardPanel .scHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.scorecardPanel .scHead h2 { margin: 0; }
+.scNote { font-size: 13px; color: var(--muted); margin: 8px 0; }
+.ringTable { margin: 16px 0; }
+.ringHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ringHead h3 { margin: 0; }
+.ringTable table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ringTable th, .ringTable td { border: 1px solid var(--line); padding: 4px; text-align: center; }
+.ringTable thead th { background: #f1f0e7; font-size: 12px; }
+.ringTable tbody th, .ringTable tfoot th { text-align: left; padding-left: 8px; white-space: nowrap; }
+.ringTable tfoot { background: #f7f6ef; }
+.ringTable .num { font-variant-numeric: tabular-nums; min-width: 34px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper input { width: 44px; height: 40px; text-align: center; font-size: 17px; padding: 0; font-variant-numeric: tabular-nums; }
+.stepper.compact input { width: 100%; min-width: 38px; max-width: 64px; }
+.stepper button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 20px; line-height: 1; }
+.penalty { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 4px; }
+.scWarn { background: #fbf1dc; border: 1px solid #ecd39a; border-radius: 8px; padding: 10px 14px 10px 30px; font-size: 13px; margin: 12px 0; display: grid; gap: 4px; }
+.scTotals { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.scTotals > div { flex: 1 1 110px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: grid; }
+.scTotals span { font-size: 12px; color: var(--muted); }
+.scTotals b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.scTotals small { font-size: 12px; font-weight: 400; margin-left: 2px; }
+.scTotals .scGrand { background: var(--olive); color: #f3efdf; border-color: var(--olive); flex-basis: 160px; }
+.scTotals .scGrand span, .scTotals .scGrand small { color: #d9d6c4; }
+.scTotals .scGrand b { font-size: 26px; }
+.shotRows { display: grid; gap: 6px; margin: 10px 0; }
+.shotRow { display: grid; grid-template-columns: 84px 1fr 40px; align-items: center; gap: 8px; }
+.shotLabel { display: grid; line-height: 1.2; font-size: 13px; }
+.shotLabel small { font-size: 11px; }
+.shotBoxes { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.shotBox { height: 36px; min-width: 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--card); font-weight: 600; font-size: 14px; }
+.shotBox.cur { outline: 2px solid var(--olive); outline-offset: 1px; background: #eef0e4; }
+.shotBox.x { color: #8a6d12; background: #fbf3d6; }
+.shotBox.miss { color: #a33; }
+.shotTotal { text-align: right; font-variant-numeric: tabular-nums; }
+.keypad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; position: sticky; bottom: 8px; background: var(--card); padding: 6px 0; z-index: 2; }
+.keypad button { height: 48px; font-size: 16px; justify-content: center; padding: 0 4px; }
+@media (max-width: 600px) {
+  .shotRow { grid-template-columns: 1fr 40px; }
+  .shotLabel { grid-column: 1 / -1; display: flex; gap: 6px; align-items: baseline; }
+  .shotBoxes { grid-column: 1; }
+  .shotBox { height: 34px; font-size: 13px; }
+  .keypad button { font-size: 14px; }
+  .ringTable { margin-left: -6px; margin-right: -6px; }
+  .ringTable th, .ringTable td { padding: 3px 2px; }
+  .stepper.compact input { min-width: 34px; height: 38px; }
+}
