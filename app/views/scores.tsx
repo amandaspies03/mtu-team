@@ -14,6 +14,7 @@ type Tab = 'board' | 'enter' | 'log';
 export default function Scores() {
   const { isStaff } = useTeam();
   const [tab, setTab] = useState<Tab>('board');
+  const phone = usePhone();
   return (
     <div>
       <PageTitle eyebrow="PERFORMANCE" title="Scores">Leaderboards for each match on the Match day page. Tick shooters to compare their trends.</PageTitle>
@@ -23,7 +24,7 @@ export default function Scores() {
         <button className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>All entries</button>
       </div>
       {tab === 'board' && <Leaderboard />}
-      {tab === 'enter' && isStaff && <EnterScores onDone={() => setTab('log')} />}
+      {tab === 'enter' && isStaff && (phone ? <PhoneEnterScores onDone={() => setTab('log')} /> : <EnterScores onDone={() => setTab('log')} />)}
       {tab === 'log' && <ScoreLog />}
     </div>
   );
@@ -338,5 +339,138 @@ function ScoreLog() {
       {editing && <EditScore score={editing} onClose={() => setEditing(null)} />}
       {list.length > 400 && <p className="formNote">Showing the latest 400 of {list.length}. Filter or export to see the rest.</p>}
     </section>
+  );
+}
+
+/** True on phone-width screens only. Tablets and desktops keep the table. */
+const PHONE_QUERY = '(max-width: 600px)';
+function usePhone() {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE_QUERY);
+    const on = () => setPhone(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return phone;
+}
+
+type PhoneRow = { key: number; member_id: string; t: string; x: string; own: boolean; date: string; label: string; code: string };
+
+/** Phone layout: batch details set once, one card per shooter, keypad Next moves Score → X → next shooter, pinned Save. */
+function PhoneEnterScores({ onDone }: { onDone: () => void }) {
+  const { sb, scores, members, courses, reload } = useTeam();
+  const [batch, setBatch] = useState({ date: todayISO(), label: '', code: courses[0]?.code ?? '' });
+  const blank = (): PhoneRow => ({ key: ++rowKey, member_id: '', t: '', x: '', own: false, date: '', label: '', code: '' });
+  const [rows, setRows] = useState<PhoneRow[]>(() => [blank()]);
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusNext.current) return;
+    document.getElementById(focusNext.current)?.focus();
+    focusNext.current = null;
+  });
+  const shooters = members.filter(m => m.team_status !== 'Inactive').sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const set = (key: number, patch: Partial<PhoneRow>) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
+  const eff = (r: PhoneRow) => (r.own ? { date: r.date, label: r.label, code: r.code } : batch);
+  const courseOf = (r: PhoneRow) => courses.find(c => c.code === eff(r).code);
+  const ready = rows.filter(r => r.member_id && r.t !== '');
+  const name = (id: string) => fullName(members.find(m => m.id === id));
+  const digits = (v: string) => v.replace(/\D/g, '').slice(0, 3);
+  const batchCourse = courses.find(c => c.code === batch.code);
+
+  function nextShooter(r: PhoneRow) {
+    const i = rows.findIndex(x => x.key === r.key);
+    const next = rows[i + 1];
+    if (next && !next.member_id) { focusNext.current = `ps-who-${next.key}`; document.getElementById(focusNext.current)?.focus(); focusNext.current = null; return; }
+    const n = blank();
+    focusNext.current = `ps-who-${n.key}`;
+    setRows(rs => { const j = rs.findIndex(x => x.key === r.key); return [...rs.slice(0, j + 1), n, ...rs.slice(j + 1)]; });
+  }
+
+  async function save() {
+    setErr('');
+    if (!ready.length) { setErr('Fill in at least one shooter and score.'); return; }
+    const half = rows.find(r => (r.member_id || r.t !== '') && !(r.member_id && r.t !== ''));
+    if (half) { setErr(`Shooter ${rows.indexOf(half) + 1} needs both a shooter and a score (or remove it).`); return; }
+    const noLabel = ready.find(r => !eff(r).label.trim());
+    if (noLabel) { setErr(noLabel.own ? `${name(noLabel.member_id)}: type the practice or match.` : 'Type the practice or match at the top (e.g. Practice, TAG Match).'); return; }
+    const out = ready.map(r => {
+      const d = eff(r), c = courses.find(x => x.code === d.code);
+      const total = Number(r.t), x = c?.has_x && r.x !== '' ? Number(r.x) : null;
+      return { r, c, row: { member_id: r.member_id, course_code: d.code, event_id: null, shot_on: d.date || null, session_label: d.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
+    });
+    const bad = out.find(o => !scoreOk(o.row.total, o.row.x_count, o.c?.max_score));
+    if (bad) { setErr(`${name(bad.r.member_id)}: score must be 0–${bad.c?.max_score ?? '∞'} and X count a whole number.`); return; }
+    setBusy(true);
+    const { error } = await sb.from('scores').insert(out.map(o => o.row));
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setRows([blank()]);
+    await reload();
+    onDone();
+  }
+
+  return (
+    <div className="phoneEntry">
+      <datalist id="sessionLabelsPhone">{[...new Set(['Practice', 'TAG Match', 'Regionals', 'Nationals (WPW)', '184th Invitational', ...sessionLabels(scores)])].map(l => <option key={l} value={l} />)}</datalist>
+      <section className="panel peBatch">
+        <div className="peBatchHead"><h2>For this batch</h2><span>Applies to every shooter below</span></div>
+        <div className="peTwo">
+          <label>Date<input type="date" value={batch.date} onChange={e => setBatch({ ...batch, date: e.target.value })} /></label>
+          <label>Practice / match<input list="sessionLabelsPhone" placeholder="Practice…" value={batch.label} onChange={e => setBatch({ ...batch, label: e.target.value })} /></label>
+        </div>
+        <label>Course of fire<select value={batch.code} onChange={e => setBatch({ ...batch, code: e.target.value })}>
+          {courses.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
+        </select></label>
+      </section>
+
+      {rows.map((r, i) => {
+        const c = courseOf(r);
+        return (
+          <section className="panel peCard" key={r.key}>
+            <div className="peTop">
+              <span className="peNum">{i + 1}</span>
+              <select id={`ps-who-${r.key}`} aria-label={`Shooter ${i + 1}`} value={r.member_id} onChange={e => {
+                set(r.key, { member_id: e.target.value });
+                if (e.target.value) focusNext.current = `ps-t-${r.key}`;
+              }}>
+                <option value="">Select shooter…</option>
+                {shooters.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+              </select>
+              <button className="iconBtn" aria-label={`Remove shooter ${i + 1}`} disabled={rows.length === 1} onClick={() => setRows(rows.filter(x => x.key !== r.key))}><X size={18} /></button>
+            </div>
+            <div className={`peScores${c?.has_x ? '' : ' noX'}`}>
+              <label>Score<input id={`ps-t-${r.key}`} inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" placeholder={c?.max_score ? `/ ${c.max_score}` : ''} value={r.t}
+                onChange={e => set(r.key, { t: digits(e.target.value) })}
+                onKeyDown={e => { if (e.key !== 'Enter') return; e.preventDefault(); if (c?.has_x) document.getElementById(`ps-x-${r.key}`)?.focus(); else nextShooter(r); }} /></label>
+              {c?.has_x && <label>X count<input id={`ps-x-${r.key}`} inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" placeholder="0" value={r.x}
+                onChange={e => set(r.key, { x: digits(e.target.value) })}
+                onKeyDown={e => { if (e.key !== 'Enter') return; e.preventDefault(); nextShooter(r); }} /></label>}
+            </div>
+            {r.own ? (
+              <div className="peOwn">
+                <span className="tag info">Different from the batch</span>
+                <div className="peTwo">
+                  <label>Date<input type="date" value={r.date} onChange={e => set(r.key, { date: e.target.value })} /></label>
+                  <label>Practice / match<input list="sessionLabelsPhone" value={r.label} onChange={e => set(r.key, { label: e.target.value })} /></label>
+                </div>
+                <label>Course of fire<select value={r.code} onChange={e => set(r.key, { code: e.target.value })}>
+                  {courses.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
+                </select></label>
+                <button className="peLink" onClick={() => set(r.key, { own: false })}>Use the batch details instead</button>
+              </div>
+            ) : <button className="peLink" onClick={() => set(r.key, { own: true, date: batch.date, label: batch.label, code: batch.code })}>Different date, match or course for this shooter?</button>}
+          </section>
+        );
+      })}
+      <button className="secondary peAdd" onClick={() => { const n = blank(); focusNext.current = `ps-who-${n.key}`; setRows([...rows, n]); }}><Plus size={15} /> Add shooter</button>
+      {err && <p className="alert">{err}</p>}
+      <div className="peSave">
+        <div><b>{ready.length} score{ready.length === 1 ? '' : 's'} ready</b><span>{batchCourse?.name ?? ''}</span></div>
+        <button className="primary" disabled={busy || !ready.length} onClick={save}><Save size={15} /> {busy ? 'Saving…' : `Save ${ready.length || ''}`}</button>
+      </div>
+    </div>
   );
 }
