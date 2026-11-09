@@ -98,7 +98,7 @@ export default function Events() {
   return (
     <div>
       <PageTitle eyebrow="SCHEDULE" title="Calendar" actions={<>{upcoming.length > 0 && <button className="secondary" onClick={() => downloadIcs('MTU upcoming events.ics', upcoming)}><CalendarPlus size={15} /> Add all upcoming to my calendar</button>}{isStaff && <button className="primary" onClick={() => setAdding('')}><Plus size={15} /> Add event</button>}</>}>
-        Practices, tryouts and matches. Open one to see who’s going, run the practice prep checklist, and log ammo issued.
+        {isStaff ? 'Practices, tryouts and matches. Open one to see who’s going, run the practice prep checklist, and log ammo issued.' : 'Upcoming practices, tryouts and matches. RSVP here or open one for details.'}
       </PageTitle>
       <div className="filters">
         <label><select value={kind} onChange={e => setKind(e.target.value)}><option value="">All types</option>{EVENT_KINDS.map(k => <option key={k} value={k}>{kindLabel[k]}</option>)}</select></label>
