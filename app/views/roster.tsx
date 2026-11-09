@@ -36,8 +36,8 @@ export default function Roster() {
 
   function exportCsv() {
     downloadCsv(`MTU roster ${today}.csv`, [
-      ['Last', 'First', 'Rank', 'Unit', 'Duty status', 'Team status', 'Staff role', 'Pistol #', 'Rifle #', 'Gov 20 pistol', 'Gov 20 rifle', 'EIC badge', "Chief's 50", 'Cell phone', 'Military email', 'Personal email', 'DD2760', 'Van license', `FY${String(fy).slice(2)} practices`, 'Last practice'],
-      ...rows.map(({ m, c, last, fyCount }) => [m.last_name, m.first_name, m.rank, m.unit, m.duty_status, m.team_status, m.staff_role, m.pistol_no, m.rifle_no, m.gov20_pistol ? 'Y' : '', m.gov20_rifle ? 'Y' : '', m.eic_badge ?? '', m.chiefs50 ? 'Y' : '', m.cell_phone, m.mil_email, m.personal_email, c?.lautenberg_date, c?.gov_license ? 'Y' : '', fyCount, last]),
+      ['Last', 'First', 'Rank', 'Unit', 'Duty status', 'Team status', 'Staff role', 'Pistol #', 'Rifle #', 'Gov 20 pistol', 'Gov 20 rifle', 'EIC pistol', 'EIC rifle', "Chief's 50", 'Cell phone', 'Military email', 'Personal email', 'DD2760', 'Van license', `FY${String(fy).slice(2)} practices`, 'Last practice'],
+      ...rows.map(({ m, c, last, fyCount }) => [m.last_name, m.first_name, m.rank, m.unit, m.duty_status, m.team_status, m.staff_role, m.pistol_no, m.rifle_no, m.gov20_pistol ? 'Y' : '', m.gov20_rifle ? 'Y' : '', m.eic_pistol ?? '', m.eic_rifle ?? '', m.chiefs50 ? 'Y' : '', m.cell_phone, m.mil_email, m.personal_email, c?.lautenberg_date, c?.gov_license ? 'Y' : '', fyCount, last]),
     ]);
   }
 

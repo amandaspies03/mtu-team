@@ -57,7 +57,7 @@ async function loadEvents(sb: SupabaseClient, isStaff: boolean): Promise<TeamEve
   return base.map(e => ({ ...EVENT_STAFF_BLANK, ...extra.get(e.id), ...pub(e) }));
 }
 
-const MEMBER_BLANK = { unit: null, duty_status: null, staff_role: null, cell_phone: null, mil_email: null, personal_email: null, pistol_no: null, rifle_no: null, notes: null, gov20_pistol: false, gov20_rifle: false, chiefs50: false, eic_badge: null };
+const MEMBER_BLANK = { unit: null, duty_status: null, staff_role: null, cell_phone: null, mil_email: null, personal_email: null, pistol_no: null, rifle_no: null, notes: null, gov20_pistol: false, gov20_rifle: false, chiefs50: false, eic_pistol: null, eic_rifle: null };
 
 /** Staff get the full roster. Shooters get their own full entry plus everyone's names (for leaderboards). */
 async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member[]> {

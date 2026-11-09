@@ -33,7 +33,8 @@ export type Member = {
   gov20_pistol: boolean;
   gov20_rifle: boolean;
   chiefs50: boolean;
-  eic_badge: EicBadge | null;
+  eic_pistol: EicBadge | null;
+  eic_rifle: EicBadge | null;
 };
 
 export type Range = { id: string; name: string; created_at: string };

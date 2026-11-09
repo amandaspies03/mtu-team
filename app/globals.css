@@ -516,3 +516,5 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .panel.attention { border-color: #e2c98a; box-shadow: inset 4px 0 0 var(--warn); }
 .teamLink { display: grid; gap: 8px; }
 .teamLink code { display: block; padding: 10px 12px; background: #f1f0e8; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.eicRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; margin: 2px 0; } .eicRow select { width: auto; min-width: 120px; padding: 4px 8px; }
+.awardsPop label.eicRow { flex-direction: row; align-items: center; justify-content: space-between; font-weight: 400; text-align: left; }
