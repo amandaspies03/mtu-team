@@ -1,5 +1,5 @@
 'use client';
-import { AlertTriangle, CalendarDays, ClipboardCheck, Target, Users } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarDays, ClipboardCheck, Target, Users } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { complianceIssues, daysUntil, displayName, eventRange, fiscalYear, fullName, kindLabel, milDate, scoreText, todayISO } from '../../lib/util';
 import { PREP_ITEMS, prepDone } from '../../lib/types';
@@ -86,7 +86,7 @@ export default function Dashboard() {
         <div className="stats">
           <div><CalendarDays size={18} /><strong>{myFyPractices}</strong><span>practices attended in FY{String(fy).slice(2)}</span></div>
           <div><ClipboardCheck size={18} /><strong>{myAllPractices}</strong><span>practices attended, all time</span></div>
-          <div><Target size={18} /><strong>{scores.filter(s => s.member_id === me.member_id).length}</strong><span>of my scores on record</span></div>
+          <button className="statLink" onClick={() => go('scores')} aria-label="Open Scores"><Target size={18} /><strong>{scores.filter(s => s.member_id === me.member_id).length}</strong><span>of my scores on record</span><ArrowRight size={15} className="statArrow" /></button>
         </div>
       )}
 
@@ -94,7 +94,7 @@ export default function Dashboard() {
         <div><Users size={18} /><strong>{active.length}</strong><span>active &amp; new shooters</span></div>
         <div><CalendarDays size={18} /><strong>{fyPractices.length}</strong><span>FY{String(fy).slice(2)} events so far</span></div>
         <div><ClipboardCheck size={18} /><strong>{fyPractices.length ? (fyAttendance / fyPractices.length).toFixed(1) : (lastFy.length ? (lastFyAtt / lastFy.length).toFixed(1) : '—')}</strong><span>avg shooters per {fyPractices.length ? 'event' : `event (FY${String(fy - 1).slice(2)})`}</span></div>
-        <div><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span></div>
+        <button className="statLink" onClick={() => go('scores')} aria-label="Open Scores"><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span><ArrowRight size={15} className="statArrow" /></button>
       </div>}
 
       <div className="grid2">

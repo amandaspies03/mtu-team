@@ -557,3 +557,6 @@ table.rowEntry .xIn { width: 60px !important; }
   .menuShade { display: block; position: fixed; inset: 66px 0 0 0; background: rgba(15, 20, 16, .4); z-index: 20; }
 }
 .changeList { list-style: none; padding: 8px 10px; margin: 8px 0 0; background: var(--info-bg); border-radius: 8px; font-size: 13px; display: grid; gap: 2px; } .changeList s { color: var(--muted); }
+.stats > .statLink { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); padding: 14px 16px; border-radius: var(--radius); color: var(--muted); text-align: left; width: 100%; cursor: pointer; }
+.stats > .statLink:hover { border-color: var(--brass); background: #fbf8ef; }
+.statLink .statArrow { margin-left: auto; color: var(--brass); }
