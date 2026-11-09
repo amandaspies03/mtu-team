@@ -47,7 +47,7 @@ async function all<T>(q: PromiseLike<{ data: T[] | null; error: { message: strin
 }
 
 const EVENT_PUBLIC = 'id, title, kind, start_date, end_date, location';
-const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null };
+const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null, prep_vehicle_requested: false, prep_vehicle_confirmed: false };
 
 /** Everyone gets event basics; staff also get plan, AAR, ammo and prep details. */
 async function loadEvents(sb: SupabaseClient, isStaff: boolean): Promise<TeamEvent[]> {

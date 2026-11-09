@@ -152,7 +152,10 @@ export default function EventView({ id }: { id: string }) {
               const done = i.key === 'prep_van_driver' ? e.prep_van_driver || !!e.van_driver_id : e[i.key];
               return (
                 <div key={i.key} className={`prepItem ${done ? 'done' : ''}`}>
-                  <label className="check"><input type="checkbox" checked={done} onChange={x => saveEvent(i.key === 'prep_van_driver' && !x.target.checked ? { prep_van_driver: false, van_driver_id: null } : { [i.key]: x.target.checked })} /> {i.label}</label>
+                  <label className="check"><input type="checkbox" checked={done} onChange={x => saveEvent(i.key === 'prep_van_driver' && !x.target.checked ? { prep_van_driver: false, van_driver_id: null }
+                    : i.key === 'prep_vehicle_confirmed' && x.target.checked ? { prep_vehicle_confirmed: true, prep_vehicle_requested: true } // confirmed implies requested
+                    : i.key === 'prep_vehicle_requested' && !x.target.checked ? { prep_vehicle_requested: false, prep_vehicle_confirmed: false }
+                    : { [i.key]: x.target.checked })} /> {i.label}</label>
                   {i.key === 'prep_ammo_draw' && (
                     <div className="drawFields">
                       <label>Requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}

@@ -79,12 +79,16 @@ export type TeamEvent = {
   ammo_draw_556: number | null;
   ammo_draw_9mm: number | null;
   groupme_posted_at: string | null;
+  prep_vehicle_requested: boolean;
+  prep_vehicle_confirmed: boolean;
 };
 
 /** Practice prep checklist. Van driver counts as done when ticked or a driver is picked. */
 export const PREP_ITEMS = [
   { key: 'prep_ammo_draw', label: 'Ammo draw requested' },
   { key: 'prep_placard', label: 'Explosive placard' },
+  { key: 'prep_vehicle_requested', label: 'Vehicle requested' },
+  { key: 'prep_vehicle_confirmed', label: 'Vehicle confirmed' },
   { key: 'prep_van_driver', label: 'Van driver identified' },
 ] as const;
 export const prepDone = (e: TeamEvent) => PREP_ITEMS.filter(i => (i.key === 'prep_van_driver' ? e.prep_van_driver || !!e.van_driver_id : e[i.key])).length;
