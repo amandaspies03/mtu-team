@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Copy, Link2, Plus, Trash2 } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import type { Invite, Profile } from '../../lib/types';
+import type { Invite, Member, Profile } from '../../lib/types';
 import { fullName, milDate } from '../../lib/util';
 import { Empty, PageTitle, Tag } from './ui';
 import ChangeLog from './changelog';
@@ -72,13 +72,13 @@ function Access() {
 
   return (
     <div>
-      <p className="formNote tabIntro">Anyone can create an account from the sign-in page. Staff-list emails get staff access right away; everyone else waits in “Waiting for approval.” When you approve someone they’re linked to their roster entry (matched by email, then cell phone, then name — only blanks get filled in), or added as a new shooter. Individual invite links skip the approval step.</p>
+      <p className="formNote tabIntro">Anyone can create an account from the sign-in page. Staff-list emails get staff access right away; everyone else waits in “Waiting for approval.” When you approve someone they’re linked to their roster entry (matched by email, then cell phone, then name — what they entered replaces the roster’s info; anything they left blank stays as is), or added as a new shooter. Individual invite links skip the approval step.</p>
       {err && <p className="alert">{err}</p>}
 
       {pending.length > 0 && (
         <section className="panel attention">
           <div className="sectionTitle"><h2>Waiting for approval</h2><Tag tone="warn">{pending.length}</Tag></div>
-          <p className="formNote">These people created an account on the site. Approve the ones you recognize. Approving adds them to the roster (or links them to their existing entry) and lets them in.</p>
+          <p className="formNote">These people created an account on the site. Approve the ones you recognize. Approving links them to their roster entry and updates it with what they entered (blanks keep your info), or adds them as a new shooter, then lets them in.</p>
           {pending.map(p => <PendingCard key={p.id} p={p} onApprove={approve} onReject={reject} />)}
         </section>
       )}
@@ -185,12 +185,22 @@ function PendingCard({ p, onApprove, onReject }: { p: Profile; onApprove: (p: Pr
     ?? (digits(info.cell_phone) ? open.find(m => digits(m.cell_phone) === digits(info.cell_phone)) : undefined)
     ?? open.find(m => norm(m.last_name) === norm(info.last_name) && norm(m.first_name) === norm(info.first_name));
   const [memberId, setMemberId] = useState(guess?.id ?? '');
+  const target = open.find(m => m.id === memberId);
+  const FIELDS: [string, string, keyof Member][] = [
+    ['rank', 'Rank', 'rank'], ['first_name', 'First name', 'first_name'], ['last_name', 'Last name', 'last_name'], ['unit', 'Unit', 'unit'],
+    ['duty_status', 'Duty status', 'duty_status'], ['cell_phone', 'Cell phone', 'cell_phone'], ['mil_email', 'Military email', 'mil_email'], ['personal_email', 'Personal email', 'personal_email'],
+  ];
+  // What approving will change on the roster entry: their non-blank answers replace the roster's.
+  const changes = target ? FIELDS.filter(([k, , mk]) => (info[k] ?? '').trim() && norm(info[k]) !== norm(target[mk] as string | null)).map(([k, label, mk]) => ({ label, from: (target[mk] as string | null) || '—', to: info[k] })) : [];
   return (
     <div className="approvalCard">
       <div className="grow">
         <strong>{[info.rank, info.first_name, info.last_name].filter(Boolean).join(' ') || p.display_name}</strong>
         <p>{p.email}</p>
         <small className="sub">{[info.unit, info.duty_status, info.cell_phone, info.mil_email, info.personal_email].filter(Boolean).join(' · ')}</small>
+        {target && (changes.length
+          ? <ul className="changeList"><li className="formNote">Approving updates the roster:</li>{changes.map(c => <li key={c.label}><b>{c.label}:</b> <s>{c.from}</s> → {c.to}</li>)}</ul>
+          : <small className="sub">Matches the roster. Nothing will change.</small>)}
       </div>
       <div className="approvalActions">
         <label>Roster entry
