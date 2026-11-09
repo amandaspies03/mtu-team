@@ -20,6 +20,8 @@ function Access() {
   const [note, setNote] = useState('');
   const [forMember, setForMember] = useState('');
   const [newStaff, setNewStaff] = useState('');
+  const [staffMember, setStaffMember] = useState('');
+  const [byEmail, setByEmail] = useState(false);
   const [justMade, setJustMade] = useState<Invite | null>(null);
 
   const linkedIds = new Set(profiles.map(p => p.member_id).filter(Boolean));
@@ -53,16 +55,39 @@ function Access() {
     await run(sb.from('profiles').delete().eq('id', p.id));
   }
 
+  /** The email a roster member signs in with: their account's email, or their roster personal email if they have no account yet. */
+  const signInEmail = (m: Member) => {
+    const acct = profiles.find(p => p.member_id === m.id);
+    return { email: (acct?.email ?? m.personal_email ?? '').trim().toLowerCase(), hasAccount: !!acct };
+  };
+  const staffMemberIds = new Set(members.filter(m => { const e = signInEmail(m).email; return e && staffSet.has(e); }).map(m => m.id));
+  const staffCandidates = members.filter(m => m.team_status !== 'Inactive' && !staffMemberIds.has(m.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const picked = members.find(m => m.id === staffMember);
+  const pickedEmail = picked ? signInEmail(picked) : null;
+
   async function addStaff(e: React.FormEvent) {
     e.preventDefault();
-    const email = newStaff.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { setErr('Enter a valid email address.'); return; }
-    if (await run(sb.from('staff_emails').insert({ email, added_by: me.id }))) setNewStaff('');
+    if (byEmail) {
+      const email = newStaff.trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(email)) { setErr('Enter a valid email address.'); return; }
+      if (await run(sb.from('staff_emails').insert({ email, added_by: me.id }))) setNewStaff('');
+      return;
+    }
+    if (!picked || !pickedEmail) { setErr('Choose someone from the roster.'); return; }
+    if (!pickedEmail.email) { setErr(`${fullName(picked)} has no account and no personal email on the roster. Add their personal email on their roster page first, or add them by email.`); return; }
+    if (!confirm(`Give ${fullName(picked)} staff access? They’ll be able to see and edit the roster, scores, events and admin settings.`)) return;
+    if (await run(sb.from('staff_emails').insert({ email: pickedEmail.email, added_by: me.id }))) setStaffMember('');
   }
+  const staffName = (email: string) => {
+    const acct = profiles.find(p => (p.email ?? '').toLowerCase() === email);
+    const m = members.find(x => (acct?.member_id && x.id === acct.member_id) || (!acct && (x.personal_email ?? '').toLowerCase() === email));
+    return m ? fullName(m) : acct?.display_name || email;
+  };
   async function removeStaff(email: string) {
     const self = email === (me.email ?? '').toLowerCase();
     if (staffEmails.length === 1) { setErr('The team needs at least one staff email.'); return; }
-    if (!confirm(self ? 'Remove yourself from staff? You will lose staff access immediately.' : `Remove ${email} from staff? If they have an account it becomes a regular shooter account.`)) return;
+    const who = staffName(email);
+    if (!confirm(self ? 'Remove yourself from staff? You will lose staff access immediately and become a shooter.' : `Make ${who} a shooter? They lose staff access right away; their account, roster entry and scores stay.`)) return;
     await run(sb.from('staff_emails').delete().eq('email', email));
   }
   async function setAccess(p: Profile, approved: boolean) {
@@ -126,20 +151,44 @@ function Access() {
       </section>
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Staff list</h2><Tag>{staffEmails.length}</Tag></div>
-        <p className="formNote">Only these emails can create an account without an invite, and only they get staff access. Use the exact email each person will sign in with.</p>
+        <div className="sectionTitle"><h2>Staff</h2><Tag>{staffEmails.length}</Tag></div>
+        <p className="formNote">Staff can see and edit everything, including this page. Pick someone from the roster to make them staff; use “Make shooter” to take it away. Their account, roster entry and scores don’t change either way.</p>
         {staffEmails.map(s => {
           const acct = profiles.find(p => (p.email ?? '').toLowerCase() === s.email);
+          const name = staffName(s.email);
           return (
-            <div key={s.email} className="listRow static">
-              <div className="grow"><strong>{s.email}</strong><small>{acct ? `Account created · ${acct.display_name || ''}` : 'No account yet'}</small></div>
-              <button className="iconBtn" aria-label={`Remove ${s.email} from staff`} onClick={() => removeStaff(s.email)}><Trash2 size={14} /></button>
+            <div key={s.email} className="listRow static staffRow">
+              <div className="grow"><strong>{name}</strong><small>{name !== s.email ? `${s.email} · ` : ''}{acct ? 'Signed up' : 'No account yet — staff once they sign up with this email'}</small></div>
+              <button className="secondary" aria-label={`Make ${name} a shooter`} onClick={() => removeStaff(s.email)}>Make shooter</button>
             </div>
           );
         })}
-        <form className="inlineForm" onSubmit={addStaff}>
-          <input type="email" value={newStaff} onChange={e => setNewStaff(e.target.value)} placeholder="name@example.com" />
-          <button className="secondary"><Plus size={15} /> Add staff</button>
+        <form className="addStaff" onSubmit={addStaff}>
+          {!byEmail ? (
+            <>
+              <label>Add staff from the roster
+                <select value={staffMember} onChange={e => { setStaffMember(e.target.value); setErr(''); }}>
+                  <option value="">Choose a team member…</option>
+                  {staffCandidates.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+                </select>
+              </label>
+              {picked && pickedEmail && (
+                <p className="formNote">{pickedEmail.email
+                  ? (pickedEmail.hasAccount ? `Staff access goes to their account (${pickedEmail.email}) right away.` : `No account yet. They’ll get staff access when they sign up with ${pickedEmail.email}.`)
+                  : 'No account and no personal email on the roster yet — add their personal email on their roster page first.'}</p>
+              )}
+              <div className="row"><button className="primary" disabled={!picked || !pickedEmail?.email}><Plus size={15} /> Make staff</button>
+                <button type="button" className="linkBtn" onClick={() => { setByEmail(true); setErr(''); }}>Not on the roster? Add by email</button></div>
+            </>
+          ) : (
+            <>
+              <label>Add staff by email <span className="muted">(the email they sign in with)</span>
+                <input type="email" value={newStaff} onChange={e => setNewStaff(e.target.value)} placeholder="name@example.com" />
+              </label>
+              <div className="row"><button className="primary"><Plus size={15} /> Make staff</button>
+                <button type="button" className="linkBtn" onClick={() => { setByEmail(false); setErr(''); }}>Pick from the roster instead</button></div>
+            </>
+          )}
         </form>
       </section>
 
