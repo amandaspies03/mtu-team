@@ -72,8 +72,16 @@ export function Rsvp({ event }: { event: TeamEvent }) {
   const locked = mine && (mine.status === 'attended' || mine.status === 'excused');
   async function set(status: 'planned' | 'absent') {
     setBusy(true); setErr('');
+    const previous = mine?.status ?? null;
     const { error } = await sb.rpc('rsvp', { p_event: event.id, p_status: status });
-    if (error) setErr(error.message); else await reload();
+    if (error) setErr(error.message);
+    else {
+      // Let the NCOIC/staff GroupMe know (best effort; never blocks the RSVP).
+      if (status !== previous && (status === 'planned' || previous === 'planned')) {
+        sb.auth.getSession().then(({ data }) => fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` }, body: JSON.stringify({ type: 'rsvp', eventId: event.id, previous }) })).catch(() => {});
+      }
+      await reload();
+    }
     setBusy(false);
   }
   if (locked) return <Tag tone="good">{mine!.status === 'attended' ? 'Attended' : 'Excused'}</Tag>;

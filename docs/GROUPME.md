@@ -13,12 +13,21 @@ The post includes the date, location and an RSVP link back to the event.
 - **Which group gets the post is decided only by the `GROUPME_BOT_ID` environment variable** in
   Vercel (project `mtu-team`, Production). Each GroupMe bot belongs to exactly one group.
 
-## The two bots
+## RSVP alerts to staff
+
+When anyone taps **I'm going** (or switches from going to **Can't make it**), the site posts a short
+note like "✅ SrA Jones is going to MTU Practice (19 NOV 2026)" to the **MTU Staff** GroupMe group so the
+NCOIC sees it. This uses a separate variable, `GROUPME_STAFF_BOT_ID` (bot "MTU RSVPs" in "MTU Staff").
+The RSVP button calls `/api/groupme` with `type: 'rsvp'` (see `Rsvp` in `app/views/ui.tsx`). If the
+variable is empty, RSVPs still work and no alert is sent.
+
+## The event-announcement bots
 
 | Bot name | GroupMe group | Use |
 | --- | --- | --- |
 | MTU Events | 184th MTU | **Live** — the real team group. This is the normal setting. |
 | MTU Events (test) | Mtu event test | Testing, so the team group doesn't get spammed. |
+| MTU RSVPs | MTU Staff | RSVP alerts (`GROUPME_STAFF_BOT_ID`), always on. |
 
 Both bots are managed at https://dev.groupme.com → **Bots** (signed in as the team GroupMe owner).
 Each card there has a "Show bot ID" button.
