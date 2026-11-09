@@ -9,7 +9,7 @@ import ChangeLog from './changelog';
 import Backups from './backups';
 import Ranges from './ranges-admin';
 
-const inviteUrl = (i: Invite) => `${window.location.origin}/#invite/${i.token}`;
+const inviteUrl = (i: Invite) => `${window.location.origin}/?invite=${i.token}`;
 const isOpen = (i: Invite) => !i.multi_use && !i.used_at && new Date(i.expires_at) > new Date();
 const teamLive = (i: Invite) => !!i.multi_use && new Date(i.expires_at) > new Date();
 const day = (iso: string) => milDate(iso.slice(0, 10));
