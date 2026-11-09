@@ -89,12 +89,12 @@ export default function EventView({ id }: { id: string }) {
             <div className="eyebrow">{kindLabel[e.kind].toUpperCase()} · {eventRange(e)}</div>
             <h1>{e.title}</h1>
             <p>{e.location || 'Location TBD'}</p>
-            {!past && <Rsvp event={e} />}
           </div>
           <div className="titleActions">
             {!past && <button className="secondary" onClick={() => downloadIcs(`MTU ${e.title} ${e.start_date}.ics`, [e])}><CalendarPlus size={15} /> Add to calendar</button>}
           </div>
         </div>
+        {!past && me.member_id && <div className="rsvpCard"><div><b>Are you going?</b><span>{kindLabel[e.kind]} · {eventRange(e)}</span></div><Rsvp event={e} /></div>}
         <section className="panel">
           <div className="sectionTitle"><h2>Your details</h2></div>
           <dl className="facts">
@@ -114,7 +114,6 @@ export default function EventView({ id }: { id: string }) {
           <div className="eyebrow">{kindLabel[e.kind].toUpperCase()} · {eventRange(e)}</div>
           <h1>{e.title}</h1>
           <p>{e.location || 'Location TBD'}</p>
-          {!past && <Rsvp event={e} />}
         </div>
         <div className="titleActions noPrint">
           {isStaff && !past && <button className="secondary" disabled={posting} onClick={postToGroupMe}><MessageCircle size={15} /> {posting ? 'Posting…' : e.groupme_posted_at ? 'Post to GroupMe again' : 'Post to GroupMe'}</button>}
@@ -126,6 +125,7 @@ export default function EventView({ id }: { id: string }) {
           {isStaff && <button className="secondary danger" onClick={() => setDeleting(true)}><Trash2 size={15} /></button>}
         </div>
       </div>
+      {!past && me.member_id && <div className="rsvpCard"><div><b>Are you going?</b><span>{kindLabel[e.kind]} · {eventRange(e)}</span></div><Rsvp event={e} /></div>}
       {err && <p className="alert">{err}</p>}
       {isStaff && (posted || e.groupme_posted_at) && <p className="formNote">{posted || `Posted to GroupMe ${new Date(e.groupme_posted_at!).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}.`}</p>}
 

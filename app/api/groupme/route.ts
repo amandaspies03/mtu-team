@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const text = [
     `📅 New ${KIND[e.kind] ?? 'event'}: ${e.title}`,
     `${when}${e.location ? ` · ${e.location}` : ''}`,
-    `RSVP on the team site: ${origin}/#event/${e.id}`,
+    `Tap to RSVP (I'm going / Can't make it): ${origin}/#event/${e.id}`,
   ].join('\n').slice(0, 1000);
 
   const res = await fetch('https://api.groupme.com/v3/bots/post', {
