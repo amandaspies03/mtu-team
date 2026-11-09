@@ -25,12 +25,11 @@ export function AwardsSelect({ member }: { member: Member }) {
   };
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     const shut = () => place();
-    document.addEventListener('mousedown', close); document.addEventListener('keydown', esc);
+    document.addEventListener('keydown', esc);
     window.addEventListener('resize', shut); window.addEventListener('scroll', shut, true);
-    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); window.removeEventListener('resize', shut); window.removeEventListener('scroll', shut, true); };
+    return () => { document.removeEventListener('keydown', esc); window.removeEventListener('resize', shut); window.removeEventListener('scroll', shut, true); };
   }, [open]);
   if (!isStaff) return <AwardChips member={member} />;
 
@@ -45,6 +44,8 @@ export function AwardsSelect({ member }: { member: Member }) {
       <button ref={btn} className="awardsBtn" aria-haspopup="true" aria-expanded={open} aria-label={`Awards for ${member.last_name}`} onClick={() => { place(); setOpen(!open); }}>
         <AwardChips member={member} /><ChevronDown size={14} />
       </button>
+      {/* A click outside only closes the menu; the invisible backdrop keeps it from opening the shooter behind it. */}
+      {open && <div className="awardsBackdrop" onClick={e => { e.stopPropagation(); setOpen(false); }} />}
       {open && (
         <div className="awardsPop" role="group" aria-label="Awards" style={{ top: pos.top, left: pos.left }}>
           <label className="check"><input type="checkbox" checked={member.gov20_pistol} onChange={e => save({ gov20_pistol: e.target.checked })} /> Governor&apos;s 20 – Pistol</label>
