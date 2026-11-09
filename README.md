@@ -21,3 +21,7 @@ Same stack as Battle Buddy: Next.js 16 on Vercel, Supabase (Postgres + Auth), Gi
 - Sessions sign out after 30 minutes of inactivity; open tabs show a refresh banner after each deploy.
 
 Do not store SSNs, DoD IDs, DOBs, license numbers or weapon serial numbers in this app.
+
+## GroupMe
+
+Staff can post events to the team GroupMe. Which group receives posts (live team group vs. test group) is controlled by the `GROUPME_BOT_ID` environment variable in Vercel. See [docs/GROUPME.md](docs/GROUPME.md) before changing it.

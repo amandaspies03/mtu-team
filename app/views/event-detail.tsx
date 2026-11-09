@@ -63,8 +63,9 @@ export default function EventView({ id }: { id: string }) {
     if (error) { setErr(error.message); return; }
     await reload(); go('events');
   }
+  // Which GroupMe group receives this is set by GROUPME_BOT_ID in Vercel — see docs/GROUPME.md.
   async function postToGroupMe() {
-    if (!confirm(`Post "${e!.title}" to the 184th MTU GroupMe? Everyone in the group will see it.${e!.groupme_posted_at ? ' (It was already posted once.)' : ''}`)) return;
+    if (!confirm(`Post "${e!.title}" to the team GroupMe? Everyone in the group will see it.${e!.groupme_posted_at ? ' (It was already posted once.)' : ''}`)) return;
     setPosting(true); setErr(''); setPosted('');
     const { data: sess } = await sb.auth.getSession();
     const res = await fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sess.session?.access_token ?? ''}` }, body: JSON.stringify({ type: 'event', eventId: e!.id }) }).catch(() => null);

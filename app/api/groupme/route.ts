@@ -1,6 +1,7 @@
 // Posts a team notice to the 184th MTU GroupMe group through the "MTU Bot".
 // Only signed-in, approved staff can trigger it, and only for an event that exists.
 // The bot ID lives in the GROUPME_BOT_ID environment variable and never reaches the browser.
+// Live vs. test group = which bot ID is in that variable. See docs/GROUPME.md before switching.
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
