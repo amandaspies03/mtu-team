@@ -185,120 +185,74 @@ function sessionLabels(scores: Score[]) {
   return [...new Set(scores.map(s => s.session_label).filter((x): x is string => !!x))].sort();
 }
 
-type Cell = { t: string; x: string };
-type Entry = { key: number; member_id: string; v: Record<string, Cell> };
-let entryKey = 0;
-const newEntry = (member_id: string): Entry => ({ key: ++entryKey, member_id, v: {} });
+type Row = { key: number; member_id: string; date: string; label: string; code: string; t: string; x: string };
+let rowKey = 0;
 
+/** One score per row: shooter, date, practice/match, course, score. "Add row" copies the last row's date, event and course. */
 function EnterScores({ onDone }: { onDone: () => void }) {
   const { sb, scores, members, courses, reload } = useTeam();
-  const [label, setLabel] = useState('');
-  const [date, setDate] = useState(todayISO());
-  const [codes, setCodes] = useState<string[]>(['PISTOL_EIC']);
-  const picked = courses.filter(c => codes.includes(c.code));
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const name = (id: string) => fullName(members.find(m => m.id === id));
-  const ordered = [...entries].sort((a, b) => name(a.member_id).localeCompare(name(b.member_id)) || a.key - b.key);
-  const has = new Set(entries.map(e => e.member_id));
-  const current = members.filter(m => m.team_status !== 'Inactive').sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const blank = (prev?: Row): Row => ({ key: ++rowKey, member_id: '', date: prev?.date ?? todayISO(), label: prev?.label ?? '', code: prev?.code ?? courses[0]?.code ?? '', t: '', x: '' });
+  const [rows, setRows] = useState<Row[]>(() => [blank()]);
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
-  const filled = entries.reduce((n, e) => n + picked.filter(c => (e.v[c.code]?.t ?? '') !== '').length, 0);
-  const setCell = (key: number, code: string, patch: Partial<Cell>) =>
-    setEntries(entries.map(e => (e.key === key ? { ...e, v: { ...e.v, [code]: { ...{ t: '', x: '' }, ...e.v[code], ...patch } } } : e)));
-  const toggleCourse = (code: string) => setCodes(codes.includes(code) ? (codes.length > 1 ? codes.filter(c => c !== code) : codes) : [...codes, code]);
+  const shooters = members.filter(m => m.team_status !== 'Inactive').sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const set = (key: number, patch: Partial<Row>) => setRows(rows.map(r => (r.key === key ? { ...r, ...patch } : r)));
+  const ready = rows.filter(r => r.member_id && r.t !== '');
+  const name = (id: string) => fullName(members.find(m => m.id === id));
 
   async function save() {
     setErr('');
-    if (!label.trim()) { setErr('Type the practice or match name.'); return; }
-    const rows = entries.flatMap(e => picked.filter(c => (e.v[c.code]?.t ?? '') !== '').map(c => {
-      const cell = e.v[c.code], total = Number(cell.t), x = c.has_x && cell.x !== '' ? Number(cell.x) : null;
-      return { member_id: e.member_id, course_code: c.code, event_id: null, shot_on: date || null, session_label: label.trim(), total, x_count: x, raw: scoreText(total, x) };
-    }));
-    if (!rows.length) { setErr('Enter at least one score.'); return; }
-    const bad = rows.find(r => !scoreOk(r.total, r.x_count, courses.find(c => c.code === r.course_code)?.max_score));
-    if (bad) { const c = courses.find(x => x.code === bad.course_code); setErr(`Check ${name(bad.member_id)} on ${c?.name}: score must be 0–${c?.max_score ?? '∞'} and X count a whole number.`); return; }
+    if (!ready.length) { setErr('Fill in at least one row with a shooter and a score.'); return; }
+    const half = rows.find(r => (r.member_id || r.t !== '') && !(r.member_id && r.t !== ''));
+    if (half) { setErr(`Row ${rows.indexOf(half) + 1} needs both a shooter and a score (or clear it).`); return; }
+    const noLabel = ready.find(r => !r.label.trim());
+    if (noLabel) { setErr(`Row ${rows.indexOf(noLabel) + 1}: type the practice or match (e.g. Practice, TAG Match).`); return; }
+    const out = ready.map(r => {
+      const c = courses.find(x => x.code === r.code);
+      const total = Number(r.t), x = c?.has_x && r.x !== '' ? Number(r.x) : null;
+      return { r, c, row: { member_id: r.member_id, course_code: r.code, event_id: null, shot_on: r.date || null, session_label: r.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
+    });
+    const bad = out.find(o => !scoreOk(o.row.total, o.row.x_count, o.c?.max_score));
+    if (bad) { setErr(`Row ${rows.indexOf(bad.r) + 1} (${name(bad.r.member_id)}): score must be 0–${bad.c?.max_score ?? '∞'} and X count a whole number.`); return; }
     setBusy(true);
-    const { error } = await sb.from('scores').insert(rows);
+    const { error } = await sb.from('scores').insert(out.map(o => o.row));
     setBusy(false);
     if (error) { setErr(error.message); return; }
-    setEntries([]);
+    setRows([blank(rows[rows.length - 1])]);
     await reload();
     onDone();
   }
 
   return (
     <section className="panel">
-      <div className="formGrid">
-        <label>Practice / match<input list="sessionLabels" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Practice, TAG Match, Winston P. Wilson" required /></label>
-        <label>Date fired<input type="date" value={date} onChange={e => setDate(e.target.value)} required /></label>
-      </div>
-      <datalist id="sessionLabels">{sessionLabels(scores).map(l => <option key={l} value={l} />)}</datalist>
-      <div className="field">
-        <span className="fieldLabel">Courses fired <small className="sub">tick every match you shot — each gets its own column</small></span>
-        <div className="chips">{courses.map(c => <button key={c.code} type="button" className={`chip ${codes.includes(c.code) ? 'on' : ''}`} aria-pressed={codes.includes(c.code)} onClick={() => toggleCourse(c.code)}>{c.name}</button>)}</div>
-      </div>
-      <div className="tableWrap"><table className="entry">
-        <thead>
-          <tr><th rowSpan={picked.some(c => c.has_x) ? 2 : 1}>Shooter</th>
-            {picked.map(c => <th key={c.code} className="num courseHead" colSpan={c.has_x ? 2 : 1}>{c.name}</th>)}
-            <th rowSpan={picked.some(c => c.has_x) ? 2 : 1} /></tr>
-          {picked.some(c => c.has_x) && <tr>{picked.map(c => [<th key={c.code + 't'} className="num">Score{c.max_score ? ` / ${c.max_score}` : ''}</th>, c.has_x && <th key={c.code + 'x'} className="num">X</th>])}</tr>}
-        </thead>
-        <tbody>
-          {ordered.map((e, i) => {
-            const first = i === 0 || ordered[i - 1].member_id !== e.member_id;
-            const n = entries.filter(x => x.member_id === e.member_id).length;
-            const idx = ordered.slice(0, i + 1).filter(x => x.member_id === e.member_id).length;
-            return (
-              <tr key={e.key} className={first ? '' : 'again'}>
-                <td>{first ? name(e.member_id) : ''}{n > 1 && <small className="sub">Score {idx} of {n}</small>}</td>
-                {picked.map(c => [
-                  <td key={c.code + 't'} className="num"><input className="numIn" type="number" inputMode="numeric" min={0} max={c.max_score ?? undefined} value={e.v[c.code]?.t ?? ''} onChange={ev => setCell(e.key, c.code, { t: ev.target.value })} aria-label={`${name(e.member_id)} ${c.name} score ${idx}`} /></td>,
-                  c.has_x && <td key={c.code + 'x'} className="num"><input className="numIn" type="number" inputMode="numeric" min={0} value={e.v[c.code]?.x ?? ''} onChange={ev => setCell(e.key, c.code, { x: ev.target.value })} aria-label={`${name(e.member_id)} ${c.name} X count ${idx}`} /></td>,
-                ])}
-                <td className="rowActions">
-                  <button className="iconBtn" title="Add another score for this shooter" aria-label={`Add another score for ${name(e.member_id)}`} onClick={() => setEntries([...entries, newEntry(e.member_id)])}><Plus size={14} /></button>
-                  <button className="iconBtn" title="Remove this row" aria-label="Remove this row" onClick={() => setEntries(entries.filter(x => x.key !== e.key))}><X size={14} /></button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
+      <datalist id="sessionLabels">{[...new Set(['Practice', 'TAG Match', 'Regionals', 'Nationals (WPW)', '184th Invitational', ...sessionLabels(scores)])].map(l => <option key={l} value={l} />)}</datalist>
+      <div className="tableWrap"><table className="entry rowEntry">
+        <thead><tr><th>#</th><th>Shooter</th><th>Date</th><th>Practice / match</th><th>Course of fire</th><th className="num">Score</th><th className="num">X</th><th /></tr></thead>
+        <tbody>{rows.map((r, i) => {
+          const c = courses.find(x => x.code === r.code);
+          return (
+            <tr key={r.key}>
+              <td className="muted">{i + 1}</td>
+              <td><select aria-label={`Row ${i + 1} shooter`} value={r.member_id} onChange={e => set(r.key, { member_id: e.target.value })}>
+                <option value="">Select shooter…</option>
+                {shooters.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
+              </select></td>
+              <td><input type="date" aria-label={`Row ${i + 1} date`} value={r.date} onChange={e => set(r.key, { date: e.target.value })} /></td>
+              <td><input list="sessionLabels" aria-label={`Row ${i + 1} practice or match`} placeholder="Practice, TAG Match…" value={r.label} onChange={e => set(r.key, { label: e.target.value })} /></td>
+              <td><select aria-label={`Row ${i + 1} course`} value={r.code} onChange={e => set(r.key, { code: e.target.value })}>
+                {courses.map(co => <option key={co.code} value={co.code}>{co.name}</option>)}
+              </select></td>
+              <td className="num"><input className="numIn" type="number" inputMode="numeric" min={0} max={c?.max_score ?? undefined} placeholder={c?.max_score ? `/ ${c.max_score}` : ''} aria-label={`Row ${i + 1} score`} value={r.t} onChange={e => set(r.key, { t: e.target.value })} /></td>
+              <td className="num">{c?.has_x ? <input className="numIn xIn" type="number" inputMode="numeric" min={0} aria-label={`Row ${i + 1} X count`} value={r.x} onChange={e => set(r.key, { x: e.target.value })} /> : <span className="muted">—</span>}</td>
+              <td><button className="iconBtn" aria-label={`Remove row ${i + 1}`} disabled={rows.length === 1} onClick={() => setRows(rows.filter(x => x.key !== r.key))}><X size={14} /></button></td>
+            </tr>
+          );
+        })}</tbody>
       </table></div>
-      <div className="row addRow">
-        <ShooterPicker pool={current.filter(m => !has.has(m.id))} onPick={id => setEntries([...entries, newEntry(id)])} />
-        {current.some(m => !has.has(m.id)) && <button className="linkBtn" onClick={() => setEntries([...entries, ...current.filter(m => !has.has(m.id)).map(m => newEntry(m.id))])}>Add everyone not inactive</button>}
-      </div>
-      <p className="formNote">Leave a box blank if someone didn’t shoot that course. Shot the same course twice? Use + on a shooter’s row for another line.</p>
+      <div className="row addRow"><button className="secondary" onClick={() => setRows([...rows, blank(rows[rows.length - 1])])}><Plus size={15} /> Add row</button>
+        <span className="formNote">New rows copy the date, practice/match and course from the row above.</span></div>
       {err && <p className="alert">{err}</p>}
-      <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : filled === 1 ? 'Save 1 score' : `Save ${filled || ''} scores`}</button></div>
+      <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : ready.length === 1 ? 'Save 1 score' : `Save ${ready.length || ''} scores`}</button></div>
     </section>
-  );
-}
-
-function ShooterPicker({ pool, onPick }: { pool: Member[]; onPick: (id: string) => void }) {
-  const [q, setQ] = useState('');
-  const [hi, setHi] = useState(0);
-  const found = q.trim() ? pool.filter(m => matches(m, q)).slice(0, 8) : [];
-  function pick(id: string) { onPick(id); setQ(''); setHi(0); }
-  return (
-    <div className="picker">
-      <label className="search"><Search size={16} /><input placeholder="Add a shooter — type a name…" value={q} aria-label="Search shooters to add"
-        onChange={e => { setQ(e.target.value); setHi(0); }}
-        onKeyDown={e => {
-          if (e.key === 'ArrowDown') { e.preventDefault(); setHi(Math.min(hi + 1, found.length - 1)); }
-          else if (e.key === 'ArrowUp') { e.preventDefault(); setHi(Math.max(hi - 1, 0)); }
-          else if (e.key === 'Enter' && found[hi]) { e.preventDefault(); pick(found[hi].id); }
-          else if (e.key === 'Escape') setQ('');
-        }} /></label>
-      {q.trim() && <div className="pickerList" role="listbox">
-        {found.length === 0 ? <p className="formNote">No match.</p> : found.map((m, i) => (
-          <button key={m.id} role="option" aria-selected={i === hi} className={i === hi ? 'on' : ''} onMouseEnter={() => setHi(i)} onClick={() => pick(m.id)}>
-            {fullName(m)} <small className="sub">{[m.rank, m.team_status].filter(Boolean).join(' · ')}</small>
-          </button>
-        ))}
-      </div>}
-    </div>
   );
 }
 

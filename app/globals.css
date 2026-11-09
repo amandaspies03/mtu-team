@@ -518,3 +518,10 @@ table.entry tbody td:first-child, table.entry thead tr:first-child th:first-chil
 .teamLink code { display: block; padding: 10px 12px; background: #f1f0e8; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }
 .eicRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; margin: 2px 0; } .eicRow select { width: auto; min-width: 120px; padding: 4px 8px; }
 .awardsPop label.eicRow { flex-direction: row; align-items: center; justify-content: space-between; font-weight: 400; text-align: left; }
+table.rowEntry td { padding: 6px 6px; vertical-align: middle; }
+table.rowEntry select, table.rowEntry input:not(.numIn) { min-width: 0; width: 100%; }
+table.rowEntry td:nth-child(2) { min-width: 170px; }
+table.rowEntry td:nth-child(3) { min-width: 150px; }
+table.rowEntry td:nth-child(4) { min-width: 160px; }
+table.rowEntry td:nth-child(5) { min-width: 170px; }
+table.rowEntry .xIn { width: 60px !important; }
