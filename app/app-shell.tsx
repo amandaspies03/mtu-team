@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
+import { clearSnapshot, isNetworkError, loadSnapshot, signOutHere } from '../lib/offline';
+import { OfflineBanner } from './views/offline-banner';
 import { TeamProvider, useTeam } from '../lib/data';
 import { DUTY_LABEL, type Profile } from '../lib/types';
 import { displayName } from '../lib/util';
@@ -40,22 +42,53 @@ export default function AppShell() {
   const [profileError, setProfileError] = useState('');
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [recovery, setRecovery] = useState(false);
+  // No signal and the sign-in couldn't be refreshed: open with the copy saved on this device (read-only until back online).
+  const [offlineUser, setOfflineUser] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    // Keeps a copy of the app on the device so it opens without signal (see public/sw.js).
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev')}`).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (!sb) { setReady(true); return; }
     const { data } = sb.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (s) setOfflineUser(null);
+      if (event === 'SIGNED_OUT') { setOfflineUser(null); void clearSnapshot(); }
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
     });
-    sb.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
+    // With no signal, an expired sign-in can make getSession retry for a long time; don't wait on it.
+    const offlineNow = typeof navigator !== 'undefined' && navigator.onLine === false;
+    const sessionOrTimeout = offlineNow
+      ? Promise.race([sb.auth.getSession(), new Promise<Awaited<ReturnType<typeof sb.auth.getSession>>>(r => setTimeout(() => r({ data: { session: null }, error: new Error('Failed to fetch (offline)') } as never), 3000))])
+      : sb.auth.getSession();
+    sessionOrTimeout.then(async ({ data, error }) => {
+      if (!data.session && (navigator.onLine === false || isNetworkError(error))) {
+        const snap = await loadSnapshot<Profile, unknown>();
+        if (snap) setOfflineUser(snap.profile);
+      }
+      setSession(data.session); setReady(true);
+    });
     return () => data.subscription.unsubscribe();
   }, [sb]);
 
   async function loadProfile() {
     if (!sb || !session) return;
     setProfileError('');
+    if (navigator.onLine === false) {
+      const snap = await loadSnapshot<Profile, unknown>();
+      if (snap && snap.userId === session.user.id) { setProfile(snap.profile); setProfileLoaded(true); return; }
+    }
     const { data, error } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-    if (error) setProfileError(error.message);
+    if (error && isNetworkError(error)) {
+      // No signal: use the access record saved with the offline copy, if it's this account's.
+      const snap = await loadSnapshot<Profile, unknown>();
+      if (snap && snap.userId === session.user.id) { setProfile(snap.profile); setProfileLoaded(true); return; }
+    }
+    if (error) setProfileError(isNetworkError(error) ? 'No signal. Connect and try again — the first sign-in on a device needs signal.' : error.message);
     setProfile(data as Profile | null);
     setProfileLoaded(true);
   }
@@ -69,13 +102,14 @@ export default function AppShell() {
 
   if (!sb) return <div className="authShell"><div className="authCard"><h1>Setup needed</h1><p>The Supabase URL and publishable key are not configured for this deployment.</p></div></div>;
   if (!ready) return <div className="loadingScreen">Loading…</div>;
+  if (!session && offlineUser && !recovery) return <TeamProvider sb={sb} me={offlineUser}><Workspace /></TeamProvider>;
   if (!session || recovery) return <><UpdateBanner /><AuthScreen sb={sb} recovery={recovery} onRecovered={() => setRecovery(false)} /></>;
   if (!profile) return (
     <div className="authShell"><div className="authCard">
       <h1>{profileLoaded ? 'No access record' : 'Checking your access…'}</h1>
       {profileLoaded && !profileError && <p>This account isn’t set up on the team site. Contact MTU staff for an invite link.</p>}
       {profileError && <p className="alert">{profileError}</p>}
-      <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
+      <button className="secondary" onClick={() => signOutHere(sb)}>Sign out</button>
     </div></div>
   );
   if (!profile.approved && profile.pending) return (
@@ -85,7 +119,7 @@ export default function AppShell() {
       <p>Thanks for signing up. MTU staff will approve your account shortly — usually the same day. Once they do, you’ll see the team calendar and can RSVP.</p>
       <div className="row">
         <button className="primary" onClick={loadProfile}>Check again</button>
-        <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
+        <button className="secondary" onClick={() => signOutHere(sb)}>Sign out</button>
       </div>
     </div></div>
   );
@@ -96,7 +130,7 @@ export default function AppShell() {
       <p>MTU staff have turned off access for {profile.email}. If you think that’s a mistake, contact MTU staff.</p>
       <div className="row">
         <button className="primary" onClick={loadProfile}>Check again</button>
-        <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out</button>
+        <button className="secondary" onClick={() => signOutHere(sb)}>Sign out</button>
       </div>
     </div></div>
   );
@@ -181,11 +215,12 @@ function Workspace() {
           </div>
           {realStaff && <button className="signout previewToggle" onClick={() => { setMenuOpen(false); setPreviewShooter(!previewShooter); }}><Eye size={14} /> {previewShooter ? 'Back to staff view' : 'View as shooter'}</button>}
           <button className="signout" onClick={() => { setMenuOpen(false); setPwOpen(true); }}><KeyRound size={14} /> Change password</button>
-          <button className="signout" onClick={() => sb.auth.signOut()}><LogOut size={14} /> Sign out</button>
+          <button className="signout" onClick={() => signOutHere(sb)}><LogOut size={14} /> Sign out</button>
         </div>
         </div>
       </aside>
       <main>
+        <OfflineBanner />
         {previewShooter && <div className="previewBar"><Eye size={16} /><span><b>Shooter view.</b> This is what a shooter sees. Anything you change still saves to your real account.</span><button onClick={() => setPreviewShooter(false)}>Back to staff view</button></div>}
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}
@@ -219,7 +254,7 @@ function CompleteProfile({ sb, onDone }: { sb: SupabaseClient; onDone: () => voi
       <ProfileFields value={info} onChange={setInfo} />
       {err && <p className="alert">{err}</p>}
       <button className="primary wide" disabled={busy}>{busy ? 'Saving…' : 'Save and continue'}</button>
-      <div className="authLinks"><button type="button" onClick={() => sb.auth.signOut()}>Sign out</button></div>
+      <div className="authLinks"><button type="button" onClick={() => signOutHere(sb)}>Sign out</button></div>
     </form></div>
   );
 }

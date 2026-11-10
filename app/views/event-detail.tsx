@@ -15,7 +15,7 @@ import { Empty, Modal, Rsvp, Tag } from './ui';
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
 export default function EventView({ id }: { id: string }) {
-  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload, can } = useTeam();
+  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload, can, saveOrQueue } = useTeam();
   const e = events.find(x => x.id === id);
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
@@ -44,8 +44,10 @@ export default function EventView({ id }: { id: string }) {
   }
   async function saveEvent(change: Record<string, number | boolean | string | null>) {
     setErr('');
-    const { error } = await sb.from('events').update(change).eq('id', e!.id);
-    if (error) setErr(error.message); else await reload();
+    try {
+      const r = await saveOrQueue({ kind: 'event', label: `${e!.title}: ${Object.keys(change).map(k => k.replace(/^prep_|_/g, ' ').trim()).join(', ')}`, eventId: e!.id, change });
+      if (r === 'sent') await reload();
+    } catch (x) { setErr((x as { message?: string }).message ?? 'Couldn’t save.'); }
   }
   async function patch(a: Attendance, change: Partial<Attendance>) {
     setErr('');
@@ -330,16 +332,18 @@ function MatchTeams({ eventId }: { eventId: string }) {
 
 /** Vehicle / ammo managers (not full staff): just the fields their role covers. The database refuses anything else. */
 function DutyPanel({ event: e }: { event: TeamEvent }) {
-  const { sb, can, reload } = useTeam();
+  const { can, reload, saveOrQueue } = useTeam();
   const [err, setErr] = useState(''), [saving, setSaving] = useState(false);
   const isPractice = e.kind === 'practice';
   const vehicle = can('vehicle') && isPractice, ammo = can('ammo');
   if (!vehicle && !ammo) return null;
   async function save(changes: Record<string, boolean | number | string | null>) {
     setErr(''); setSaving(true);
-    const { error } = await sb.rpc('update_event_duty', { p_event: e.id, p_changes: changes });
+    try {
+      const r = await saveOrQueue({ kind: 'duty', label: `${e.title}: ${Object.keys(changes).map(k => k.replace(/^prep_|_/g, ' ').trim()).join(', ')}`, eventId: e.id, change: changes });
+      if (r === 'sent') await reload();
+    } catch (x) { setErr((x as { message?: string }).message ?? 'Couldn’t save.'); }
     setSaving(false);
-    if (error) setErr(error.message); else await reload();
   }
   const num = (v: string) => (v === '' ? null : Math.max(0, Math.round(+v)));
   return (

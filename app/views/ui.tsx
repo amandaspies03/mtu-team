@@ -64,24 +64,21 @@ export function Sparkline({ values, max }: { values: number[]; max?: number | nu
 
 /** Lets a shooter say they're coming or not. Staff manage attendance on the event page. */
 export function Rsvp({ event }: { event: TeamEvent }) {
-  const { sb, me, attendance, reload } = useTeam();
+  const { me, attendance, reload, saveOrQueue } = useTeam();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [queued, setQueued] = useState(false);
   if (!me.member_id) return <span className="formNote">Ask staff to link your account to the roster to RSVP.</span>;
   const mine = attendance.find(a => a.event_id === event.id && a.member_id === me.member_id);
   const locked = mine && (mine.status === 'attended' || mine.status === 'excused');
   async function set(status: 'planned' | 'absent') {
-    setBusy(true); setErr('');
+    setBusy(true); setErr(''); setQueued(false);
     const previous = mine?.status ?? null;
-    const { error } = await sb.rpc('rsvp', { p_event: event.id, p_status: status });
-    if (error) setErr(error.message);
-    else {
-      // Let the NCOIC/staff GroupMe know (best effort; never blocks the RSVP).
-      if (status !== previous && (status === 'planned' || previous === 'planned')) {
-        sb.auth.getSession().then(({ data }) => fetch('/api/groupme', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` }, body: JSON.stringify({ type: 'rsvp', eventId: event.id, previous }) })).catch(() => {});
-      }
-      await reload();
-    }
+    try {
+      // Sends now (and alerts the NCOIC/staff GroupMe), or waits on this phone until there's signal.
+      const r = await saveOrQueue({ kind: 'rsvp', label: `RSVP: ${status === 'planned' ? 'going' : 'can’t make it'} · ${event.title}`, eventId: event.id, status, previous, memberId: me.member_id! });
+      if (r === 'sent') await reload(); else setQueued(true);
+    } catch (e) { setErr((e as { message?: string }).message ?? 'Couldn’t save your RSVP.'); }
     setBusy(false);
   }
   if (locked) return <Tag tone="good">{mine!.status === 'attended' ? 'Attended' : 'Excused'}</Tag>;
@@ -90,6 +87,7 @@ export function Rsvp({ event }: { event: TeamEvent }) {
       <button className={mine?.status === 'planned' ? 'chip on' : 'chip'} disabled={busy} onClick={() => set('planned')}>I’m going</button>
       <button className={mine?.status === 'absent' ? 'chip on bad' : 'chip'} disabled={busy} onClick={() => set('absent')}>Can’t make it</button>
       {err && <span className="formNote error">{err}</span>}
+      {queued && <span className="formNote queuedNote">Saved on this phone. Sends when you have signal.</span>}
     </div>
   );
 }

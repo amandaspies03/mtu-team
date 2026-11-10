@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Modal } from './ui';
+import { signOutHere } from '../../lib/offline';
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev';
 
@@ -62,7 +63,7 @@ export function IdleSignOut({ sb }: { sb: SupabaseClient }) {
       if (idle >= IDLE_MS) {
         clearInterval(id);
         try { sessionStorage.setItem(IDLE_FLAG, '1'); } catch { /* ignore */ }
-        await sb.auth.signOut();
+        await signOutHere(sb);
       } else if (idle >= IDLE_MS - WARN_MS) setLeft(Math.ceil((IDLE_MS - idle) / 1000));
       else setLeft(null);
     }, 1000);
@@ -74,7 +75,7 @@ export function IdleSignOut({ sb }: { sb: SupabaseClient }) {
     <Modal title="Still there?" onClose={() => { last.current = Date.now(); writeLast(last.current); setLeft(null); }}>
       <p>For security, you’ll be signed out in <b>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</b> because of inactivity.</p>
       <div className="formActions">
-        <button className="secondary" onClick={() => sb.auth.signOut()}>Sign out now</button>
+        <button className="secondary" onClick={() => signOutHere(sb)}>Sign out now</button>
         <button className="primary" onClick={() => { last.current = Date.now(); writeLast(last.current); setLeft(null); }}>Stay signed in</button>
       </div>
     </Modal>

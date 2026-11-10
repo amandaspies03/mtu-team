@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { flushOutbox, isNetworkError, loadSnapshot, outboxItems, saveOrQueue, saveSnapshot, type NewOutboxItem, type OutboxItem } from './offline';
 import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty } from './types';
 
 export type TeamData = {
@@ -35,6 +36,13 @@ export type TeamData = {
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
+  /** Set when showing the copy saved on this device because the server can't be reached. */
+  offline: { savedAt: string } | null;
+  /** Changes made without signal, waiting to send (this account only). */
+  pending: OutboxItem[];
+  /** Save now, or keep it to send when signal returns. The screen updates either way. */
+  saveOrQueue: (item: NewOutboxItem) => Promise<'sent' | 'queued'>;
+  sendPending: () => Promise<void>;
   memberById: (id: string | null | undefined) => Member | undefined;
 };
 
@@ -89,7 +97,7 @@ async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member
 
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
-  const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error'>>({
+  const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>>({
     members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [],
   });
   const [loading, setLoading] = useState(true);
@@ -98,6 +106,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
   const reload = useCallback(async () => {
     setError('');
     try {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new Error('Failed to fetch (offline)');
       let duties: Duty[] = [];
       if (!isStaff) {
         const r = await sb.rpc('my_duties');
@@ -118,15 +127,51 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         all<Range>(sb.from('ranges').select('*').order('name')),
         isStaff ? all<StaffDuty>(sb.from('staff_duties').select('*').order('email')) : Promise.resolve([] as StaffDuty[]),
       ]);
-      setState({ members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties });
+      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties };
+      const waiting = await outboxItems(me.id);
+      setState(applyPending(fresh, waiting, me.member_id));
+      setOffline(null);
+      void saveSnapshot({ userId: me.id, savedAt: new Date().toISOString(), profile: me, data: forDevice(fresh) });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load team data');
+      const snap = isNetworkError(e) ? await loadSnapshot<Profile, typeof state>() : undefined;
+      if (snap && snap.userId === me.id) {
+        setState(applyPending(snap.data, await outboxItems(me.id), me.member_id));
+        setOffline({ savedAt: snap.savedAt });
+      } else setError(isNetworkError(e) ? 'No signal, and there’s no saved copy of the team data on this device yet.' : e instanceof Error ? e.message : 'Could not load team data');
     } finally {
       setLoading(false);
     }
-  }, [sb, isStaff]);
+  }, [sb, isStaff, me]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  // ---- Offline: data copy status and the outbox of changes waiting for signal ----
+  const [offline, setOffline] = useState<{ savedAt: string } | null>(null);
+  const [pending, setPending] = useState<OutboxItem[]>([]);
+  const refreshPending = useCallback(async () => setPending(await outboxItems(me.id)), [me.id]);
+  const sendPending = useCallback(async () => {
+    const sent = await flushOutbox(sb, me.id);
+    await refreshPending();
+    if (sent > 0 || offline) await reload();
+  }, [sb, me.id, refreshPending, reload, offline]);
+  useEffect(() => {
+    void refreshPending();
+    const onChange = () => { void refreshPending(); };
+    const onOnline = () => { void sendPending(); };
+    window.addEventListener('mtu-outbox', onChange);
+    window.addEventListener('online', onOnline);
+    // Weak signal often doesn't fire "online": keep trying every 30 s while something is waiting or the copy is showing.
+    const t = setInterval(() => { if (pending.length || offline) void sendPending(); }, 30_000);
+    return () => { window.removeEventListener('mtu-outbox', onChange); window.removeEventListener('online', onOnline); clearInterval(t); };
+  }, [refreshPending, sendPending, pending.length, offline]);
+  const queue = useCallback(async (item: NewOutboxItem) => {
+    const r = await saveOrQueue(sb, me.id, item);
+    if (r === 'queued') {
+      setState(st => applyPending(st, [{ ...item, id: 'local', userId: me.id, createdAt: new Date().toISOString() } as OutboxItem], me.member_id));
+      await refreshPending();
+    }
+    return r;
+  }, [sb, me.id, me.member_id, refreshPending]);
 
   // Staff can preview exactly what a shooter sees, using the same trimming the database applies to shooters.
   const [previewShooter, setPreviewState] = useState(() => { try { return isStaff && sessionStorage.getItem('mtu-preview-shooter') === '1'; } catch { return false; } });
@@ -161,5 +206,38 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
     if (!isStaff && !me.tutorial_done_at) sb.rpc('mark_tutorial_done').then(() => {}, () => {});
   }, [isStaff, me.tutorial_done_at, sb]);
 
-  return <Ctx.Provider value={{ sb, me, isStaff: fullStaff, realStaff: isStaff, previewShooter: preview, setPreviewShooter, tourOpen, openTour, closeTour, ...shown, can, loading, error, reload, memberById }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ sb, me, isStaff: fullStaff, realStaff: isStaff, previewShooter: preview, setPreviewShooter, tourOpen, openTour, closeTour, ...shown, can, loading, error, reload, memberById, offline, pending, saveOrQueue: queue, sendPending }}>{children}</Ctx.Provider>;
+}
+
+type TeamState = Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>;
+
+/** The copy kept on this device for offline use: no roster contact info, no admin-only data. */
+function forDevice(d: TeamState): TeamState {
+  return {
+    ...d,
+    members: d.members.map(m => ({ ...m, cell_phone: null, mil_email: null, personal_email: null, notes: null })),
+    profiles: [], staffEmails: [], invites: [], staffDuties: [],
+  };
+}
+
+/** Shows changes that are still waiting to send, so the screens match what the person entered. */
+function applyPending(d: TeamState, items: OutboxItem[], myMemberId: string | null): TeamState {
+  if (!items.length) return d;
+  let { scores, attendance, events } = d;
+  for (const i of items) {
+    if (i.kind === 'scores') {
+      const have = new Set(scores.map(x => x.id));
+      scores = [...scores, ...(i.rows as unknown as Score[]).filter(r => !have.has(r.id))];
+    } else if (i.kind === 'rsvp') {
+      const mid = i.memberId || myMemberId;
+      if (!mid) continue;
+      const cur = attendance.find(a => a.event_id === i.eventId && a.member_id === mid);
+      if (cur && cur.status !== 'planned' && cur.status !== 'absent') continue;
+      attendance = cur ? attendance.map(a => (a === cur ? { ...a, status: i.status } : a))
+        : [...attendance, { id: `pending-${i.eventId}`, event_id: i.eventId, member_id: mid, status: i.status } as Attendance];
+    } else {
+      events = events.map(e => (e.id === i.eventId ? ({ ...e, ...i.change } as TeamEvent) : e));
+    }
+  }
+  return { ...d, scores, attendance, events };
 }

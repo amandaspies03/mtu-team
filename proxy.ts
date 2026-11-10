@@ -9,4 +9,4 @@ export function proxy(request:NextRequest){
  const headers=new Headers(request.headers);headers.set('x-nonce',nonce);headers.set('Content-Security-Policy',policy);
  const response=NextResponse.next({request:{headers}});response.headers.set('Content-Security-Policy',policy);return response;
 }
-export const config={matcher:['/((?!api|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)']};
+export const config={matcher:['/((?!api|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|sw.js).*)']};

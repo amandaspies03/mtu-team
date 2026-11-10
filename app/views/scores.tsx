@@ -191,7 +191,8 @@ let rowKey = 0;
 
 /** One score per row: shooter, date, practice/match, course, score. "Add row" copies the last row's date, event and course. */
 function EnterScores({ onDone }: { onDone: () => void }) {
-  const { sb, scores, members, courses, reload } = useTeam();
+  const { scores, members, courses, reload, saveOrQueue } = useTeam();
+  const [queuedMsg, setQueuedMsg] = useState('');
   const blank = (prev?: Row): Row => ({ key: ++rowKey, member_id: '', date: prev?.date ?? todayISO(), label: prev?.label ?? '', code: prev?.code ?? courses[0]?.code ?? '', t: '', x: '' });
   const [rows, setRows] = useState<Row[]>(() => [blank()]);
   const [busy, setBusy] = useState(false), [err, setErr] = useState('');
@@ -210,15 +211,18 @@ function EnterScores({ onDone }: { onDone: () => void }) {
     const out = ready.map(r => {
       const c = courses.find(x => x.code === r.code);
       const total = Number(r.t), x = c?.has_x && r.x !== '' ? Number(r.x) : null;
-      return { r, c, row: { member_id: r.member_id, course_code: r.code, event_id: null, shot_on: r.date || null, session_label: r.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
+      return { r, c, row: { id: crypto.randomUUID(), member_id: r.member_id, course_code: r.code, event_id: null, shot_on: r.date || null, session_label: r.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
     });
     const bad = out.find(o => !scoreOk(o.row.total, o.row.x_count, o.c?.max_score));
     if (bad) { setErr(`Row ${rows.indexOf(bad.r) + 1} (${name(bad.r.member_id)}): score must be 0–${bad.c?.max_score ?? '∞'} and X count a whole number.`); return; }
     setBusy(true);
-    const { error } = await sb.from('scores').insert(out.map(o => o.row));
+    let r: 'sent' | 'queued';
+    try { r = await saveOrQueue({ kind: 'scores', label: `${out.length} score${out.length === 1 ? '' : 's'} · ${out[0].row.session_label}`, rows: out.map(o => o.row) }); }
+    catch (e) { setBusy(false); setErr((e as { message?: string }).message ?? 'Couldn’t save the scores.'); return; }
     setBusy(false);
-    if (error) { setErr(error.message); return; }
     setRows([blank(rows[rows.length - 1])]);
+    if (r === 'queued') { setQueuedMsg(`No signal. ${out.length} score${out.length === 1 ? ' is' : 's are'} saved on this device and will send when you’re back in signal.`); return; }
+    setQueuedMsg('');
     await reload();
     onDone();
   }
@@ -252,6 +256,7 @@ function EnterScores({ onDone }: { onDone: () => void }) {
       <div className="row addRow"><button className="secondary" onClick={() => setRows([...rows, blank(rows[rows.length - 1])])}><Plus size={15} /> Add row</button>
         <span className="formNote">New rows copy the date, practice/match and course from the row above.</span></div>
       {err && <p className="alert">{err}</p>}
+      {queuedMsg && <p className="queuedMsg" role="status">{queuedMsg}</p>}
       <div className="formActions"><button className="primary" disabled={busy} onClick={save}><Save size={15} /> {busy ? 'Saving…' : ready.length === 1 ? 'Save 1 score' : `Save ${ready.length || ''} scores`}</button></div>
     </section>
   );
@@ -360,7 +365,8 @@ type PhoneRow = { key: number; member_id: string; t: string; x: string; own: boo
 
 /** Phone layout: batch details set once, one card per shooter, keypad Next moves Score → X → next shooter, pinned Save. */
 function PhoneEnterScores({ onDone }: { onDone: () => void }) {
-  const { sb, scores, members, courses, reload } = useTeam();
+  const { scores, members, courses, reload, saveOrQueue } = useTeam();
+  const [queuedMsg, setQueuedMsg] = useState('');
   const [batch, setBatch] = useState({ date: todayISO(), label: '', code: courses[0]?.code ?? '' });
   const blank = (): PhoneRow => ({ key: ++rowKey, member_id: '', t: '', x: '', own: false, date: '', label: '', code: '' });
   const [rows, setRows] = useState<PhoneRow[]>(() => [blank()]);
@@ -399,15 +405,18 @@ function PhoneEnterScores({ onDone }: { onDone: () => void }) {
     const out = ready.map(r => {
       const d = eff(r), c = courses.find(x => x.code === d.code);
       const total = Number(r.t), x = c?.has_x && r.x !== '' ? Number(r.x) : null;
-      return { r, c, row: { member_id: r.member_id, course_code: d.code, event_id: null, shot_on: d.date || null, session_label: d.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
+      return { r, c, row: { id: crypto.randomUUID(), member_id: r.member_id, course_code: d.code, event_id: null, shot_on: d.date || null, session_label: d.label.trim(), total, x_count: x, raw: scoreText(total, x) } };
     });
     const bad = out.find(o => !scoreOk(o.row.total, o.row.x_count, o.c?.max_score));
     if (bad) { setErr(`${name(bad.r.member_id)}: score must be 0–${bad.c?.max_score ?? '∞'} and X count a whole number.`); return; }
     setBusy(true);
-    const { error } = await sb.from('scores').insert(out.map(o => o.row));
+    let r: 'sent' | 'queued';
+    try { r = await saveOrQueue({ kind: 'scores', label: `${out.length} score${out.length === 1 ? '' : 's'} · ${out[0].row.session_label}`, rows: out.map(o => o.row) }); }
+    catch (e) { setBusy(false); setErr((e as { message?: string }).message ?? 'Couldn’t save the scores.'); return; }
     setBusy(false);
-    if (error) { setErr(error.message); return; }
     setRows([blank()]);
+    if (r === 'queued') { setQueuedMsg(`No signal. ${out.length} score${out.length === 1 ? ' is' : 's are'} saved on this phone and will send when you’re back in signal.`); return; }
+    setQueuedMsg('');
     await reload();
     onDone();
   }
@@ -467,6 +476,7 @@ function PhoneEnterScores({ onDone }: { onDone: () => void }) {
       })}
       <button className="secondary peAdd" onClick={() => { const n = blank(); focusNext.current = `ps-who-${n.key}`; setRows([...rows, n]); }}><Plus size={15} /> Add shooter</button>
       {err && <p className="alert">{err}</p>}
+      {queuedMsg && <p className="queuedMsg" role="status">{queuedMsg}</p>}
       <div className="peSave">
         <div><b>{ready.length} score{ready.length === 1 ? '' : 's'} ready</b><span>{batchCourse?.name ?? ''}</span></div>
         <button className="primary" disabled={busy || !ready.length} onClick={save}><Save size={15} /> {busy ? 'Saving…' : `Save ${ready.length || ''}`}</button>

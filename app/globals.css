@@ -747,3 +747,16 @@ table.roster td:first-child { min-width: 150px; }
 @media (max-width: 600px) {
   table.roster td:first-child, table.roster th:first-child { min-width: 128px; width: 128px; max-width: 128px; white-space: normal; overflow-wrap: normal; word-break: normal; }
 }
+/* Offline */
+.offlineBanner { background: #fbf1dc; border: 1px solid #ecd39a; border-radius: 10px; padding: 10px 14px; margin: 0 0 16px; }
+.offlineBanner.hasFailed { background: #f8e3df; border-color: #e9b9ae; }
+.obMain { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.obText { flex: 1 1 220px; display: grid; gap: 2px; font-size: 13px; line-height: 1.4; }
+.obText b { font-size: 14px; }
+.obRetry { height: 36px; }
+.obList { list-style: none; margin: 10px 0 0; padding: 8px 0 0; border-top: 1px solid #ecd39a; display: grid; gap: 6px; }
+.obList li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.obList li span { display: grid; }
+.obList small { color: var(--muted); }
+.queuedMsg { background: #fbf1dc; border: 1px solid #ecd39a; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.queuedNote { color: #7a5a12; }
