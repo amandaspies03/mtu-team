@@ -738,3 +738,12 @@ main:has(.peSave) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .staffRow .grow { min-width: 180px; }
 .staffRow .grow strong, .staffRow .grow small { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .staffRow .grow { flex: 1 1 100%; } }
+/* Roster: Name column stays put while the rest scrolls sideways */
+table.roster th:first-child, table.roster td:first-child { position: sticky; left: 0; z-index: 2; background: var(--card); box-shadow: inset -1px 0 0 var(--line); }
+table.roster thead th:first-child { z-index: 3; }
+table.roster tr.clickable:hover td:first-child { background: #f8f7f1; }
+table.roster td:first-child { min-width: 150px; }
+.tableWrap.scrolled table.roster td:first-child, .tableWrap.scrolled table.roster th:first-child { box-shadow: inset -1px 0 0 var(--line), 6px 0 8px -6px rgba(31, 43, 36, .25); }
+@media (max-width: 600px) {
+  table.roster td:first-child, table.roster th:first-child { min-width: 128px; width: 128px; max-width: 128px; white-space: normal; overflow-wrap: normal; word-break: normal; }
+}

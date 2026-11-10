@@ -56,7 +56,7 @@ export default function Roster() {
         </select></label>
         <span className="formNote">{rows.length} shown{status === 'current' && inactiveCount > 0 && <> · {inactiveCount} inactive hidden <button className="linkBtn" onClick={() => setStatus('Inactive')}>Show inactive</button></>}</span>
       </div>
-      <div className="tableWrap"><table className="roster">
+      <div className="tableWrap" onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollLeft > 0)}><table className="roster">
         <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Pistol #</th><th>Rifle #</th><th>Awards</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
         <tbody>
           {rows.map(({ m, c, last, fyCount }) => (
