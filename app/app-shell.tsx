@@ -4,7 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { TeamProvider, useTeam } from '../lib/data';
-import type { Profile } from '../lib/types';
+import { DUTY_LABEL, type Profile } from '../lib/types';
 import { displayName } from '../lib/util';
 import Dashboard from './views/dashboard';
 import Roster from './views/roster';
@@ -105,7 +105,7 @@ export default function AppShell() {
 }
 
 function Workspace() {
-  const { sb, me, isStaff, realStaff, previewShooter, setPreviewShooter, memberById, loading, error, reload, tourOpen, closeTour } = useTeam();
+  const { sb, me, isStaff, realStaff, previewShooter, setPreviewShooter, memberById, loading, error, reload, tourOpen, closeTour, can, duties } = useTeam();
   const [route, setRoute] = useState<Route>(parseHash);
   const [pwOpen, setPwOpen] = useState(false);
   useEffect(() => {
@@ -117,7 +117,7 @@ function Workspace() {
   const updates = useUpdates(sb, me.id, isStaff);
   const popupItem = updates.published.find(a => a.popup && !a.read);
 
-  const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; match?: string[]; badge?: number }[] = [
+  const nav: { view: string; label: string; icon: React.ReactNode; staff?: boolean; show?: boolean; match?: string[]; badge?: number }[] = [
     { view: 'dashboard', label: 'Dashboard', icon: <Gauge size={18} /> },
     { view: 'events', label: 'Calendar', icon: <CalendarDays size={18} />, match: ['event'] },
     ...(isStaff
@@ -128,7 +128,7 @@ function Workspace() {
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },
     { view: 'support', label: 'Support', icon: <LifeBuoy size={18} /> },
-    { view: 'ammo', label: 'Ammo', icon: <Package size={18} />, staff: true },
+    { view: 'ammo', label: 'Ammo', icon: <Package size={18} />, show: can('ammo') },
     { view: 'admin', label: 'Admin', icon: <ShieldCheck size={18} />, staff: true },
   ];
 
@@ -147,7 +147,7 @@ function Workspace() {
     case 'matchday': body = <MatchDay />; break;
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;
-    case 'ammo': body = isStaff ? <AmmoReport /> : <Dashboard />; break;
+    case 'ammo': body = can('ammo') ? <AmmoReport /> : <Dashboard />; break;
     case 'support': body = <Support />; break;
     case 'whatsnew': body = <WhatsNew feed={updates} sb={sb} isStaff={isStaff} />; break;
     default: body = <Dashboard />;
@@ -168,7 +168,7 @@ function Workspace() {
         {menuOpen && <div className="menuShade" onClick={() => setMenuOpen(false)} />}
         <div className="navPanel">
         <nav>
-          {nav.filter(n => !n.staff || isStaff).map(n => (
+          {nav.filter(n => (n.show ?? true) && (!n.staff || isStaff)).map(n => (
             <button key={n.view} aria-label={n.label} className={route.view === n.view || n.match?.includes(route.view) ? 'active' : ''} onClick={() => { setMenuOpen(false); go(n.view); }}>
               {n.icon}<span>{n.label}</span>{!!n.badge && <b className="navBadge" aria-label={`${n.badge} unread`}>{n.badge}</b>}
             </button>
@@ -177,7 +177,7 @@ function Workspace() {
         <div className="sideFoot">
           <div className="who">
             <strong>{meMember ? displayName(meMember) : me.display_name || me.email}</strong>
-            <span>{isStaff ? 'Staff' : previewShooter ? 'Staff · shooter view' : 'Shooter'}</span>
+            <span>{isStaff ? 'Staff' : previewShooter ? 'Staff · shooter view' : duties.length ? `Shooter · ${duties.map(d => DUTY_LABEL[d]).join(', ')}` : 'Shooter'}</span>
           </div>
           {realStaff && <button className="signout previewToggle" onClick={() => { setMenuOpen(false); setPreviewShooter(!previewShooter); }}><Eye size={14} /> {previewShooter ? 'Back to staff view' : 'View as shooter'}</button>}
           <button className="signout" onClick={() => { setMenuOpen(false); setPwOpen(true); }}><KeyRound size={14} /> Change password</button>

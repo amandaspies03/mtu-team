@@ -713,3 +713,28 @@ main:has(.peSave) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .addStaff { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); max-width: 520px; }
 .addStaff label { display: grid; gap: 5px; }
 .staffRow .secondary { flex-shrink: 0; }
+/* Admin → Staff access levels */
+.levelPick { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.levelPick legend { font-size: 13px; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.levelPick label { position: relative; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; background: #fff; }
+.levelPick label.on { border-color: var(--olive); box-shadow: 0 0 0 1px var(--olive); background: #f3f4ec; }
+.levelPick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; pointer-events: none; }
+.levelPick label:focus-within { outline: 2px solid var(--brass); outline-offset: 1px; }
+.levelPick b { font-size: 14px; }
+.levelPick small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.addStaff { max-width: 640px; }
+.subHead { font-size: 14px; margin: 18px 0 4px; }
+.dutyChips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.dutyChip { display: inline-flex; align-items: center; gap: 4px; background: #eef1e8; border: 1px solid #d9dccd; border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12px; font-weight: 600; }
+.dutyChip button { width: 24px; height: 24px; border-radius: 50%; border: 0; background: transparent; font-size: 16px; line-height: 1; color: var(--muted); }
+.dutyChip button:hover { background: #dfe3d6; }
+.dutyPanel h3 { font-size: 14px; margin: 0 0 6px; }
+.dutyAmmo { margin-bottom: 12px; }
+@media (max-width: 600px) {
+  .levelPick { grid-template-columns: 1fr; }
+  .staffRow { flex-wrap: wrap; }
+  .dutyChips { justify-content: flex-start; }
+}
+.staffRow .grow { min-width: 180px; }
+.staffRow .grow strong, .staffRow .grow small { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .staffRow .grow { flex: 1 1 100%; } }

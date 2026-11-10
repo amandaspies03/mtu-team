@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Copy, Link2, Plus, Trash2 } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import type { Invite, Member, Profile } from '../../lib/types';
+import { DUTY_LABEL, type Duty, type Invite, type Member, type Profile } from '../../lib/types';
 import { fullName, milDate } from '../../lib/util';
 import { Empty, PageTitle, Tag } from './ui';
 import ChangeLog from './changelog';
@@ -14,7 +14,7 @@ const isOpen = (i: Invite) => !i.multi_use && !i.used_at && new Date(i.expires_a
 const day = (iso: string) => milDate(iso.slice(0, 10));
 
 function Access() {
-  const { sb, me, profiles, members, staffEmails, invites, reload } = useTeam();
+  const { sb, me, profiles, members, staffEmails, staffDuties, invites, reload } = useTeam();
   const [err, setErr] = useState('');
   const [copied, setCopied] = useState('');
   const [note, setNote] = useState('');
@@ -22,6 +22,7 @@ function Access() {
   const [newStaff, setNewStaff] = useState('');
   const [staffMember, setStaffMember] = useState('');
   const [byEmail, setByEmail] = useState(false);
+  const [level, setLevel] = useState<'full' | Duty>('full');
   const [justMade, setJustMade] = useState<Invite | null>(null);
 
   const linkedIds = new Set(profiles.map(p => p.member_id).filter(Boolean));
@@ -61,22 +62,35 @@ function Access() {
     return { email: (acct?.email ?? m.personal_email ?? '').trim().toLowerCase(), hasAccount: !!acct };
   };
   const staffMemberIds = new Set(members.filter(m => { const e = signInEmail(m).email; return e && staffSet.has(e); }).map(m => m.id));
-  const staffCandidates = members.filter(m => m.team_status !== 'Inactive' && !staffMemberIds.has(m.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const hasDuty = (m: Member, d: Duty) => { const e = signInEmail(m).email; return !!e && staffDuties.some(x => x.email === e && x.duty === d); };
+  const staffCandidates = members.filter(m => m.team_status !== 'Inactive' && !staffMemberIds.has(m.id) && (level === 'full' || !hasDuty(m, level))).sort((a, b) => fullName(a).localeCompare(fullName(b)));
   const picked = members.find(m => m.id === staffMember);
   const pickedEmail = picked ? signInEmail(picked) : null;
 
+  async function grant(email: string, who: string) {
+    if (level === 'full') {
+      if (!confirm(`Give ${who} full staff access? They’ll be able to see and edit the roster, scores, events and admin settings.`)) return false;
+      return run(sb.from('staff_emails').insert({ email, added_by: me.id }));
+    }
+    const what = level === 'vehicle' ? 'tick Vehicle requested / Vehicle confirmed on practices' : 'open the Ammo page, enter rounds issued and fill in the ammo draw on events';
+    if (!confirm(`Make ${who} ${DUTY_LABEL[level].toLowerCase()}? They stay a shooter but can ${what}.`)) return false;
+    return run(sb.from('staff_duties').insert({ email, duty: level, added_by: me.id }));
+  }
   async function addStaff(e: React.FormEvent) {
     e.preventDefault();
     if (byEmail) {
       const email = newStaff.trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(email)) { setErr('Enter a valid email address.'); return; }
-      if (await run(sb.from('staff_emails').insert({ email, added_by: me.id }))) setNewStaff('');
+      if (await grant(email, email)) setNewStaff('');
       return;
     }
     if (!picked || !pickedEmail) { setErr('Choose someone from the roster.'); return; }
     if (!pickedEmail.email) { setErr(`${fullName(picked)} has no account and no personal email on the roster. Add their personal email on their roster page first, or add them by email.`); return; }
-    if (!confirm(`Give ${fullName(picked)} staff access? They’ll be able to see and edit the roster, scores, events and admin settings.`)) return;
-    if (await run(sb.from('staff_emails').insert({ email: pickedEmail.email, added_by: me.id }))) setStaffMember('');
+    if (await grant(pickedEmail.email, fullName(picked))) setStaffMember('');
+  }
+  async function removeDuty(email: string, duty: Duty) {
+    if (!confirm(`Remove ${DUTY_LABEL[duty].toLowerCase()} from ${staffName(email)}? They keep their shooter account.`)) return;
+    await run(sb.from('staff_duties').delete().eq('email', email).eq('duty', duty));
   }
   const staffName = (email: string) => {
     const acct = profiles.find(p => (p.email ?? '').toLowerCase() === email);
@@ -152,7 +166,7 @@ function Access() {
 
       <section className="panel">
         <div className="sectionTitle"><h2>Staff</h2><Tag>{staffEmails.length}</Tag></div>
-        <p className="formNote">Staff can see and edit everything, including this page. Pick someone from the roster to make them staff; use “Make shooter” to take it away. Their account, roster entry and scores don’t change either way.</p>
+        <p className="formNote">Full staff can see and edit everything, including this page. Limited roles keep a shooter account and add only what the role needs. Their account, roster entry and scores don’t change when you add or remove access.</p>
         {staffEmails.map(s => {
           const acct = profiles.find(p => (p.email ?? '').toLowerCase() === s.email);
           const name = staffName(s.email);
@@ -163,10 +177,28 @@ function Access() {
             </div>
           );
         })}
+        {staffDuties.length > 0 && <>
+          <h3 className="subHead">Limited roles</h3>
+          {[...new Set(staffDuties.map(d => d.email))].map(email => (
+            <div key={email} className="listRow static staffRow">
+              <div className="grow"><strong>{staffName(email)}</strong><small>{staffName(email) !== email ? `${email} · ` : ''}{profiles.some(p => (p.email ?? '').toLowerCase() === email) ? 'Signed up' : 'No account yet'}</small></div>
+              <div className="dutyChips">{staffDuties.filter(d => d.email === email).map(d => (
+                <span key={d.duty} className="dutyChip">{DUTY_LABEL[d.duty]}<button aria-label={`Remove ${DUTY_LABEL[d.duty]} from ${staffName(email)}`} onClick={() => removeDuty(email, d.duty)}>×</button></span>
+              ))}</div>
+            </div>
+          ))}
+        </>}
         <form className="addStaff" onSubmit={addStaff}>
+          <fieldset className="levelPick"><legend>Access level</legend>
+            {(['full', 'vehicle', 'ammo'] as const).map(l => (
+              <label key={l} className={level === l ? 'on' : ''}><input type="radio" name="level" checked={level === l} onChange={() => { setLevel(l); setStaffMember(''); setErr(''); }} />
+                <b>{l === 'full' ? 'Full staff' : DUTY_LABEL[l]}</b>
+                <small>{l === 'full' ? 'Everything, including Admin' : l === 'vehicle' ? 'Vehicle requested / confirmed on practices' : 'Ammo page, rounds issued, ammo draw'}</small></label>
+            ))}
+          </fieldset>
           {!byEmail ? (
             <>
-              <label>Add staff from the roster
+              <label>Choose from the roster
                 <select value={staffMember} onChange={e => { setStaffMember(e.target.value); setErr(''); }}>
                   <option value="">Choose a team member…</option>
                   {staffCandidates.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
@@ -174,18 +206,18 @@ function Access() {
               </label>
               {picked && pickedEmail && (
                 <p className="formNote">{pickedEmail.email
-                  ? (pickedEmail.hasAccount ? `Staff access goes to their account (${pickedEmail.email}) right away.` : `No account yet. They’ll get staff access when they sign up with ${pickedEmail.email}.`)
+                  ? (pickedEmail.hasAccount ? `Access goes to their account (${pickedEmail.email}) right away.` : `No account yet. They’ll get this access when they sign up with ${pickedEmail.email}.`)
                   : 'No account and no personal email on the roster yet — add their personal email on their roster page first.'}</p>
               )}
-              <div className="row"><button className="primary" disabled={!picked || !pickedEmail?.email}><Plus size={15} /> Make staff</button>
+              <div className="row"><button className="primary" disabled={!picked || !pickedEmail?.email}><Plus size={15} /> {level === 'full' ? 'Make staff' : `Make ${DUTY_LABEL[level].toLowerCase()}`}</button>
                 <button type="button" className="linkBtn" onClick={() => { setByEmail(true); setErr(''); }}>Not on the roster? Add by email</button></div>
             </>
           ) : (
             <>
-              <label>Add staff by email <span className="muted">(the email they sign in with)</span>
+              <label>Add by email <span className="muted">(the email they sign in with)</span>
                 <input type="email" value={newStaff} onChange={e => setNewStaff(e.target.value)} placeholder="name@example.com" />
               </label>
-              <div className="row"><button className="primary"><Plus size={15} /> Make staff</button>
+              <div className="row"><button className="primary"><Plus size={15} /> {level === 'full' ? 'Make staff' : `Make ${DUTY_LABEL[level].toLowerCase()}`}</button>
                 <button type="button" className="linkBtn" onClick={() => { setByEmail(false); setErr(''); }}>Pick from the roster instead</button></div>
             </>
           )}

@@ -7,14 +7,14 @@ import { go } from '../app-shell';
 import { Empty, PageTitle } from './ui';
 
 export default function AmmoReport() {
-  const { events, attendance } = useTeam();
+  const { events, attendance, isStaff } = useTeam();
   const thisFy = fiscalYear(todayISO());
   const fys = useMemo(() => [...new Set([thisFy, ...events.map(e => fiscalYear(e.start_date))])].sort((a, b) => b - a), [events, thisFy]);
   const [fy, setFy] = useState(thisFy);
 
   const rows = events.filter(e => fiscalYear(e.start_date) === fy && ((e.ammo_556 ?? 0) > 0 || (e.ammo_9mm ?? 0) > 0)).map(e => ({
     e,
-    shooters: attendance.filter(a => a.event_id === e.id && a.status === 'attended').length,
+    shooters: isStaff ? attendance.filter(a => a.event_id === e.id && a.status === 'attended').length : (e.attended_count ?? 0),
     r: e.ammo_556 ?? 0,
     p: e.ammo_9mm ?? 0,
   }));

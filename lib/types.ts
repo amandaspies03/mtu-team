@@ -81,6 +81,8 @@ export type TeamEvent = {
   groupme_posted_at: string | null;
   prep_vehicle_requested: boolean;
   prep_vehicle_confirmed: boolean;
+  /** Only filled for ammo managers (shooter accounts can't count other people's attendance). */
+  attended_count?: number | null;
 };
 
 /** Practice prep checklist. Van driver counts as done when ticked or a driver is picked. */
@@ -153,3 +155,8 @@ export type Invite = {
   created_at: string; expires_at: string; used_at: string | null; used_by: string | null;
   multi_use?: boolean; use_count?: number;
 };
+
+/** Limited staff roles. Full staff can do all of these. */
+export type Duty = 'vehicle' | 'ammo';
+export const DUTY_LABEL: Record<Duty, string> = { vehicle: 'Vehicle manager', ammo: 'Ammo manager' };
+export type StaffDuty = { email: string; duty: Duty; added_by: string | null; created_at: string };

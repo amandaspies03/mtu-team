@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { ArrowLeft, CalendarPlus, MessageCircle, ClipboardCopy, Mail, Search, Pencil, Plus, Printer, Trash2, UserPlus, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
-import { PREP_ITEMS, prepDone, type Attendance, type AttendanceStatus } from '../../lib/types';
+import { PREP_ITEMS, prepDone, type Attendance, type AttendanceStatus, type TeamEvent } from '../../lib/types';
 import { WeaponSelect } from './weapon-select';
 import { groupme } from '../../lib/groupme';
 import { displayName, eventRange, fullName, kindLabel, todayISO } from '../../lib/util';
@@ -15,7 +15,7 @@ import { Empty, Modal, Rsvp, Tag } from './ui';
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
 export default function EventView({ id }: { id: string }) {
-  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload } = useTeam();
+  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload, can } = useTeam();
   const e = events.find(x => x.id === id);
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
@@ -103,6 +103,7 @@ export default function EventView({ id }: { id: string }) {
           </div>
         </div>
         {!past && me.member_id && <div className="rsvpCard"><div><b>Are you going?</b><span>{kindLabel[e.kind]} · {eventRange(e)}</span></div><Rsvp event={e} /></div>}
+        {(can('vehicle') || can('ammo')) && <DutyPanel event={e} />}
         <section className="panel">
           <div className="sectionTitle"><h2>Your details</h2></div>
           <dl className="facts">
@@ -323,6 +324,64 @@ function MatchTeams({ eventId }: { eventId: string }) {
           <button className="secondary"><Plus size={15} /> Add team</button>
         </form>
       )}
+    </section>
+  );
+}
+
+/** Vehicle / ammo managers (not full staff): just the fields their role covers. The database refuses anything else. */
+function DutyPanel({ event: e }: { event: TeamEvent }) {
+  const { sb, can, reload } = useTeam();
+  const [err, setErr] = useState(''), [saving, setSaving] = useState(false);
+  const isPractice = e.kind === 'practice';
+  const vehicle = can('vehicle') && isPractice, ammo = can('ammo');
+  if (!vehicle && !ammo) return null;
+  async function save(changes: Record<string, boolean | number | string | null>) {
+    setErr(''); setSaving(true);
+    const { error } = await sb.rpc('update_event_duty', { p_event: e.id, p_changes: changes });
+    setSaving(false);
+    if (error) setErr(error.message); else await reload();
+  }
+  const num = (v: string) => (v === '' ? null : Math.max(0, Math.round(+v)));
+  return (
+    <section className="panel dutyPanel">
+      <div className="sectionTitle"><h2>Your checklist</h2><span className="formNote">{[vehicle && 'Vehicle', ammo && 'Ammo'].filter(Boolean).join(' · ')}{saving ? ' · Saving…' : ''}</span></div>
+      {ammo && (
+        <div className="dutyAmmo">
+          <h3>Rounds issued</h3>
+          <div className="drawFields">
+            {(['ammo_556', 'ammo_9mm'] as const).map(f => (
+              <label key={f}>{f === 'ammo_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
+                onBlur={x => { const v = num(x.target.value); if (v !== e[f]) void save({ [f]: v }); }} /></label>
+            ))}
+          </div>
+        </div>
+      )}
+      {isPractice && (
+        <div className="prepList">
+          {ammo && (
+            <div className={`prepItem ${e.prep_ammo_draw ? 'done' : ''}`}>
+              <label className="check"><input type="checkbox" checked={!!e.prep_ammo_draw} onChange={x => void save({ prep_ammo_draw: x.target.checked })} /> Ammo draw requested</label>
+              <div className="drawFields">
+                <label>Requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
+                  onBlur={x => { const v = x.target.value || null; if (v !== e.ammo_draw_requested_on) void save(v ? { ammo_draw_requested_on: v, prep_ammo_draw: true } : { ammo_draw_requested_on: null }); }} /></label>
+                {(['ammo_draw_556', 'ammo_draw_9mm'] as const).map(f => (
+                  <label key={f}>{f === 'ammo_draw_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
+                    onBlur={x => { const v = num(x.target.value); if (v !== e[f]) void save({ [f]: v }); }} /></label>
+                ))}
+              </div>
+            </div>
+          )}
+          {vehicle && (['prep_vehicle_requested', 'prep_vehicle_confirmed'] as const).map(k => (
+            <div key={k} className={`prepItem ${e[k] ? 'done' : ''}`}>
+              <label className="check"><input type="checkbox" checked={!!e[k]} onChange={x => void save(
+                k === 'prep_vehicle_confirmed' && x.target.checked ? { prep_vehicle_confirmed: true, prep_vehicle_requested: true }
+                : k === 'prep_vehicle_requested' && !x.target.checked ? { prep_vehicle_requested: false, prep_vehicle_confirmed: false }
+                : { [k]: x.target.checked })} /> {k === 'prep_vehicle_requested' ? 'Vehicle requested' : 'Vehicle confirmed'}</label>
+            </div>
+          ))}
+        </div>
+      )}
+      {err && <p className="alert" role="alert">{err}</p>}
     </section>
   );
 }
