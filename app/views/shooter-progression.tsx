@@ -32,7 +32,7 @@ function result(attempt: Attempt, par: number) {
   if (attempt.hits === 'skipped') return 'Skipped';
   if (!attempt.hits || !Number.isFinite(Number(attempt.time)) || Number(attempt.time) <= 0) return 'Incomplete';
   const overTime = Number(attempt.time) > par;
-  if (attempt.hits !== 'C' && attempt.hits !== 'all') return overTime ? 'Fail · Hit result and over time' : 'Fail · Hit result';
+  if (!['A', 'B', 'C', 'all'].includes(attempt.hits)) return overTime ? 'Fail · Hit result and over time' : 'Fail · Hit result';
   return overTime ? 'Fail · Over time' : 'Pass';
 }
 
@@ -169,7 +169,7 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
           <h3>Drill scoring instructions</h3>
           <ul>
             <li>Record the first attempt separately for each of the five stages.</li>
-            <li>A stage passes when all required hits are in the C-zone and the recorded time is at or under the stage par. A miss, an out-of-zone hit, or a time over par fails the attempt.</li>
+            <li>A stage passes when all required hits are in A, B, or C and the recorded time is at or under the stage par. A miss, an out-of-zone hit, or a time over par fails the attempt.</li>
             <li>Use one attempt per stage for strict evaluation. In two-attempt mode, a failed first attempt can be retried once.</li>
             <li>First-attempt passes count toward the progression graph. The card also shows the total stages passed, including retries.</li>
           </ul>
