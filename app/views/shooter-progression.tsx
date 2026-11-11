@@ -55,7 +55,7 @@ export default function ShooterProgression() {
   return <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={displayName(memberById(me.member_id))} />;
 }
 
-function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: string }) {
+export function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: string }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [card, setCard] = useState<Card | null>(null);
   const [status, setStatus] = useState('');
