@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTeam } from '../../lib/data';
 import { displayName, todayISO } from '../../lib/util';
 import { PageTitle } from './ui';
@@ -65,6 +65,7 @@ function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: strin
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) setCards(JSON.parse(saved));
+      setCard(newCard());
       setReady(true);
     } catch {
       setStatus('Saved scorecards could not be opened on this device.');
@@ -83,60 +84,86 @@ function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: strin
   }
 
   const summary = card && summarize(card);
+  const reset = () => { setCard(newCard()); setStatus(''); };
 
   return (
     <div>
       <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card · Short Card</PageTitle>
       <p>Draft preview. Scorecards are saved in this browser.</p>
-      {ready && <button type="button" onClick={() => { setCard(newCard()); setStatus(''); }}>New scorecard</button>}
-      {card && summary && (
+      {ready && card && summary && (
         <form className="panel scorecardPanel manCard" onSubmit={event => { event.preventDefault(); save(card); }}>
-          <div className="scHead"><h2>Man Card scorecard</h2></div>
+          <div className="scHead">
+            <div><h2>Scorecard</h2><p className="scNote">Man Card · Short Card</p></div>
+            <button className="secondary" type="button" onClick={reset}>Clear card</button>
+          </div>
           <p>Shooter {shooter}</p>
           <label>Date <input type="date" required value={card.date} onChange={event => setCard({ ...card, date: event.target.value })} /></label>
           <label>Evaluation mode <select value={card.mode} onChange={event => setCard({ ...card, mode: event.target.value === 'one' ? 'one' : 'two' })}>
             <option value="one">One attempt</option>
             <option value="two">Up to two attempts</option>
           </select></label>
-          <div className="shotRows">
-          {stages.map(({ name, par }, stageIndex) => {
-            const attempts = card.attempts[stageIndex];
-            const first = result(attempts[0], par);
-            const showRetry = card.mode === 'two' && first.startsWith('Fail');
-            return (
-              <div key={name} className="shotRow manCardRow" role="group" aria-label={name}>
-                <span className="shotLabel"><b>{name}</b><small>{summary.outcomes[stageIndex]}</small></span>
-                {attempts.slice(0, showRetry ? 2 : 1).map((attempt, attemptIndex) => {
-                  function update(change: Partial<Attempt>) {
-                    setCard(current => current && ({
-                      ...current,
-                      attempts: current.attempts.map((pair, index) => {
-                        if (index !== stageIndex) return pair;
-                        const updated: [Attempt, Attempt] = [...pair];
-                        updated[attemptIndex] = { ...updated[attemptIndex], ...change };
-                        return updated;
-                      }),
-                    }));
-                  }
-                  return (
-                    <fieldset key={attemptIndex} className="manCardAttempt">
-                      <legend>Attempt {attemptIndex + 1}</legend>
-                      <label>Time (seconds) <input type="number" min="0.01" step="0.01" inputMode="decimal" value={attempt.time} onChange={event => update({ time: event.target.value })} /></label>
-                      <label>Hit result <select value={attempt.hits} onChange={event => update({ hits: event.target.value })}>
-                        <option value="">Select hit result</option>
-                        <option value="all">All hits in zone</option>
-                        <option value="miss">Miss or outside zone</option>
-                      </select></label>
-                      <p>{result(attempt, par)}</p>
-                      {attemptIndex === 1 && <button type="button" onClick={() => update({
-                        time: '', hits: attempt.hits === 'skipped' ? '' : 'skipped',
-                      })}>{attempt.hits === 'skipped' ? 'Record retry' : 'Skip retry'}</button>}
-                    </fieldset>
-                  );
-                })}
-              </div>
-            );
-          })}
+          <div className="ringTable manCardTable">
+            <div className="tableWrap">
+              <table>
+                <thead><tr>
+                  <th scope="col">Stage</th>
+                  <th scope="col">First time (s)</th>
+                  <th scope="col">First hits</th>
+                  <th scope="col">First result</th>
+                  {card.mode === 'two' && <>
+                    <th scope="col">Retry time (s)</th>
+                    <th scope="col">Retry hits</th>
+                    <th scope="col">Retry result</th>
+                  </>}
+                  <th scope="col">Stage result</th>
+                </tr></thead>
+                <tbody>
+                  {stages.map(({ name, par }, stageIndex) => {
+                    const attempts = card.attempts[stageIndex];
+                    const canRetry = result(attempts[0], par).startsWith('Fail');
+                    return (
+                      <tr key={name}>
+                        <th scope="row">{name}</th>
+                        {attempts.slice(0, card.mode === 'two' ? 2 : 1).map((attempt, attemptIndex) => {
+                          const isRetry = attemptIndex === 1;
+                          const skipped = isRetry && attempt.hits === 'skipped';
+                          const disabled = isRetry && (!canRetry || skipped);
+                          const label = `${name}, ${isRetry ? 'retry' : 'first attempt'}`;
+                          function update(change: Partial<Attempt>) {
+                            setCard(current => current && ({
+                              ...current,
+                              attempts: current.attempts.map((pair, index) => {
+                                if (index !== stageIndex) return pair;
+                                const updated: [Attempt, Attempt] = [...pair];
+                                updated[attemptIndex] = { ...updated[attemptIndex], ...change };
+                                return updated;
+                              }),
+                            }));
+                          }
+                          return (
+                            <Fragment key={attemptIndex}>
+                              <td><input aria-label={`${label} time in seconds`} type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" disabled={disabled} value={disabled ? '' : attempt.time} onChange={event => update({ time: event.target.value })} /></td>
+                              <td><select aria-label={`${label} hit result`} disabled={disabled} value={disabled ? '' : attempt.hits} onChange={event => update({ hits: event.target.value })}>
+                                <option value="">Select</option>
+                                <option value="all">All in zone</option>
+                                <option value="miss">Miss / outside</option>
+                              </select></td>
+                              <td>
+                                {isRetry && !canRetry ? '—' : result(attempt, par)}
+                                {isRetry && canRetry && <button className="secondary" type="button" onClick={() => update({ time: '', hits: skipped ? '' : 'skipped' })}>
+                                  {skipped ? 'Record retry' : 'Skip retry'}
+                                </button>}
+                              </td>
+                            </Fragment>
+                          );
+                        })}
+                        <td><b>{summary.outcomes[stageIndex]}</b></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
           <div className="scTotals">
             <div><span>First-attempt passes</span><b>{summary.cold}<small>/5</small></b></div>
