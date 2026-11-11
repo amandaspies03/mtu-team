@@ -90,21 +90,22 @@ function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: strin
       <p>Draft preview. Scorecards are saved in this browser.</p>
       {ready && <button type="button" onClick={() => { setCard(newCard()); setStatus(''); }}>New scorecard</button>}
       {card && summary && (
-        <form onSubmit={event => { event.preventDefault(); save(card); }}>
-          <h2>Man Card scorecard</h2>
+        <form className="panel scorecardPanel manCard" onSubmit={event => { event.preventDefault(); save(card); }}>
+          <div className="scHead"><h2>Man Card scorecard</h2></div>
           <p>Shooter {shooter}</p>
           <label>Date <input type="date" required value={card.date} onChange={event => setCard({ ...card, date: event.target.value })} /></label>
           <label>Evaluation mode <select value={card.mode} onChange={event => setCard({ ...card, mode: event.target.value === 'one' ? 'one' : 'two' })}>
             <option value="one">One attempt</option>
             <option value="two">Up to two attempts</option>
           </select></label>
+          <div className="shotRows">
           {stages.map(({ name, par }, stageIndex) => {
             const attempts = card.attempts[stageIndex];
             const first = result(attempts[0], par);
             const showRetry = card.mode === 'two' && first.startsWith('Fail');
             return (
-              <details key={name} className="card">
-                <summary>{name} · {summary.outcomes[stageIndex]}</summary>
+              <div key={name} className="shotRow manCardRow" role="group" aria-label={name}>
+                <span className="shotLabel"><b>{name}</b><small>{summary.outcomes[stageIndex]}</small></span>
                 {attempts.slice(0, showRetry ? 2 : 1).map((attempt, attemptIndex) => {
                   function update(change: Partial<Attempt>) {
                     setCard(current => current && ({
@@ -118,7 +119,7 @@ function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: strin
                     }));
                   }
                   return (
-                    <fieldset key={attemptIndex}>
+                    <fieldset key={attemptIndex} className="manCardAttempt">
                       <legend>Attempt {attemptIndex + 1}</legend>
                       <label>Time (seconds) <input type="number" min="0.01" step="0.01" inputMode="decimal" value={attempt.time} onChange={event => update({ time: event.target.value })} /></label>
                       <label>Hit result <select value={attempt.hits} onChange={event => update({ hits: event.target.value })}>
@@ -133,14 +134,17 @@ function Scorecard({ storageKey, shooter }: { storageKey: string; shooter: strin
                     </fieldset>
                   );
                 })}
-              </details>
+              </div>
             );
           })}
-          <p>First-attempt passes {summary.cold} of 5</p>
-          <p>Total stages passed {summary.passed} of 5</p>
-          <p>{summary.remaining ? `In progress · ${summary.remaining} stages left` : summary.passed === 5 ? 'Passed' : 'Failed'}</p>
+          </div>
+          <div className="scTotals">
+            <div><span>First-attempt passes</span><b>{summary.cold}<small>/5</small></b></div>
+            <div><span>Total stages passed</span><b>{summary.passed}<small>/5</small></b></div>
+            <div className="scGrand"><span>Card status</span><b>{summary.remaining ? 'In progress' : summary.passed === 5 ? 'Passed' : 'Failed'}</b></div>
+          </div>
           <label>Session notes <textarea value={card.notes} onChange={event => setCard({ ...card, notes: event.target.value })} /></label>
-          <button type="submit">{summary.remaining ? 'Save draft' : 'Save scorecard'}</button>
+          <button className="primary" type="submit">{summary.remaining ? 'Save draft' : 'Save scorecard'}</button>
         </form>
       )}
       <p role="status">{status}</p>

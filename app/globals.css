@@ -760,3 +760,26 @@ table.roster td:first-child { min-width: 150px; }
 .obList small { color: var(--muted); }
 .queuedMsg { background: #fbf1dc; border: 1px solid #ecd39a; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
 .queuedNote { color: #7a5a12; }
+
+.scorecardPanel .manCardRow {
+  grid-template-columns: minmax(125px, 1fr) repeat(2, minmax(0, 1.5fr));
+  align-items: start;
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+.manCardAttempt {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.manCardAttempt legend { font-weight: 600; }
+.manCardAttempt label { display: block; }
+.manCardAttempt input, .manCardAttempt select { width: 100%; }
+.manCardAttempt p { margin: 4px 0; }
+.manCard .scTotals { margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .scorecardPanel .manCardRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .manCardRow .shotLabel { grid-column: 1 / -1; }
+  .manCardAttempt:only-of-type { grid-column: 1 / -1; }
+}
