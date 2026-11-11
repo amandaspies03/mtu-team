@@ -157,7 +157,7 @@ function Workspace() {
     ...(isStaff
       ? [{ view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] }]
       : [{ view: 'me', label: 'My profile', icon: <UserRound size={18} />, match: ['member'] }]),
-    { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
+    { view: 'scores', label: 'Match Scores', icon: <Target size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },

@@ -17,7 +17,7 @@ export default function Scores() {
   const phone = usePhone();
   return (
     <div>
-      <PageTitle eyebrow="PERFORMANCE" title="Scores">Leaderboards for each match on the Match day page. Tick shooters to compare their trends.</PageTitle>
+      <PageTitle eyebrow="PERFORMANCE" title="Match Scores">Leaderboards for each match on the Match day page. Tick shooters to compare their trends.</PageTitle>
       <div className="tabs">
         <button className={tab === 'board' ? 'on' : ''} onClick={() => setTab('board')}>Leaderboard</button>
         {isStaff && <button className={tab === 'enter' ? 'on' : ''} onClick={() => setTab('enter')}>Enter scores</button>}

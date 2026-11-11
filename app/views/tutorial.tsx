@@ -36,9 +36,9 @@ const STEPS: Step[] = [
     </>,
   },
   {
-    icon: <Target size={22} />, title: 'Scores', view: 'scores',
+    icon: <Target size={22} />, title: 'Match Scores', view: 'scores',
     body: <>
-      <p>Staff enter scores after each practice and match. <b>Scores</b> has the team leaderboards for each course of fire.</p>
+      <p>Staff enter scores after each practice and match. <b>Match Scores</b> has the team leaderboards for each course of fire.</p>
       <p>Tick names to compare trends on the graph. Your Dashboard also shows <b>how you stack up</b> on each course.</p>
     </>,
   },

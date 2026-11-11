@@ -86,7 +86,7 @@ export default function Dashboard() {
         <div className="stats">
           <div><CalendarDays size={18} /><strong>{myFyPractices}</strong><span>practices attended in FY{String(fy).slice(2)}</span></div>
           <div><ClipboardCheck size={18} /><strong>{myAllPractices}</strong><span>practices attended, all time</span></div>
-          <button className="statLink" onClick={() => go('scores')} aria-label="Open Scores"><Target size={18} /><strong>{scores.filter(s => s.member_id === me.member_id).length}</strong><span>of my scores on record</span><ArrowRight size={15} className="statArrow" /></button>
+          <button className="statLink" onClick={() => go('scores')} aria-label="Open Match Scores"><Target size={18} /><strong>{scores.filter(s => s.member_id === me.member_id).length}</strong><span>of my scores on record</span><ArrowRight size={15} className="statArrow" /></button>
         </div>
       )}
 
@@ -94,7 +94,7 @@ export default function Dashboard() {
         <div><Users size={18} /><strong>{active.length}</strong><span>active &amp; new shooters</span></div>
         <div><CalendarDays size={18} /><strong>{fyPractices.length}</strong><span>FY{String(fy).slice(2)} events so far</span></div>
         <div><ClipboardCheck size={18} /><strong>{fyPractices.length ? (fyAttendance / fyPractices.length).toFixed(1) : (lastFy.length ? (lastFyAtt / lastFy.length).toFixed(1) : '—')}</strong><span>avg shooters per {fyPractices.length ? 'event' : `event (FY${String(fy - 1).slice(2)})`}</span></div>
-        <button className="statLink" onClick={() => go('scores')} aria-label="Open Scores"><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span><ArrowRight size={15} className="statArrow" /></button>
+        <button className="statLink" onClick={() => go('scores')} aria-label="Open Match Scores"><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span><ArrowRight size={15} className="statArrow" /></button>
       </div>}
 
       <div className="grid2">
@@ -142,7 +142,7 @@ export default function Dashboard() {
           </section>
         ) : (
           <section className="panel">
-            <div className="sectionTitle"><h2>My recent scores</h2><button onClick={() => go('scores')}>All scores</button></div>
+            <div className="sectionTitle"><h2>My recent scores</h2><button onClick={() => go('scores')}>All match scores</button></div>
             {mine.length === 0 ? <Empty title="No scores yet">Scores staff enter for you will show up here.</Empty> : mine.map(s => (
               <div key={s.id} className="listRow static">
                 <Target size={16} />
@@ -172,7 +172,7 @@ export default function Dashboard() {
 
       {isStaff && (
         <section className="panel">
-          <div className="sectionTitle"><h2>Latest scores entered</h2><button onClick={() => go('scores')}>Scores</button></div>
+          <div className="sectionTitle"><h2>Latest scores entered</h2><button onClick={() => go('scores')}>Match Scores</button></div>
           <div className="tableWrap"><table>
             <thead><tr><th>Date</th><th>Shooter</th><th>Course</th><th className="num">Score</th></tr></thead>
             <tbody>{recent.map(s => <tr key={s.id}><td>{milDate(s.shot_on)}</td><td><a href={`#member/${s.member_id}`}>{displayName(memberById(s.member_id))}</a></td><td>{course(s.course_code)}</td><td className="num">{scoreText(s.total, s.x_count, s.raw)}</td></tr>)}</tbody>
