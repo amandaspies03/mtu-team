@@ -6,6 +6,7 @@ import { displayName, todayISO } from '../../lib/util';
 import { PageTitle, Sparkline } from './ui';
 import { ScoreChart } from './scores';
 import BillDrill from './bill-drill';
+import ReloadDrill from './reload-drill';
 
 // Man Card (Achilles Heel Tactical). 25 yards, C-zone. Pass = every hit in the C-zone at or under par.
 const stages = [
@@ -57,6 +58,7 @@ function summarize(card: Card) {
 const DRILLS = [
   { id: 'man-card', title: 'Man Card', sub: '5 stages · 25 yd · par times' },
   { id: 'bill-drill', title: 'Bill Drill', sub: '6 rounds · 7 yd · A-zone' },
+  { id: 'one-reload-one', title: '1-Reload-1', sub: '1 shot · reload · 1 shot · 5–7 yd · C-zone' },
 ] as const;
 type DrillId = typeof DRILLS[number]['id'];
 type Tab = 'leaderboard' | 'drills' | 'entries';
@@ -104,6 +106,10 @@ export default function ShooterProgression() {
         <BillDrill key={me.id} storageKey={`mtu.bill-drill.${me.id}`} shooter={shooter} drillSelect={drillSelect}
           tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'bill-drill')}
           onOpenDrill={() => { setTab('drills'); setOpen('bill-drill'); }} onBack={() => setOpen(null)} />}
+      {(tab !== 'drills' ? drill === 'one-reload-one' : open === 'one-reload-one') &&
+        <ReloadDrill key={me.id} storageKey={`mtu.one-reload-one.${me.id}`} shooter={shooter} drillSelect={drillSelect}
+          tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'one-reload-one')}
+          onOpenDrill={() => { setTab('drills'); setOpen('one-reload-one'); }} onBack={() => setOpen(null)} />}
     </div>
   );
 }

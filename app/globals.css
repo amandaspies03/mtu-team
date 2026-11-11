@@ -804,3 +804,8 @@ table.roster td:first-child { min-width: 150px; }
 .billTop input[type="date"] { -webkit-appearance: none; appearance: none; display: block; padding: 0 10px; }
 .drillPick .drillOpen { font-size: 13px; color: var(--info, #3d5a8a); margin-top: 6px; }
 .drillPick button:hover { border-color: var(--olive); }
+@media (max-width: 600px) {
+  .reloadCard .ringTable select { width: 48px; }
+  .reloadCard .billNum { width: 56px; }
+  .reloadCard .billRes { font-size: 13px; }
+}
