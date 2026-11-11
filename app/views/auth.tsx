@@ -13,6 +13,10 @@ type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
 const tokenFrom = (text: string) => (text.match(/invite[/=]([\w-]{12,})/) ?? text.trim().match(/^([\w-]{16,})$/))?.[1] ?? null;
 const inviteFromUrl = () => (typeof window === 'undefined' ? null : tokenFrom(window.location.search) ?? tokenFrom(window.location.hash));
 
+const isMilEmail = (e: string) => /@([a-z0-9-]+\.)*mil$/i.test(e.trim());
+const MIL_SIGNIN = 'Military email addresses can’t be used to sign in here. Sign in with the personal email you use for the MTU site (Gmail, Hotmail, etc.). Not sure which one? Ask MTU staff.';
+const MIL_SIGNUP = 'Please use a personal email (Gmail, Hotmail, etc.) for your account, not your military email. You can still enter your military email in the “Military email” field below.';
+
 function friendly(msg: string, mode: Mode) {
   if (/database error saving new user/i.test(msg)) {
     return mode === 'invite'
@@ -69,8 +73,13 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
       }
       if (mode === 'signin') {
         const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          // Military addresses can't be used to sign in: people sign in with their personal email.
+          if (isMilEmail(email) && /invalid login credentials|email not confirmed/i.test(error.message)) throw new Error(MIL_SIGNIN);
+          throw error;
+        }
       } else if (signingUp) {
+        if (isMilEmail(email)) throw new Error(MIL_SIGNUP);
         const meta = { ...info, ...(mode === 'invite' ? { invite: token } : {}) };
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirect, data: meta } });
         if (error) throw (error as { code?: string }).code === 'weak_password' ? new Error(passwordHelp) : error;
