@@ -5,6 +5,7 @@ import { Crosshair } from 'lucide-react';
 import { blankProfile, ProfileFields, type ProfileInfo } from './profile-fields';
 import { NewPasswordField } from './password-field';
 import { IDLE_FLAG } from './session-guards';
+import { DEMO } from '../../lib/supabase';
 import { isBreached, passwordError, passwordHelp, passwordOk } from '../../lib/password-policy';
 
 type Mode = 'signin' | 'staff' | 'invite' | 'forgot';
@@ -96,6 +97,7 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
         <div className="brandIcon"><Crosshair size={26} /></div>
         <div className="eyebrow">184TH MARKSMANSHIP TRAINING UNIT</div>
         <h1>{title}</h1>
+        {DEMO && <p className="formNote"><b>Demo site.</b> Sign in with the guest login you were given. All data here is made up and the site is view-only.</p>}
         {mode === 'staff' && <p className="formNote">Fill in your info below. MTU staff will approve your account and link it to the team roster. (Staff on the MTU staff list get in right away.)</p>}
         {mode === 'invite' && !invite && <p className="formNote">Checking your invite…</p>}
         {inviteBad && <p className="alert">{invite!.reason}</p>}
@@ -123,14 +125,14 @@ export default function AuthScreen({ sb, recovery, onRecovered }: { sb: Supabase
             </button>
           </>
         )}
-        {!recovery && (
+        {!recovery && !DEMO && (
           <div className="authLinks">
             {mode !== 'signin' && <button type="button" onClick={() => { setMode('signin'); setError(''); }}>Back to sign in</button>}
             {mode === 'signin' && <button type="button" onClick={() => { setMode('forgot'); setError(''); }}>Forgot password</button>}
             {mode === 'signin' && <button type="button" onClick={() => { setMode('staff'); setError(''); }}>Create an account</button>}
           </div>
         )}
-        {mode === 'signin' && <p className="formNote">New to the team? Tap <b>Create an account</b>. Staff will approve it.</p>}
+        {mode === 'signin' && !DEMO && <p className="formNote">New to the team? Tap <b>Create an account</b>. Staff will approve it.</p>}
       </form>
     </div>
   );

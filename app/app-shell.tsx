@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy } from 'lucide-react';
-import { getSupabase } from '../lib/supabase';
+import { DEMO, getSupabase } from '../lib/supabase';
 import { clearSnapshot, isNetworkError, loadSnapshot, signOutHere } from '../lib/offline';
 import { OfflineBanner } from './views/offline-banner';
 import { TeamProvider, useTeam } from '../lib/data';
@@ -224,6 +224,7 @@ function Workspace() {
       </aside>
       <main>
         <OfflineBanner />
+        {DEMO && <div className="previewBar demoBar"><Eye size={16} /><span><b>View-only demo.</b> Everyone and everything here is made up. Look around freely — nothing you change will be saved.</span></div>}
         {previewShooter && <div className="previewBar"><Eye size={16} /><span><b>Shooter view.</b> This is what a shooter sees. Anything you change still saves to your real account.</span><button onClick={() => setPreviewShooter(false)}>Back to staff view</button></div>}
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}

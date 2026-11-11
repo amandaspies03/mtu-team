@@ -1,8 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+/** The view-only demo site: made-up data, no database, nothing can be saved. */
+export const DEMO = process.env.NEXT_PUBLIC_DEMO === '1';
+
 let client: SupabaseClient | null = null;
 
 export function getSupabase() {
+  // Checked inline so the real site's build leaves the demo code out entirely.
+  if (process.env.NEXT_PUBLIC_DEMO === '1') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (client ??= (require('./demo/client') as typeof import('./demo/client')).createDemoClient());
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return null;
