@@ -14,6 +14,7 @@ import MemberView from './views/member';
 import Events from './views/events';
 import EventView from './views/event-detail';
 import Scores from './views/scores';
+import ShooterProgression from './views/shooter-progression';
 import MatchDay from './views/matchday';
 import Admin from './views/admin';
 import AmmoReport from './views/ammo';
@@ -157,7 +158,8 @@ function Workspace() {
     ...(isStaff
       ? [{ view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] }]
       : [{ view: 'me', label: 'My profile', icon: <UserRound size={18} />, match: ['member'] }]),
-    { view: 'scores', label: 'Scores', icon: <Target size={18} /> },
+    { view: 'scores', label: 'Match Scores', icon: <Target size={18} /> },
+    { view: 'shooter-progression', label: 'Shooter Progression', icon: <Target size={18} /> , staff: true },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },
@@ -178,6 +180,7 @@ function Workspace() {
     case 'events': body = <Events />; break;
     case 'event': body = <EventView id={route.id!} />; break;
     case 'scores': body = <Scores />; break;
+    case 'shooter-progression': body = isStaff ? <ShooterProgression /> : <Dashboard />; break;
     case 'matchday': body = <MatchDay />; break;
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;

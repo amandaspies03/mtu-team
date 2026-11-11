@@ -760,3 +760,8 @@ table.roster td:first-child { min-width: 150px; }
 .obList small { color: var(--muted); }
 .queuedMsg { background: #fbf1dc; border: 1px solid #ecd39a; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
 .queuedNote { color: #7a5a12; }
+
+.manCardTable input[type="number"] { width: 72px; text-align: center; }
+.manCardTable select { min-width: 110px; }
+.manCardTable td button { display: block; margin: 4px auto 0; }
+.manCard .scTotals { margin-bottom: 12px; }

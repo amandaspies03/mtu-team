@@ -87,7 +87,7 @@ export default function MemberView({ id }: { id: string }) {
       </div>
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Scores</h2><button onClick={() => go('scores')}>{isStaff ? 'Enter / view all' : 'Leaderboards'}</button></div>
+        <div className="sectionTitle"><h2>Match Scores</h2><button onClick={() => go('scores')}>{isStaff ? 'Enter / view all' : 'Leaderboards'}</button></div>
         {byCourse.length === 0 ? <Empty title="No scores yet" /> : (
           <div className="courseCards">
             {byCourse.map(({ co, list, best, avg, trend }) => (
