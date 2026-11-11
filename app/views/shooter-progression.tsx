@@ -5,6 +5,7 @@ import { useTeam } from '../../lib/data';
 import { displayName, todayISO } from '../../lib/util';
 import { PageTitle, Sparkline } from './ui';
 import { ScoreChart } from './scores';
+import BillDrill from './bill-drill';
 
 // Man Card · Short Card (Achilles Heel Tactical). 25 yards, C-zone. Pass = every hit in the C-zone at or under par.
 const stages = [
@@ -53,10 +54,33 @@ function summarize(card: Card) {
   return { outcomes, cold, passed, remaining };
 }
 
+const DRILLS = [
+  { id: 'man-card', title: 'Man Card · Short Card', sub: '5 stages · 25 yd · par times' },
+  { id: 'bill-drill', title: 'Bill Drill', sub: '6 rounds · 7 yd · A-zone' },
+] as const;
+type DrillId = typeof DRILLS[number]['id'];
+
 export default function ShooterProgression() {
   const { me, memberById, isStaff } = useTeam();
+  const [drill, setDrill] = useState<DrillId>(() => { try { return (localStorage.getItem('mtu.progression.drill') as DrillId) || 'man-card'; } catch { return 'man-card'; } });
   if (!isStaff) return null;
-  return <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={displayName(memberById(me.member_id))} />;
+  const pick = (d: DrillId) => { setDrill(d); try { localStorage.setItem('mtu.progression.drill', d); } catch { /* ignore */ } };
+  const shooter = displayName(memberById(me.member_id));
+  return (
+    <div>
+      <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Drills with par times and standards. Scorecards are saved in this browser.</PageTitle>
+      <div className="drillPick" role="tablist" aria-label="Drill">
+        {DRILLS.map(d => (
+          <button key={d.id} type="button" role="tab" aria-selected={drill === d.id} className={drill === d.id ? 'on' : ''} onClick={() => pick(d.id)}>
+            <b>{d.title}</b><small>{d.sub}</small>
+          </button>
+        ))}
+      </div>
+      {drill === 'man-card'
+        ? <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={shooter} hideHeader />
+        : <BillDrill key={me.id} storageKey={`mtu.bill-drill.${me.id}`} shooter={shooter} />}
+    </div>
+  );
 }
 
 type Entry = { shooter: string; card: Card; own: boolean };
@@ -79,7 +103,7 @@ const sampleEntries: Entry[] = [
   },
 })));
 
-export function Scorecard({ storageKey, shooter, preview = false, showTabs = true }: { storageKey: string; shooter: string; preview?: boolean; showTabs?: boolean }) {
+export function Scorecard({ storageKey, shooter, preview = false, showTabs = true, hideHeader = false }: { storageKey: string; shooter: string; preview?: boolean; showTabs?: boolean; hideHeader?: boolean }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [card, setCard] = useState<Card | null>(null);
   const [status, setStatus] = useState('');
@@ -145,8 +169,8 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
 
   return (
     <div>
-      <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card · Short Card</PageTitle>
-      <p>Scorecards are saved in this browser.</p>
+      {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card · Short Card</PageTitle>
+      <p>Scorecards are saved in this browser.</p></>}
       {showTabs && <div className="tabs" aria-label="Shooter Progression views">
         {[['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']].map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); setDrillOpen(false); }}>{title}</button>

@@ -779,3 +779,26 @@ table.roster td:first-child { min-width: 150px; }
 .drillStages dd { margin: 0; }
 .manCardTable th small.stageHint { display: block; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-top: 2px; white-space: normal; min-width: 150px; }
 @media (max-width: 600px) { .drillFacts { grid-template-columns: 1fr; } }
+/* Shooter Progression: drill picker + Bill Drill */
+.drillPick { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 0 0 14px; max-width: 640px; }
+.drillPick button { display: grid; gap: 2px; text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--card); }
+.drillPick button.on { border-color: var(--olive); box-shadow: 0 0 0 1px var(--olive); background: #f3f4ec; }
+.drillPick small { font-size: 12px; color: var(--muted); }
+.drillList { padding-left: 20px; display: grid; gap: 6px; margin: 6px 0 12px; }
+.billFields { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.billCard { min-width: 0; overflow: hidden; }
+.billTop { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.billTop label, .billFields > label { display: grid; gap: 5px; }
+.billNum { width: 84px; height: 40px; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
+.billCard select { height: 40px; }
+.billRes.clean { color: var(--good); font-weight: 700; }
+.billRes.not-clean { color: var(--bad, #a8473a); font-weight: 600; }
+.billCard .primary { justify-self: start; margin-top: 4px; }
+@media (max-width: 600px) {
+  .billCard .ringTable th, .billCard .ringTable td { padding: 4px 3px; }
+  .billNum { width: 62px; }
+  .billCard .ringTable select { width: 58px; padding: 0 4px; }
+  .billCard .ringTable thead th { font-size: 10px; letter-spacing: .5px; }
+}
+.billTop input, .billTop select { width: 100%; min-width: 0; max-width: 100%; height: 44px; box-sizing: border-box; }
+.billTop input[type="date"] { -webkit-appearance: none; appearance: none; display: block; padding: 0 10px; }
