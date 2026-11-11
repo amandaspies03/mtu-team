@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Backpack, Crosshair, Download, FileText, Info, Search, ShieldCheck, Trash2, Trophy, Upload, UserRound, X } from 'lucide-react';
+import { ArrowRight, Backpack, Crosshair, Download, FileText, Info, Search, ShieldCheck, Trash2, Trophy, Upload, UserRound, X, Printer } from 'lucide-react';
 import { RESOURCES, type ResourceCategory } from '../../lib/resources';
 import { useTeam } from '../../lib/data';
 import { Modal, PageTitle } from './ui';
@@ -94,6 +94,16 @@ export default function Resources() {
               <FileList files={files.filter(f => f.category_id === category.id)} isStaff={isStaff} onOpen={openFile} onDelete={removeFile} />
             </section>
           )}
+
+          <section className="panel printTargets">
+            <div className="sectionTitle"><h2>Printable targets</h2></div>
+            <p className="formNote">Print on letter-size paper at 100% (actual size) so the dots stay 2 inches.</p>
+            <a className="printTarget" href="/drills/dot-torture-target.pdf" target="_blank" rel="noopener">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/drills/dot-torture-target.png" alt="" loading="lazy" />
+              <span><b>Dot Torture target</b><small>10 numbered 2-inch dots · 50-round drill · course of fire printed on the target</small><span className="printLink"><Printer size={14} /> Open to print (PDF)</span></span>
+            </a>
+          </section>
         </>
       )}
       {filesErr && <p className="alert">{filesErr}</p>}

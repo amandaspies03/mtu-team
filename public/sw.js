@@ -10,6 +10,7 @@ const PRECACHE = [
   '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png',
   '/match/scorecard-pi2210.png', '/match/scorecard-pi2250.png', '/match/scorecard-ri3020.png',
   '/match/scorecard-rifle-eic.png', '/match/target-rifle-eic.png',
+  '/drills/dot-torture-target.png', '/drills/dot-torture-target.pdf',
 ];
 
 self.addEventListener('install', event => {

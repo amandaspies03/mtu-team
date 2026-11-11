@@ -825,3 +825,27 @@ table.roster td:first-child { min-width: 150px; }
   .manCard label { display: grid; gap: 5px; }
   .manCard input[type="date"] { -webkit-appearance: none; appearance: none; width: 100%; min-width: 0; }
 }
+/* Dot Torture */
+.dotGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.dotTarget { margin: 0; text-align: center; }
+.dotTarget img { width: 100%; max-width: 340px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.dotTarget figcaption { font-size: 13px; margin-top: 6px; }
+.dotRows { display: grid; gap: 6px; }
+.dotRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; }
+.dotRow.ok { border-color: #bcd3bf; }
+.dotRow.miss { border-color: #e9b9ae; background: #fdf3f1; }
+.dotLabel { display: grid; gap: 2px; min-width: 0; }
+.dotLabel small { font-size: 12px; color: var(--muted); }
+.dotHits { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.dotHits select { width: 64px; height: 42px; font-size: 16px; }
+.dotHits span { font-size: 13px; color: var(--muted); }
+@media (max-width: 700px) { .dotGrid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .dotRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; } .dotHits { flex-direction: column; align-items: flex-end; gap: 2px; } .dotHits .linkBtn { font-size: 12px; padding: 0; } }
+/* Resources: printable targets */
+.printTargets { margin-top: 18px; }
+.printTarget { display: flex; gap: 14px; align-items: center; text-decoration: none; color: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fff; max-width: 560px; }
+.printTarget:hover { border-color: var(--olive); }
+.printTarget img { width: 84px; height: auto; border: 1px solid var(--line); border-radius: 4px; flex-shrink: 0; }
+.printTarget > span { display: grid; gap: 3px; }
+.printTarget small { font-size: 12px; color: var(--muted); }
+.printLink { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--info, #3d5a8a); text-decoration: underline; margin-top: 4px; }
