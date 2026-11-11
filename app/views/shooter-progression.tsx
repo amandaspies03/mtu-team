@@ -305,15 +305,15 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
                           }
                           return (
                             <Fragment key={attemptIndex}>
-                              <td><input aria-label={`${label} time in seconds`} type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" disabled={disabled} value={disabled ? '' : attempt.time} onChange={event => update({ time: event.target.value })} /></td>
-                              <td><select aria-label={`${label} hit result`} disabled={disabled} value={disabled ? '' : attempt.hits === 'all' ? 'C' : attempt.hits} onChange={event => update({ hits: event.target.value })}>
+                              <td data-label={isRetry ? 'Retry time (s)' : 'Time (s)'}><input aria-label={`${label} time in seconds`} type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" disabled={disabled} value={disabled ? '' : attempt.time} onChange={event => update({ time: event.target.value })} /></td>
+                              <td data-label={isRetry ? 'Retry hits' : 'Hits'}><select aria-label={`${label} hit result`} disabled={disabled} value={disabled ? '' : attempt.hits === 'all' ? 'C' : attempt.hits} onChange={event => update({ hits: event.target.value })}>
                                 <option value="">Select</option>
                                 <option value="A">A</option>
                                 <option value="B">B</option>
                                 <option value="C">C</option>
                                 <option value="miss">MISS</option>
                               </select></td>
-                              <td>
+                              <td data-label={isRetry ? 'Retry result' : 'Result'} className="mcRes">
                                 {isRetry && !canRetry ? '—' : result(attempt, par)}
                                 {!readOnly && isRetry && canRetry && <button className="secondary" type="button" onClick={() => update({ time: '', hits: skipped ? '' : 'skipped' })}>
                                   {skipped ? 'Record retry' : 'Skip retry'}
@@ -322,7 +322,7 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
                             </Fragment>
                           );
                         })}
-                        <td><b>{summary.outcomes[stageIndex]}</b></td>
+                        <td data-label="Stage" className="mcStage"><b>{summary.outcomes[stageIndex]}</b></td>
                       </tr>
                     );
                   })}

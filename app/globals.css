@@ -809,3 +809,19 @@ table.roster td:first-child { min-width: 150px; }
   .reloadCard .billNum { width: 56px; }
   .reloadCard .billRes { font-size: 13px; }
 }
+/* Man Card scorecard on phones: one card per stage, no sideways scrolling */
+@media (max-width: 600px) {
+  .manCardTable .tableWrap { overflow: visible; }
+  .manCardTable table, .manCardTable tbody { display: block; width: 100%; }
+  .manCardTable thead { display: none; }
+  .manCardTable tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 6px 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #fff; }
+  .manCardTable tr > th { grid-column: 1 / -1; border: 0; padding: 0 0 2px; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--ink); }
+  .manCardTable th small.stageHint { min-width: 0; font-size: 12px; }
+  .manCardTable tr > td { border: 0; padding: 0; display: grid; gap: 3px; align-content: start; text-align: left; font-size: 13px; min-width: 0; }
+  .manCardTable tr > td::before { content: attr(data-label); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .manCardTable input[type="number"], .manCardTable select { width: 100%; min-width: 0; height: 42px; font-size: 16px; }
+  .manCardTable td button { margin: 4px 0 0; font-size: 12px; padding: 4px 8px; height: auto; }
+  .manCardTable td.mcStage { grid-column: 1 / -1; display: flex; gap: 8px; align-items: baseline; border-top: 1px solid #efeee7; padding-top: 6px; }
+  .manCard label { display: grid; gap: 5px; }
+  .manCard input[type="date"] { -webkit-appearance: none; appearance: none; width: 100%; min-width: 0; }
+}
