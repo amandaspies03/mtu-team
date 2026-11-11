@@ -32,7 +32,7 @@ function result(attempt: Attempt, par: number) {
   if (attempt.hits === 'skipped') return 'Skipped';
   if (!attempt.hits || !Number.isFinite(Number(attempt.time)) || Number(attempt.time) <= 0) return 'Incomplete';
   const overTime = Number(attempt.time) > par;
-  if (attempt.hits === 'miss') return overTime ? 'Fail · Hit result and over time' : 'Fail · Hit result';
+  if (attempt.hits !== 'C' && attempt.hits !== 'all') return overTime ? 'Fail · Hit result and over time' : 'Fail · Hit result';
   return overTime ? 'Fail · Over time' : 'Pass';
 }
 
@@ -70,8 +70,8 @@ const sampleEntries: Entry[] = [
     mode: 'two' as const,
     notes: '',
     attempts: stages.map(({ par }, stage): [Attempt, Attempt] => [
-      { time: String(par), hits: stage < cold ? 'all' : 'miss' },
-      stage < cold ? blankAttempt() : { time: String(par), hits: 'all' },
+      { time: String(par), hits: stage < cold ? 'C' : 'miss' },
+      stage < cold ? blankAttempt() : { time: String(par), hits: 'C' },
     ]),
   },
 })));
@@ -231,10 +231,12 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
                           return (
                             <Fragment key={attemptIndex}>
                               <td><input aria-label={`${label} time in seconds`} type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" disabled={disabled} value={disabled ? '' : attempt.time} onChange={event => update({ time: event.target.value })} /></td>
-                              <td><select aria-label={`${label} hit result`} disabled={disabled} value={disabled ? '' : attempt.hits} onChange={event => update({ hits: event.target.value })}>
+                              <td><select aria-label={`${label} hit result`} disabled={disabled} value={disabled ? '' : attempt.hits === 'all' ? 'C' : attempt.hits} onChange={event => update({ hits: event.target.value })}>
                                 <option value="">Select</option>
-                                <option value="all">All in zone</option>
-                                <option value="miss">Miss / outside</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="miss">MISS</option>
                               </select></td>
                               <td>
                                 {isRetry && !canRetry ? '—' : result(attempt, par)}
