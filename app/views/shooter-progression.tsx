@@ -7,7 +7,7 @@ import { PageTitle, Sparkline } from './ui';
 import { ScoreChart } from './scores';
 import BillDrill from './bill-drill';
 
-// Man Card · Short Card (Achilles Heel Tactical). 25 yards, C-zone. Pass = every hit in the C-zone at or under par.
+// Man Card (Achilles Heel Tactical). 25 yards, C-zone. Pass = every hit in the C-zone at or under par.
 const stages = [
   { name: 'Compressed Ready', par: 1, weapon: 'Pistol', rounds: '1 round', start: 'Compressed ready' },
   { name: 'Holster Draw', par: 1.5, weapon: 'Pistol', rounds: '1 round', start: 'Full holster draw (any level of retention or concealment)' },
@@ -55,30 +55,55 @@ function summarize(card: Card) {
 }
 
 const DRILLS = [
-  { id: 'man-card', title: 'Man Card · Short Card', sub: '5 stages · 25 yd · par times' },
+  { id: 'man-card', title: 'Man Card', sub: '5 stages · 25 yd · par times' },
   { id: 'bill-drill', title: 'Bill Drill', sub: '6 rounds · 7 yd · A-zone' },
 ] as const;
 type DrillId = typeof DRILLS[number]['id'];
+type Tab = 'leaderboard' | 'drills' | 'entries';
 
 export default function ShooterProgression() {
   const { me, memberById, isStaff } = useTeam();
+  const [tab, setTab] = useState<Tab>('leaderboard');
+  // Which drill the Leaderboard and All entries show.
   const [drill, setDrill] = useState<DrillId>(() => { try { return (localStorage.getItem('mtu.progression.drill') as DrillId) || 'man-card'; } catch { return 'man-card'; } });
+  // Which drill is open on the Drills tab (null = the list of drills).
+  const [open, setOpen] = useState<DrillId | null>(null);
   if (!isStaff) return null;
-  const pick = (d: DrillId) => { setDrill(d); try { localStorage.setItem('mtu.progression.drill', d); } catch { /* ignore */ } };
   const shooter = displayName(memberById(me.member_id));
+  const pickDrill = (d: DrillId) => { setDrill(d); try { localStorage.setItem('mtu.progression.drill', d); } catch { /* ignore */ } };
+  const drillSelect = (
+    <label>Drill<select value={drill} onChange={e => pickDrill(e.target.value as DrillId)}>
+      {DRILLS.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+    </select></label>
+  );
+  const go = (t: Tab, d?: DrillId) => { setTab(t); if (d) pickDrill(d); if (t !== 'drills') setOpen(null); };
+  const manControls = {
+    tab: tab === 'drills' ? 'drills' : tab, drillOpen: open === 'man-card', drillSelect,
+    onTab: (t: string) => go(t as Tab, 'man-card'),
+    onDrillOpen: (o: boolean) => { setOpen(o ? 'man-card' : null); if (o) setTab('drills'); },
+  };
   return (
     <div>
       <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Drills with par times and standards. Scorecards are saved in this browser.</PageTitle>
-      <div className="drillPick" role="tablist" aria-label="Drill">
-        {DRILLS.map(d => (
-          <button key={d.id} type="button" role="tab" aria-selected={drill === d.id} className={drill === d.id ? 'on' : ''} onClick={() => pick(d.id)}>
-            <b>{d.title}</b><small>{d.sub}</small>
-          </button>
-        ))}
+      <div className="tabs" aria-label="Shooter Progression views">
+        {([['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']] as const).map(([id, title]) =>
+          <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)}>{title}</button>)}
       </div>
-      {drill === 'man-card'
-        ? <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={shooter} hideHeader />
-        : <BillDrill key={me.id} storageKey={`mtu.bill-drill.${me.id}`} shooter={shooter} />}
+      {tab === 'drills' && !open && (
+        <div className="drillPick">
+          {DRILLS.map(d => (
+            <button key={d.id} type="button" onClick={() => setOpen(d.id)}>
+              <b>{d.title}</b><small>{d.sub}</small><span className="drillOpen">Open drill and scorecard →</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {(tab !== 'drills' ? drill === 'man-card' : open === 'man-card') &&
+        <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={shooter} hideHeader controls={manControls} />}
+      {(tab !== 'drills' ? drill === 'bill-drill' : open === 'bill-drill') &&
+        <BillDrill key={me.id} storageKey={`mtu.bill-drill.${me.id}`} shooter={shooter} drillSelect={drillSelect}
+          tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'bill-drill')}
+          onOpenDrill={() => { setTab('drills'); setOpen('bill-drill'); }} onBack={() => setOpen(null)} />}
     </div>
   );
 }
@@ -103,13 +128,19 @@ const sampleEntries: Entry[] = [
   },
 })));
 
-export function Scorecard({ storageKey, shooter, preview = false, showTabs = true, hideHeader = false }: { storageKey: string; shooter: string; preview?: boolean; showTabs?: boolean; hideHeader?: boolean }) {
+type Controls = { tab: string; onTab: (t: string) => void; drillOpen: boolean; onDrillOpen: (open: boolean) => void; drillSelect: React.ReactNode };
+export function Scorecard({ storageKey, shooter, preview = false, showTabs = true, hideHeader = false, controls }: { storageKey: string; shooter: string; preview?: boolean; showTabs?: boolean; hideHeader?: boolean; controls?: Controls }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [card, setCard] = useState<Card | null>(null);
   const [status, setStatus] = useState('');
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState('leaderboard');
-  const [drillOpen, setDrillOpen] = useState(false);
+  const [tabLocal, setTabLocal] = useState('leaderboard');
+  const [openLocal, setOpenLocal] = useState(false);
+  // On the Shooter Progression page the tabs and drill list are shared by all drills (see ShooterProgression).
+  const tab = controls?.tab ?? tabLocal;
+  const setTab = (t: string) => (controls ? controls.onTab(t) : setTabLocal(t));
+  const drillOpen = controls?.drillOpen ?? openLocal;
+  const setDrillOpen = (o: boolean) => (controls ? controls.onDrillOpen(o) : setOpenLocal(o));
   const [viewing, setViewing] = useState<Entry | null>(null);
 
   useEffect(() => {
@@ -169,37 +200,37 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
 
   return (
     <div>
-      {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card · Short Card</PageTitle>
+      {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card</PageTitle>
       <p>Scorecards are saved in this browser.</p></>}
-      {showTabs && <div className="tabs" aria-label="Shooter Progression views">
+      {showTabs && !controls && <div className="tabs" aria-label="Shooter Progression views">
         {[['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']].map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); setDrillOpen(false); }}>{title}</button>
         )}
       </div>}
-      {showTabs && tab !== 'drills' && <ProgressionResults entries={entries} currentShooter={shooter} leaderboard={tab === 'leaderboard'} onEdit={edit} onDelete={remove} onOpen={entry => {
+      {showTabs && tab !== 'drills' && <ProgressionResults drillSelect={controls?.drillSelect} entries={entries} currentShooter={shooter} leaderboard={tab === 'leaderboard'} onEdit={edit} onDelete={remove} onOpen={entry => {
         if (entry.own && summarize(entry.card).remaining) {
           edit(entry);
         } else {
           setViewing(entry);
         }
       }} />}
-      {showTabs && tab === 'drills' && (!drillOpen ? (
+      {showTabs && tab === 'drills' && (!drillOpen ? (controls ? null :
         <div className="scoreGrid">
           <button className="panel" type="button" onClick={() => setDrillOpen(true)}>
-            <strong>Man Card · Short Card</strong><br />Open drill and scorecard
+            <strong>Man Card</strong><br />Open drill and scorecard
           </button>
         </div>
       ) : (
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setDrillOpen(false)}>Back to drills</button>
-          <h2>Man Card · Short Card</h2>
+          <h2>Man Card</h2>
           <div className="drillFacts">
             <div><span>Distance</span><b>25 yards</b></div>
             <div><span>Target</span><b>C-zone steel or IPSC C-zone</b></div>
             <div><span>Attempts</span><b>Usually 2 per stage (1 for strict evaluation)</b></div>
           </div>
           <p className="callout">All shots must land inside the C-zone. Any hit outside the C-zone, or a time over par, fails the stage.</p>
-          <h3>The Short Card course of fire</h3>
+          <h3>Course of fire</h3>
           <ol className="drillStages">
             {stages.map(st => (
               <li key={st.name}>
@@ -218,7 +249,7 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
       {ready && activeCard && summary && (!showTabs || (tab === 'drills' && drillOpen) || readOnly) && (
         <form className="panel scorecardPanel manCard" onSubmit={event => { event.preventDefault(); if (!readOnly && card) save(card); }}>
           <div className="scHead">
-            <div><h2>Scorecard</h2><p className="scNote">Man Card · Short Card</p></div>
+            <div><h2>Scorecard</h2><p className="scNote">Man Card</p></div>
             {!readOnly && <button className="secondary" type="button" onClick={reset}>Clear card</button>}
           </div>
           <p>Shooter {readOnly ? viewing?.shooter : shooter}</p>
@@ -320,7 +351,7 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
   );
 }
 
-function ProgressionResults({ entries, currentShooter, leaderboard, onOpen, onEdit, onDelete }: { entries: Entry[]; currentShooter: string; leaderboard: boolean; onOpen: (entry: Entry) => void; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void }) {
+function ProgressionResults({ drillSelect, entries, currentShooter, leaderboard, onOpen, onEdit, onDelete }: { drillSelect?: React.ReactNode; entries: Entry[]; currentShooter: string; leaderboard: boolean; onOpen: (entry: Entry) => void; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void }) {
   const [period, setPeriod] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([currentShooter]);
@@ -340,7 +371,7 @@ function ProgressionResults({ entries, currentShooter, leaderboard, onOpen, onEd
   return (
     <section className="panel">
       <div className="filters">
-        <label>Drill<select defaultValue="man-card"><option value="man-card">Man Card · Short Card</option></select></label>
+        {drillSelect ?? <label>Drill<select defaultValue="man-card"><option value="man-card">Man Card</option></select></label>}
         <label>Period<select value={period} onChange={event => setPeriod(event.target.value)}>
           <option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option>
         </select></label>

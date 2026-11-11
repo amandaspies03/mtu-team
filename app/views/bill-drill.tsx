@@ -48,10 +48,16 @@ function summarize(s: Session) {
 }
 const secs = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)} s`);
 
-export default function BillDrill({ storageKey, shooter }: { storageKey: string; shooter: string }) {
+type BillTab = 'leaderboard' | 'drill' | 'entries';
+export default function BillDrill({ storageKey, shooter, drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
+  storageKey: string; shooter: string; drillSelect?: React.ReactNode;
+  tab?: BillTab; onTab?: (t: BillTab) => void; onOpenDrill?: () => void; onBack?: () => void;
+}) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [card, setCard] = useState<Session>(newSession);
-  const [tab, setTab] = useState<'leaderboard' | 'drill' | 'entries'>('leaderboard');
+  const [tabLocal, setTabLocal] = useState<BillTab>('leaderboard');
+  const tab = tabProp ?? tabLocal;
+  const setTab = (t: BillTab) => { if (t === 'drill' && onOpenDrill) onOpenDrill(); else if (onTab) onTab(t); else setTabLocal(t); };
   const [viewing, setViewing] = useState<Session | null>(null);
   const [status, setStatus] = useState('');
 
@@ -82,12 +88,12 @@ export default function BillDrill({ storageKey, shooter }: { storageKey: string;
 
   return (
     <div>
-      <div className="tabs" aria-label="Bill Drill views">
+      {!tabProp && <div className="tabs" aria-label="Bill Drill views">
         {([['leaderboard', 'Leaderboard'], ['drill', 'Drill & scorecard'], ['entries', 'All entries']] as const).map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); }}>{title}</button>)}
-      </div>
+      </div>}
 
-      {tab === 'leaderboard' && <Leaderboard entries={entries} current={shooter} />}
+      {tab === 'leaderboard' && <Leaderboard entries={entries} current={shooter} drillSelect={drillSelect} />}
 
       {tab === 'entries' && (viewing ? (
         <section className="panel">
@@ -96,6 +102,7 @@ export default function BillDrill({ storageKey, shooter }: { storageKey: string;
         </section>
       ) : (
         <section className="panel">
+          {drillSelect && <div className="filters">{drillSelect}</div>}
           {entries.length === 0 ? <p className="muted">No Bill Drill sessions yet. Open “Drill & scorecard” to log one.</p> : (
             <div className="tableWrap"><table>
               <thead><tr><th>Date</th><th>Shooter</th><th>Start</th><th className="num">Runs</th><th className="num">Clean</th><th className="num">Best clean</th><th className="num">Avg clean</th><th>Level</th><th /></tr></thead>
@@ -117,7 +124,7 @@ export default function BillDrill({ storageKey, shooter }: { storageKey: string;
       ))}
 
       {tab === 'drill' && <>
-        <DrillInstructions />
+        <DrillInstructions onBack={onBack} />
         <form className="panel scorecardPanel billCard" onSubmit={save}>
           <div className="scHead">
             <div><h2>Scorecard</h2><p className="scNote">Bill Drill · 6 rounds · 7 yards</p></div>
@@ -132,9 +139,10 @@ export default function BillDrill({ storageKey, shooter }: { storageKey: string;
   );
 }
 
-function DrillInstructions() {
+function DrillInstructions({ onBack }: { onBack?: () => void }) {
   return (
     <section className="panel">
+      {onBack && <button className="secondary" type="button" onClick={onBack}>Back to drills</button>}
       <h2>Bill Drill</h2>
       <p className="formNote">A foundational speed-and-accuracy drill developed by Bill Wilson of Wilson Combat.</p>
       <div className="drillFacts">
@@ -214,7 +222,7 @@ function SessionCard({ session: s, shooter, onChange, readOnly = false }: { sess
   );
 }
 
-function Leaderboard({ entries, current }: { entries: Entry[]; current: string }) {
+function Leaderboard({ entries, current, drillSelect }: { entries: Entry[]; current: string; drillSelect?: React.ReactNode }) {
   const [period, setPeriod] = useState('all'), [start, setStart] = useState<Start | 'all'>('holster');
   const [selected, setSelected] = useState<string[]>([current]);
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - Number(period));
@@ -232,6 +240,7 @@ function Leaderboard({ entries, current }: { entries: Entry[]; current: string }
   return (
     <section className="panel">
       <div className="filters">
+        {drillSelect}
         <label>Start<select value={start} onChange={e => setStart(e.target.value as Start | 'all')}>
           <option value="holster">Holster</option><option value="low">Low ready</option><option value="high">High ready</option><option value="all">Any start</option>
         </select></label>

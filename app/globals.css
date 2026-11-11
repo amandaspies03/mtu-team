@@ -802,3 +802,5 @@ table.roster td:first-child { min-width: 150px; }
 }
 .billTop input, .billTop select { width: 100%; min-width: 0; max-width: 100%; height: 44px; box-sizing: border-box; }
 .billTop input[type="date"] { -webkit-appearance: none; appearance: none; display: block; padding: 0 10px; }
+.drillPick .drillOpen { font-size: 13px; color: var(--info, #3d5a8a); margin-top: 6px; }
+.drillPick button:hover { border-color: var(--olive); }
