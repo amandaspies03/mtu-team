@@ -765,3 +765,17 @@ table.roster td:first-child { min-width: 150px; }
 .manCardTable select { min-width: 110px; }
 .manCardTable td button { display: block; margin: 4px auto 0; }
 .manCard .scTotals { margin-bottom: 12px; }
+/* Man Card drill instructions */
+.drillFacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.drillFacts > div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: grid; gap: 2px; background: #fff; }
+.drillFacts span { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.drillFacts b { font-size: 14px; }
+.drillStages { padding-left: 22px; display: grid; gap: 10px; margin: 8px 0 12px; }
+.drillStages li { padding: 2px 0 8px; border-bottom: 1px solid #efeee7; }
+.drillStageHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.drillPar { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--olive); }
+.drillStages dl { display: grid; grid-template-columns: 56px 1fr; gap: 2px 10px; margin: 6px 0 0; font-size: 14px; }
+.drillStages dt { color: var(--muted); font-size: 12px; font-weight: 600; padding-top: 2px; }
+.drillStages dd { margin: 0; }
+.manCardTable th small.stageHint { display: block; font-size: 11px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-top: 2px; white-space: normal; min-width: 150px; }
+@media (max-width: 600px) { .drillFacts { grid-template-columns: 1fr; } }

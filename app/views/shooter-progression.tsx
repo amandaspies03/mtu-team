@@ -6,13 +6,15 @@ import { displayName, todayISO } from '../../lib/util';
 import { PageTitle, Sparkline } from './ui';
 import { ScoreChart } from './scores';
 
+// Man Card · Short Card (Achilles Heel Tactical). 25 yards, C-zone. Pass = every hit in the C-zone at or under par.
 const stages = [
-  { name: 'Compressed Ready', par: 1 },
-  { name: 'Holster Draw', par: 1.5 },
-  { name: 'Low Ready', par: 1 },
-  { name: 'High Ready', par: 1 },
-  { name: 'Rifle-to-Pistol Transition', par: 2.5 },
-];
+  { name: 'Compressed Ready', par: 1, weapon: 'Pistol', rounds: '1 round', start: 'Compressed ready' },
+  { name: 'Holster Draw', par: 1.5, weapon: 'Pistol', rounds: '1 round', start: 'Full holster draw (any level of retention or concealment)' },
+  { name: 'Low Ready', par: 1, weapon: 'Rifle', rounds: '1 round', start: 'Low ready, muzzle at a 45-degree downward angle' },
+  { name: 'High Ready', par: 1, weapon: 'Rifle', rounds: '1 round', start: 'High ready (out of the shoulder, looking over the muzzle)' },
+  { name: 'Rifle-to-Pistol Transition', par: 2.5, weapon: 'Rifle → Pistol', rounds: '1 rifle round, transition, 1 pistol round',
+    setup: '1 full pistol magazine, 1 full rifle magazine, and 1 empty rifle magazine in the rifle to force the transition' },
+] as { name: string; par: number; weapon: string; rounds: string; start?: string; setup?: string }[];
 
 type Attempt = { time: string; hits: string };
 type Card = { id: string; date: string; mode: 'one' | 'two'; notes: string; attempts: [Attempt, Attempt][] };
@@ -167,15 +169,26 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setDrillOpen(false)}>Back to drills</button>
           <h2>Man Card · Short Card</h2>
-          <h3>Drill scoring instructions</h3>
-          <ul>
-            <li>Record the first attempt separately for each of the five stages.</li>
-            <li>A stage passes when all required hits are in A, B, or C and the recorded time is at or under the stage par. A miss, an out-of-zone hit, or a time over par fails the attempt.</li>
-            <li>Use one attempt per stage for strict evaluation. In two-attempt mode, a failed first attempt can be retried once.</li>
-            <li>First-attempt passes count toward the progression graph. The card also shows the total stages passed, including retries.</li>
-          </ul>
-          <h3>Target</h3>
-          <p>IPSC C-zone (all shots must land inside the C-zone)</p>
+          <div className="drillFacts">
+            <div><span>Distance</span><b>25 yards</b></div>
+            <div><span>Target</span><b>C-zone steel or IPSC C-zone</b></div>
+            <div><span>Attempts</span><b>Usually 2 per stage (1 for strict evaluation)</b></div>
+          </div>
+          <p className="callout">All shots must land inside the C-zone. Any hit outside the C-zone, or a time over par, fails the stage.</p>
+          <h3>The Short Card course of fire</h3>
+          <ol className="drillStages">
+            {stages.map(st => (
+              <li key={st.name}>
+                <div className="drillStageHead"><b>{st.name}</b><span className="tag">{st.weapon}</span><span className="drillPar">Par {st.par.toFixed(1)} s</span></div>
+                <dl>
+                  <dt>Task</dt><dd>{st.rounds}</dd>
+                  {st.start && <><dt>Start</dt><dd>{st.start}</dd></>}
+                  {st.setup && <><dt>Setup</dt><dd>{st.setup}</dd></>}
+                </dl>
+              </li>
+            ))}
+          </ol>
+          <p className="formNote">Drill: Achilles Heel Tactical “Man Card.” First-attempt passes count toward the progression graph.</p>
         </section>
       ))}
       {ready && activeCard && summary && (!showTabs || (tab === 'drills' && drillOpen) || readOnly) && (
@@ -212,7 +225,7 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
                     const canRetry = result(attempts[0], par).startsWith('Fail');
                     return (
                       <tr key={name}>
-                        <th scope="row">{name}</th>
+                        <th scope="row">{name}<small className="stageHint">{[stages[stageIndex].rounds, stages[stageIndex].start?.split(' (')[0], `par ${par.toFixed(1)} s`].filter(Boolean).join(' · ')}</small></th>
                         {attempts.slice(0, activeCard.mode === 'two' ? 2 : 1).map((attempt, attemptIndex) => {
                           const isRetry = attemptIndex === 1;
                           const skipped = isRetry && attempt.hits === 'skipped';
