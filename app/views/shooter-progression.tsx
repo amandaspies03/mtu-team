@@ -82,25 +82,27 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
   const [status, setStatus] = useState('');
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState('leaderboard');
+  const [drillOpen, setDrillOpen] = useState(false);
   const [viewing, setViewing] = useState<Entry | null>(null);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) setCards(JSON.parse(saved));
+      else if (preview) setCards(sampleEntries.filter(entry => entry.shooter === 'Jordan Reed').map(entry => entry.card));
       setCard(newCard());
       setReady(true);
     } catch {
       setStatus('Saved scorecards could not be opened on this device.');
     }
-  }, [storageKey]);
+  }, [preview, storageKey]);
 
   function save(entry: Card) {
     const next = [entry, ...cards.filter(saved => saved.id !== entry.id)].sort((a, b) => b.date.localeCompare(a.date));
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
       setCards(next);
-      setStatus('Scorecard saved on this device.');
+      setStatus(summarize(entry).remaining ? 'Draft saved on this device.' : 'Score published to the preview record.');
       if (preview) { setCard(newCard()); setTab('entries'); }
     } catch {
       setStatus('Could not save this scorecard on this device.');
@@ -110,10 +112,32 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
   const activeCard = preview && tab === 'entries' ? viewing?.card : card;
   const summary = activeCard && summarize(activeCard);
   const entries = preview ? [
-    ...sampleEntries.map(entry => entry.shooter === 'Jordan Reed' ? { ...entry, shooter, own: true } : entry),
+    ...sampleEntries.filter(entry => entry.shooter !== 'Jordan Reed'),
     ...cards.map(card => ({ shooter, card, own: true })),
   ] : [];
   const readOnly = preview && tab === 'entries';
+  function edit(entry: Entry) {
+    if (!entry.own) return;
+    setCard(entry.card);
+    setViewing(null);
+    setDrillOpen(true);
+    setTab('drills');
+    setStatus('');
+  }
+
+  function remove(entry: Entry) {
+    if (!entry.own || !window.confirm('Delete this scorecard from the record?')) return;
+    const next = cards.filter(saved => saved.id !== entry.card.id);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+      setCards(next);
+      if (viewing?.card.id === entry.card.id) setViewing(null);
+      setStatus('Scorecard deleted.');
+    } catch {
+      setStatus('Could not delete this scorecard.');
+    }
+  }
+
   const reset = () => { setCard(newCard()); setStatus(''); };
 
   return (
@@ -121,19 +145,34 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
       <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card · Short Card</PageTitle>
       <p>Draft preview. Scorecards are saved in this browser.</p>
       {preview && <div className="tabs" aria-label="Shooter Progression views">
-        {[['leaderboard', 'Leaderboard'], ['enter', 'Enter scores'], ['entries', 'All entries']].map(([id, title]) =>
-          <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); }}>{title}</button>
+        {[['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']].map(([id, title]) =>
+          <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); setDrillOpen(false); }}>{title}</button>
         )}
       </div>}
-      {preview && tab !== 'enter' && <ProgressionResults entries={entries} currentShooter={shooter} leaderboard={tab === 'leaderboard'} onOpen={entry => {
+      {preview && tab !== 'drills' && <ProgressionResults entries={entries} currentShooter={shooter} leaderboard={tab === 'leaderboard'} onEdit={edit} onDelete={remove} onOpen={entry => {
         if (entry.own && summarize(entry.card).remaining) {
-          setCard(entry.card);
-          setTab('enter');
+          edit(entry);
         } else {
           setViewing(entry);
         }
       }} />}
-      {ready && activeCard && summary && (!preview || tab === 'enter' || readOnly) && (
+      {preview && tab === 'drills' && (!drillOpen ? (
+        <div className="scoreGrid">
+          <button className="panel" type="button" onClick={() => setDrillOpen(true)}>
+            <strong>Man Card · Short Card</strong><br />Open drill and scorecard
+          </button>
+        </div>
+      ) : (
+        <section className="panel">
+          <button className="secondary" type="button" onClick={() => setDrillOpen(false)}>Back to drills</button>
+          <h2>Man Card · Short Card</h2>
+          <h3>Directions</h3>
+          <p>Choose the evaluation mode and record the result for each stage. If you’re using two-attempt mode, record or skip each available retry. Select Save scores to publish the completed card.</p>
+          <h3>Target</h3>
+          <p>C-zone scoring target.</p>
+        </section>
+      ))}
+      {ready && activeCard && summary && (!preview || (tab === 'drills' && drillOpen) || readOnly) && (
         <form className="panel scorecardPanel manCard" onSubmit={event => { event.preventDefault(); if (!readOnly && card) save(card); }}>
           <div className="scHead">
             <div><h2>Scorecard</h2><p className="scNote">Man Card · Short Card</p></div>
@@ -215,7 +254,7 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
             <div className="scGrand"><span>Card status</span><b>{summary.remaining ? 'In progress' : summary.passed === 5 ? 'Passed' : 'Failed'}</b></div>
           </div>
           <label>Session notes <textarea value={activeCard.notes} onChange={event => setCard({ ...activeCard, notes: event.target.value })} /></label>
-          {!readOnly && <button className="primary" type="submit">{summary.remaining ? 'Save draft' : 'Save scorecard'}</button>}
+          {!readOnly && <button className="primary" type="submit">{summary.remaining ? 'Save draft' : preview ? 'Save scores' : 'Save scorecard'}</button>}
           </fieldset>
         </form>
       )}
@@ -236,7 +275,7 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
   );
 }
 
-function ProgressionResults({ entries, currentShooter, leaderboard, onOpen }: { entries: Entry[]; currentShooter: string; leaderboard: boolean; onOpen: (entry: Entry) => void }) {
+function ProgressionResults({ entries, currentShooter, leaderboard, onOpen, onEdit, onDelete }: { entries: Entry[]; currentShooter: string; leaderboard: boolean; onOpen: (entry: Entry) => void; onEdit: (entry: Entry) => void; onDelete: (entry: Entry) => void }) {
   const [period, setPeriod] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([currentShooter]);
@@ -299,7 +338,10 @@ function ProgressionResults({ entries, currentShooter, leaderboard, onOpen }: { 
           <tbody>{filtered.map(entry => <tr key={entry.card.id}>
             <td>{entry.card.date}</td><td>{entry.shooter}</td><td>{entry.result.cold}/5</td><td>{entry.result.passed}/5</td>
             <td>{entry.result.remaining ? 'Private draft' : entry.result.passed === 5 ? 'Passed' : 'Failed'}</td>
-            <td><button className="secondary" type="button" onClick={() => onOpen(entry)}>{entry.result.remaining ? 'Resume draft' : 'View card'}</button></td>
+            <td><button className="secondary" type="button" onClick={() => onOpen(entry)}>{entry.result.remaining ? 'Resume draft' : 'View card'}</button>
+              {entry.own && !entry.result.remaining && <button className="secondary" type="button" onClick={() => onEdit(entry)}>Edit</button>}
+              {entry.own && <button className="secondary" type="button" onClick={() => onDelete(entry)}>Delete</button>}
+            </td>
           </tr>)}</tbody>
         </table></div>
         {filtered.length === 0 && <p>No entries match these filters.</p>}
