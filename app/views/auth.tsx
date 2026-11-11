@@ -19,6 +19,14 @@ function friendly(msg: string, mode: Mode) {
       ? 'This invite link is no longer valid. Go back and tap “Create an account” instead.'
       : 'We couldn’t create that account. Try again, or contact MTU staff.';
   }
+  // Supabase caps how many sign-up and reset emails go out per hour, and how fast one phone can retry.
+  if (/email rate limit|over_email_send_rate_limit/i.test(msg)) {
+    return mode === 'forgot'
+      ? 'Too many reset emails have gone out in the last hour. Wait an hour and try again, or ask MTU staff to set a temporary password for you.'
+      : 'Your account wasn’t created: too many sign-up emails have gone out in the last hour. Wait an hour and try again, or ask MTU staff to create your account for you.';
+  }
+  if (/request rate limit|too many requests/i.test(msg)) return 'Too many tries in a row. Wait a minute, then tap the button once.';
+  if (/email address not authorized/i.test(msg)) return 'The site can’t send email to that address yet. Ask MTU staff to create your account for you.';
   return msg;
 }
 
