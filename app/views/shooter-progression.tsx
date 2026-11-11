@@ -166,10 +166,15 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setDrillOpen(false)}>Back to drills</button>
           <h2>Man Card · Short Card</h2>
-          <h3>Directions</h3>
-          <p>Choose the evaluation mode and record the result for each stage. If you’re using two-attempt mode, record or skip each available retry. Select Save scores to publish the completed card.</p>
+          <h3>Drill scoring instructions</h3>
+          <ul>
+            <li>Record the first attempt separately for each of the five stages.</li>
+            <li>A stage passes when all required hits are in the C-zone and the recorded time is at or under the stage par. A miss, an out-of-zone hit, or a time over par fails the attempt.</li>
+            <li>Use one attempt per stage for strict evaluation. In two-attempt mode, a failed first attempt can be retried once.</li>
+            <li>First-attempt passes count toward the progression graph. The card also shows the total stages passed, including retries.</li>
+          </ul>
           <h3>Target</h3>
-          <p>C-zone scoring target.</p>
+          <p>IPSC C-zone (all shots must land inside the C-zone)</p>
         </section>
       ))}
       {ready && activeCard && summary && (!preview || (tab === 'drills' && drillOpen) || readOnly) && (
