@@ -215,6 +215,7 @@ const SIGN_OFF = 'The scorer prints their name and signs to certify the score; t
 
 export const MATCH_SCORING: Record<string, Scoring> = {
   PI2210: {
+    target: { src: '/match/target-pistol-eic.png', caption: '“EIC” Combat target (scoring rings X, 5, 4, 3, 2)' },
     scorecard: { src: '/match/scorecard-pi2210.png', caption: 'NGMTC Form PI2210 scorecard' },
     table: [['Ring', 'Points'], ['X', '5 (also counted as an X)'], ['5', '5'], ['4', '4'], ['3', '3'], ['2', '2']],
     steps: [
@@ -245,12 +246,14 @@ export const MATCH_SCORING: Record<string, Scoring> = {
     ],
   },
   PI2250: {
+    target: { src: '/match/target-figure-11.png', caption: 'Figure 11 target (facial area and body rings 5, 4, 3, 2)' },
     scorecard: { src: '/match/scorecard-pi2250.png', caption: 'NGMTC Form PI2250 scorecard' },
     table: FIG11_TABLE,
     steps: [...FIG11_STEPS_STAGE1, ...FIG11_STEPS_STAGE2],
     notes: ['PT2350 is a paper match built from the combined PI2250 scores.', SIGN_OFF],
   },
   RI3020: {
+    target: { src: '/match/target-figure-11.png', caption: 'Figure 11 target (facial area and body rings 5, 4, 3, 2)' },
     scorecard: { src: '/match/scorecard-ri3020.png', caption: 'NGMTC Form RI3020 scorecard' },
     table: FIG11_TABLE,
     steps: [...FIG11_STEPS_STAGE1, ...FIG11_STEPS_STAGE2],
