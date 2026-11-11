@@ -24,7 +24,7 @@ export default function ShooterProgressionPreview() {
         </div>
       </aside>
       <main>
-        <Scorecard storageKey="mtu.man-card.preview" shooter="Sample Shooter" />
+        <Scorecard storageKey="mtu.man-card.preview" shooter="Sample Shooter" preview />
       </main>
     </div>
   );

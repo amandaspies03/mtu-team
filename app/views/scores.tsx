@@ -132,9 +132,9 @@ function Leaderboard() {
 
 const SERIES_COLORS = ['#2f5a78', '#b8893e', '#9a3a2c', '#3f6b45', '#6b4c8a', '#1f8a86'];
 
-type Series = { id: string; name: string; color: string; points: { date: string; value: number; score: Score }[] };
+type Series = { id: string; name: string; color: string; points: { date: string; value: number; score?: Score; label?: string; id?: string }[] };
 
-function ScoreChart({ series, max }: { series: Series[]; max: number | null }) {
+export function ScoreChart({ series, max }: { series: Series[]; max: number | null }) {
   const [hover, setHover] = useState<{ x: number; y: number; text: string; color: string } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(760);
@@ -167,8 +167,8 @@ function ScoreChart({ series, max }: { series: Series[]; max: number | null }) {
         {xTicks.map((d, i) => <text key={i} x={L + ((d - x0) / (x1 - x0)) * (W - L - R)} y={H - 10} textAnchor={i === 0 ? 'start' : i === nX - 1 ? 'end' : 'middle'} className="axis">{fmt(d)}</text>)}
         {series.map(se => <g key={se.id}>
           {se.points.length > 1 && <polyline points={se.points.map(p => `${sx(p.date)},${sy(p.value)}`).join(' ')} fill="none" stroke={se.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-          {se.points.map(p => <circle key={p.score.id} cx={sx(p.date)} cy={sy(p.value)} r="4.5" fill={se.color} stroke="#fffefa" strokeWidth="1.5"
-            onMouseEnter={() => setHover({ x: sx(p.date) / W, y: sy(p.value) / H, color: se.color, text: `${se.name} · ${scoreText(p.score.total, p.score.x_count, p.score.raw)} · ${milDate(p.date)}${p.score.session_label ? ' · ' + p.score.session_label : ''}` })} />)}
+          {se.points.map(p => <circle key={p.id ?? p.score?.id} cx={sx(p.date)} cy={sy(p.value)} r="4.5" fill={se.color} stroke="#fffefa" strokeWidth="1.5"
+            onMouseEnter={() => setHover({ x: sx(p.date) / W, y: sy(p.value) / H, color: se.color, text: `${se.name} · ${p.label ?? (p.score ? scoreText(p.score.total, p.score.x_count, p.score.raw) : p.value)} · ${milDate(p.date)}${p.score?.session_label ? ' · ' + p.score.session_label : ''}` })} />)}
         </g>)}
       </svg>
       {hover && <div className="chartTip" style={{ left: `${hover.x * 100}%`, top: `${hover.y * 100}%`, borderColor: hover.color, transform: `translate(${hover.x > 0.7 ? '-100%' : hover.x < 0.3 ? '0' : '-50%'}, calc(-100% - 12px))`, whiteSpace: W < 500 ? 'normal' : 'nowrap', maxWidth: W < 500 ? 220 : undefined }}>{hover.text}</div>}
