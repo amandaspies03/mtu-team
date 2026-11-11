@@ -109,7 +109,10 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
 
   const activeCard = preview && tab === 'entries' ? viewing?.card : card;
   const summary = activeCard && summarize(activeCard);
-  const entries = preview ? [...sampleEntries, ...cards.map(card => ({ shooter, card, own: true }))] : [];
+  const entries = preview ? [
+    ...sampleEntries.map(entry => entry.shooter === 'Jordan Reed' ? { ...entry, shooter, own: true } : entry),
+    ...cards.map(card => ({ shooter, card, own: true })),
+  ] : [];
   const readOnly = preview && tab === 'entries';
   const reset = () => { setCard(newCard()); setStatus(''); };
 
@@ -122,7 +125,7 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); }}>{title}</button>
         )}
       </div>}
-      {preview && tab !== 'enter' && <ProgressionResults entries={entries} leaderboard={tab === 'leaderboard'} onOpen={entry => {
+      {preview && tab !== 'enter' && <ProgressionResults entries={entries} currentShooter={shooter} leaderboard={tab === 'leaderboard'} onOpen={entry => {
         if (entry.own && summarize(entry.card).remaining) {
           setCard(entry.card);
           setTab('enter');
@@ -233,10 +236,10 @@ export function Scorecard({ storageKey, shooter, preview = false }: { storageKey
   );
 }
 
-function ProgressionResults({ entries, leaderboard, onOpen }: { entries: Entry[]; leaderboard: boolean; onOpen: (entry: Entry) => void }) {
+function ProgressionResults({ entries, currentShooter, leaderboard, onOpen }: { entries: Entry[]; currentShooter: string; leaderboard: boolean; onOpen: (entry: Entry) => void }) {
   const [period, setPeriod] = useState('all');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>([currentShooter]);
   const latestFirst = [...entries].sort((a, b) => b.card.date.localeCompare(a.card.date));
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - Number(period));
