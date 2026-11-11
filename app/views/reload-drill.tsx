@@ -2,8 +2,9 @@
 // 1-Reload-1 (1R1): one shot to slide lock, emergency reload, one shot. IPSC target; a run passes when
 // both shots are inside the C-zone (A-zone counts, it sits inside C) and the time is at or under par.
 // Par is chosen on the card: Beginner 7.0 s, Intermediate 5.0 s, Advanced 3.0 s (top of each published range).
-// Sessions are saved in this browser, like the other drills (see shooter-progression.tsx).
-import { useEffect, useState } from 'react';
+// Sessions are saved to the team record (lib/drills.tsx).
+import { useState } from 'react';
+import { ShooterPick, useDrillRecord, type DrillEntry } from '../../lib/drills';
 import { Plus, X } from 'lucide-react';
 import { todayISO } from '../../lib/util';
 import { Sparkline } from './ui';
@@ -23,7 +24,7 @@ const inC = (z: string) => z === 'A' || z === 'C';
 
 type Run = { time: string; shot1: string; shot2: string; reload: string };
 type Session = { id: string; date: string; start: Start; level: Level; distance: string; notes: string; runs: Run[] };
-type Entry = { shooter: string; session: Session; own: boolean };
+type Entry = DrillEntry<Session>;
 type ReloadTab = 'leaderboard' | 'drill' | 'entries';
 
 const blankRun = (): Run => ({ time: '', shot1: '', shot2: '', reload: '' });
@@ -62,40 +63,38 @@ function summarize(s: Session) {
 const secs = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)} s`);
 const timeOnly = (v: string) => v.replace(/[^0-9.]/g, '').slice(0, 6);
 
-export default function ReloadDrill({ storageKey, shooter, drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
-  storageKey: string; shooter: string; drillSelect?: React.ReactNode;
+export default function ReloadDrill({ drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
+  drillSelect?: React.ReactNode;
   tab?: ReloadTab; onTab?: (t: ReloadTab) => void; onOpenDrill?: () => void; onBack?: () => void;
 }) {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const rec = useDrillRecord<Session>('one-reload-one');
+  const [cardFor, setCardFor] = useState(rec.myMemberId);
+  const [busy, setBusy] = useState(false);
   const [card, setCard] = useState<Session>(newSession);
   const [tabLocal, setTabLocal] = useState<ReloadTab>('leaderboard');
   const tab = tabProp ?? tabLocal;
   const setTab = (t: ReloadTab) => { if (t === 'drill' && onOpenDrill) onOpenDrill(); else if (onTab) onTab(t); else setTabLocal(t); };
-  const [viewing, setViewing] = useState<Session | null>(null);
+  const [viewing, setViewing] = useState<Entry | null>(null);
   const [status, setStatus] = useState('');
 
-  useEffect(() => {
-    try { const saved = localStorage.getItem(storageKey); if (saved) setSessions(JSON.parse(saved)); }
-    catch { setStatus('Saved 1-Reload-1 sessions could not be opened on this device.'); }
-  }, [storageKey]);
-
-  function persist(next: Session[], msg: string) {
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); setSessions(next); setStatus(msg); }
-    catch { setStatus('Could not save on this device.'); }
-  }
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!summarize(card).runs) { setStatus('Enter a time and both shot zones for at least one run.'); return; }
     if (card.runs.some(r => (r.time !== '' && !(num(r.time) > 0)) || (r.reload !== '' && !(num(r.reload) > 0)))) { setStatus('Times must be in seconds, like 4.35.'); return; }
-    persist([card, ...sessions.filter(s => s.id !== card.id)].sort((a, b) => b.date.localeCompare(a.date)), 'Session saved in this browser.');
-    setCard(newSession()); setTab('entries');
+    if (!cardFor) { setStatus('Choose a shooter.'); return; }
+    setBusy(true);
+    try { setStatus(await rec.save(card, cardFor)); setCard(newSession()); setCardFor(rec.myMemberId); setTab('entries'); }
+    catch (err) { setStatus(`Could not save: ${(err as Error).message}`); }
+    finally { setBusy(false); }
   }
-  function remove(s: Session) {
-    if (!window.confirm('Delete this 1-Reload-1 session?')) return;
-    persist(sessions.filter(x => x.id !== s.id), 'Session deleted.');
-    if (viewing?.id === s.id) setViewing(null);
+  async function remove(en: Entry) {
+    if (!en.own || !window.confirm(`Delete this 1-Reload-1 session for ${en.shooter}?`)) return;
+    try { setStatus(await rec.remove(en.id)); if (viewing?.id === en.id) setViewing(null); }
+    catch (err) { setStatus(`Could not delete: ${(err as Error).message}`); }
   }
-  const entries: Entry[] = sessions.map(session => ({ shooter, session, own: true }));
+  function edit(en: Entry) { if (!en.own) return; setCard(en.session); setCardFor(en.memberId); setTab('drill'); setStatus(''); }
+  const entries = rec.entries;
+  const shooter = rec.currentShooter;
 
   return (
     <div>
@@ -109,7 +108,7 @@ export default function ReloadDrill({ storageKey, shooter, drillSelect, tab: tab
       {tab === 'entries' && (viewing ? (
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setViewing(null)}>Back to entries</button>
-          <SessionCard session={viewing} shooter={shooter} readOnly />
+          <SessionCard session={viewing.session} who={<ShooterPick readOnly name={viewing.shooter} value={viewing.memberId} onChange={() => {}} options={[]} />} readOnly />
         </section>
       ) : (
         <section className="panel">
@@ -117,15 +116,16 @@ export default function ReloadDrill({ storageKey, shooter, drillSelect, tab: tab
           {entries.length === 0 ? <p className="muted">No 1-Reload-1 sessions yet. Open it from the Drills tab to log one.</p> : (
             <div className="tableWrap"><table>
               <thead><tr><th>Date</th><th>Shooter</th><th>Start</th><th>Par</th><th className="num">Runs</th><th className="num">Passed</th><th className="num">Best (hits in C)</th><th>Level</th><th /></tr></thead>
-              <tbody>{entries.map(({ session: s, shooter: who }) => {
+              <tbody>{entries.map(en => {
+                const { session: s, shooter: who } = en;
                 const t = summarize(s);
                 return <tr key={s.id}>
                   <td>{s.date}</td><td>{who}</td><td>{START_LABEL[s.start]}</td><td>{par(s.level).toFixed(1)} s</td>
                   <td className="num">{t.runs}</td><td className="num">{t.passed}/{t.runs}</td><td className="num">{secs(t.best)}</td><td>{reloadLevel(t.best)}</td>
                   <td className="nowrap">
-                    <button className="secondary" type="button" onClick={() => setViewing(s)}>View</button>{' '}
-                    <button className="secondary" type="button" onClick={() => { setCard(s); setTab('drill'); setStatus(''); }}>Edit</button>{' '}
-                    <button className="secondary" type="button" onClick={() => remove(s)}>Delete</button>
+                    <button className="secondary" type="button" onClick={() => setViewing(en)}>View</button>
+                    {en.own && <>{' '}<button className="secondary" type="button" onClick={() => edit(en)}>Edit</button>{' '}
+                    <button className="secondary" type="button" onClick={() => remove(en)}>Delete</button></>}
                   </td>
                 </tr>;
               })}</tbody>
@@ -139,10 +139,10 @@ export default function ReloadDrill({ storageKey, shooter, drillSelect, tab: tab
         <form className="panel scorecardPanel billCard reloadCard" onSubmit={save}>
           <div className="scHead">
             <div><h2>Scorecard</h2><p className="scNote">1-Reload-1 · 2 rounds · IPSC C-zone</p></div>
-            <button className="secondary" type="button" onClick={() => { setCard(newSession()); setStatus(''); }}>Clear card</button>
+            <button className="secondary" type="button" onClick={() => { setCard(newSession()); setCardFor(rec.myMemberId); setStatus(''); }}>Clear card</button>
           </div>
-          <SessionCard session={card} shooter={shooter} onChange={setCard} />
-          <button className="primary" type="submit">Save session</button>
+          <SessionCard session={card} who={<ShooterPick value={cardFor} onChange={setCardFor} options={rec.shooters} />} onChange={setCard} />
+          <button className="primary" type="submit" disabled={busy || !rec.canSave}>{busy ? 'Saving…' : 'Save session'}</button>
         </form>
       </>}
       {status && <p role="status" className="formNote">{status}</p>}
@@ -192,7 +192,7 @@ function DrillInstructions({ onBack }: { onBack?: () => void }) {
   );
 }
 
-function SessionCard({ session: s, shooter, onChange, readOnly = false }: { session: Session; shooter: string; onChange?: (s: Session) => void; readOnly?: boolean }) {
+function SessionCard({ session: s, who, onChange, readOnly = false }: { session: Session; who: React.ReactNode; onChange?: (s: Session) => void; readOnly?: boolean }) {
   const sum = summarize(s);
   const set = (patch: Partial<Session>) => onChange?.({ ...s, ...patch });
   const setRun = (i: number, patch: Partial<Run>) => set({ runs: s.runs.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
@@ -203,7 +203,7 @@ function SessionCard({ session: s, shooter, onChange, readOnly = false }: { sess
   );
   return (
     <fieldset disabled={readOnly} className="billFields">
-      <p className="formNote">Shooter: <b>{shooter}</b></p>
+      {who}
       <div className="billTop">
         <label>Date<input type="date" required value={s.date} onChange={e => set({ date: e.target.value })} /></label>
         <label>Start position<select value={s.start} onChange={e => set({ start: e.target.value as Start })}>

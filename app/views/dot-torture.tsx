@@ -1,8 +1,9 @@
 'use client';
 // Dot Torture: 50 rounds on 10 numbered 2-inch dots. Clean pass = 50/50; then move back a distance.
 // No time limit. Target: public/drills/dot-torture-target.pdf (preview .png).
-// Sessions are saved in this browser, like the other drills (see shooter-progression.tsx).
+// Sessions are saved to the team record (lib/drills.tsx).
 import { useEffect, useState } from 'react';
+import { ShooterPick, useDrillRecord, type DrillEntry } from '../../lib/drills';
 import { todayISO } from '../../lib/util';
 import { Sparkline } from './ui';
 import { ScoreChart } from './scores';
@@ -20,7 +21,7 @@ type Key = typeof STRINGS[number]['key'];
 const DISTANCES = ['3', '5', '7', '10'];
 
 type Session = { id: string; date: string; distance: string; hits: Partial<Record<Key, string>>; notes: string };
-type Entry = { shooter: string; session: Session; own: boolean };
+type Entry = DrillEntry<Session>;
 type DotTab = 'leaderboard' | 'drill' | 'entries';
 
 const newSession = (distance = '3'): Session => ({ id: crypto.randomUUID(), date: todayISO(), distance, hits: {}, notes: '' });
@@ -32,54 +33,52 @@ function summarize(s: Session) {
   return { score, complete, clean: complete && score === 50, misses: entered.reduce((t, st) => t + st.rounds - Number(s.hits[st.key]), 0) };
 }
 
-export default function DotTorture({ storageKey, shooter, drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
-  storageKey: string; shooter: string; drillSelect?: React.ReactNode;
+export default function DotTorture({ drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
+  drillSelect?: React.ReactNode;
   tab?: DotTab; onTab?: (t: DotTab) => void; onOpenDrill?: () => void; onBack?: () => void;
 }) {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const rec = useDrillRecord<Session>('dot-torture');
+  const [cardFor, setCardFor] = useState(rec.myMemberId);
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [card, setCard] = useState<Session>(() => newSession());
   const [tabLocal, setTabLocal] = useState<DotTab>('leaderboard');
   const tab = tabProp ?? tabLocal;
   const setTab = (t: DotTab) => { if (t === 'drill' && onOpenDrill) onOpenDrill(); else if (onTab) onTab(t); else setTabLocal(t); };
-  const [viewing, setViewing] = useState<Session | null>(null);
+  const [viewing, setViewing] = useState<Entry | null>(null);
   const [status, setStatus] = useState('');
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const list = JSON.parse(saved) as Session[];
-        setSessions(list);
-        // Start the next card at the distance the shooter is working on: one step back after a clean run.
-        const last = list[0];
-        if (last) {
-          const i = DISTANCES.indexOf(last.distance);
-          setCard(newSession(summarize(last).clean && i >= 0 && i < DISTANCES.length - 1 ? DISTANCES[i + 1] : last.distance));
-        }
-      }
-    } catch { setStatus('Saved Dot Torture sessions could not be opened on this device.'); }
-  }, [storageKey]);
-
-  function persist(next: Session[], msg: string) {
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); setSessions(next); setStatus(msg); }
-    catch { setStatus('Could not save on this device.'); }
-  }
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const sum = summarize(card);
     if (!sum.complete) { setStatus('Enter hits for all seven strings (0 if none hit).'); return; }
-    persist([card, ...sessions.filter(s => s.id !== card.id)].sort((a, b) => b.date.localeCompare(a.date)),
-      sum.clean ? `Clean run at ${card.distance} yards. Next time, move back a distance.` : `Saved: ${sum.score}/50. Stay at ${card.distance} yards until you run it clean.`);
-    const i = DISTANCES.indexOf(card.distance);
-    setCard(newSession(sum.clean && i < DISTANCES.length - 1 ? DISTANCES[i + 1] : card.distance));
-    setTab('entries');
+    if (!cardFor) { setStatus('Choose a shooter.'); return; }
+    setBusy(true);
+    try {
+      const msg = await rec.save(card, cardFor);
+      setStatus(`${msg} ${sum.clean ? `Clean run at ${card.distance} yards. Next time, move back a distance.` : `${sum.score}/50. Stay at ${card.distance} yards until it's clean.`}`);
+      setEditing(false); setCard(newSession(card.distance)); setCardFor(rec.myMemberId); setTab('entries');
+    } catch (err) { setStatus(`Could not save: ${(err as Error).message}`); }
+    finally { setBusy(false); }
   }
-  function remove(s: Session) {
-    if (!window.confirm('Delete this Dot Torture session?')) return;
-    persist(sessions.filter(x => x.id !== s.id), 'Session deleted.');
-    if (viewing?.id === s.id) setViewing(null);
+  async function remove(en: Entry) {
+    if (!en.own || !window.confirm(`Delete this Dot Torture session for ${en.shooter}?`)) return;
+    try { setStatus(await rec.remove(en.id)); if (viewing?.id === en.id) setViewing(null); }
+    catch (err) { setStatus(`Could not delete: ${(err as Error).message}`); }
   }
-  const entries: Entry[] = sessions.map(session => ({ shooter, session, own: true }));
+  function edit(en: Entry) { if (!en.own) return; setEditing(true); setCard(en.session); setCardFor(en.memberId); setTab('drill'); setStatus(''); }
+  const entries = rec.entries;
+  // Start a new card at the distance this shooter is working on: one step back after a clean run.
+  const latest = entries.find(en => en.memberId === cardFor)?.session;
+  const latestKey = latest ? `${latest.id}:${latest.distance}:${summarize(latest).clean}` : '';
+  useEffect(() => {
+    if (editing || !latest) return;
+    const i = DISTANCES.indexOf(latest.distance);
+    const next = summarize(latest).clean && i >= 0 && i < DISTANCES.length - 1 ? DISTANCES[i + 1] : latest.distance;
+    setCard(c => (c.distance === next ? c : { ...c, distance: next }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestKey, editing]);
+  const shooter = rec.currentShooter;
 
   return (
     <div>
@@ -93,7 +92,7 @@ export default function DotTorture({ storageKey, shooter, drillSelect, tab: tabP
       {tab === 'entries' && (viewing ? (
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setViewing(null)}>Back to entries</button>
-          <SessionCard session={viewing} shooter={shooter} readOnly />
+          <SessionCard session={viewing.session} who={<ShooterPick readOnly name={viewing.shooter} value={viewing.memberId} onChange={() => {}} options={[]} />} readOnly />
         </section>
       ) : (
         <section className="panel">
@@ -101,15 +100,16 @@ export default function DotTorture({ storageKey, shooter, drillSelect, tab: tabP
           {entries.length === 0 ? <p className="muted">No Dot Torture sessions yet. Open it from the Drills tab to log one.</p> : (
             <div className="tableWrap"><table>
               <thead><tr><th>Date</th><th>Shooter</th><th className="num">Distance</th><th className="num">Score</th><th>Result</th><th /></tr></thead>
-              <tbody>{entries.map(({ session: s, shooter: who }) => {
+              <tbody>{entries.map(en => {
+                const { session: s, shooter: who } = en;
                 const t = summarize(s);
                 return <tr key={s.id}>
                   <td>{s.date}</td><td>{who}</td><td className="num">{s.distance} yd</td><td className="num"><b>{t.score}</b>/50</td>
                   <td className={t.clean ? 'billRes clean' : 'billRes not-clean'}>{t.clean ? 'Clean' : `${t.misses} miss${t.misses === 1 ? '' : 'es'}`}</td>
                   <td className="nowrap">
-                    <button className="secondary" type="button" onClick={() => setViewing(s)}>View</button>{' '}
-                    <button className="secondary" type="button" onClick={() => { setCard(s); setTab('drill'); setStatus(''); }}>Edit</button>{' '}
-                    <button className="secondary" type="button" onClick={() => remove(s)}>Delete</button>
+                    <button className="secondary" type="button" onClick={() => setViewing(en)}>View</button>
+                    {en.own && <>{' '}<button className="secondary" type="button" onClick={() => edit(en)}>Edit</button>{' '}
+                    <button className="secondary" type="button" onClick={() => remove(en)}>Delete</button></>}
                   </td>
                 </tr>;
               })}</tbody>
@@ -123,10 +123,10 @@ export default function DotTorture({ storageKey, shooter, drillSelect, tab: tabP
         <form className="panel scorecardPanel billCard dotCard" onSubmit={save}>
           <div className="scHead">
             <div><h2>Scorecard</h2><p className="scNote">Dot Torture · 50 rounds · no time limit</p></div>
-            <button className="secondary" type="button" onClick={() => { setCard(newSession(card.distance)); setStatus(''); }}>Clear card</button>
+            <button className="secondary" type="button" onClick={() => { setEditing(false); setCard(newSession(card.distance)); setCardFor(rec.myMemberId); setStatus(''); }}>Clear card</button>
           </div>
-          <SessionCard session={card} shooter={shooter} onChange={setCard} />
-          <button className="primary" type="submit">Save session</button>
+          <SessionCard session={card} who={<ShooterPick value={cardFor} onChange={setCardFor} options={rec.shooters} />} onChange={setCard} />
+          <button className="primary" type="submit" disabled={busy || !rec.canSave}>{busy ? 'Saving…' : 'Save session'}</button>
         </form>
       </>}
       {status && <p role="status" className="formNote">{status}</p>}
@@ -167,13 +167,13 @@ function DrillInstructions({ onBack }: { onBack?: () => void }) {
   );
 }
 
-function SessionCard({ session: s, shooter, onChange, readOnly = false }: { session: Session; shooter: string; onChange?: (s: Session) => void; readOnly?: boolean }) {
+function SessionCard({ session: s, who, onChange, readOnly = false }: { session: Session; who: React.ReactNode; onChange?: (s: Session) => void; readOnly?: boolean }) {
   const sum = summarize(s);
   const set = (patch: Partial<Session>) => onChange?.({ ...s, ...patch });
   const setHits = (k: Key, v: string) => set({ hits: { ...s.hits, [k]: v } });
   return (
     <fieldset disabled={readOnly} className="billFields">
-      <p className="formNote">Shooter: <b>{shooter}</b></p>
+      {who}
       <div className="billTop">
         <label>Date<input type="date" required value={s.date} onChange={e => set({ date: e.target.value })} /></label>
         <label>Distance<select value={s.distance} onChange={e => set({ distance: e.target.value })}>

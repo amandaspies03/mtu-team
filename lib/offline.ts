@@ -61,7 +61,9 @@ export type OutboxItem =
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'scores'; rows: Record<string, unknown>[] }
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'rsvp'; eventId: string; status: 'planned' | 'absent'; previous: string | null; memberId: string }
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'event'; eventId: string; change: Record<string, unknown> }
-  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'duty'; eventId: string; change: Record<string, unknown> };
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'duty'; eventId: string; change: Record<string, unknown> }
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'drill'; row: { id: string; member_id: string; drill: string; shot_on: string; data: Record<string, unknown> } }
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'drill-delete'; sessionId: string };
 export type NewOutboxItem = OutboxItem extends infer T ? T extends OutboxItem ? Omit<T, 'id' | 'createdAt' | 'userId' | 'error'> : never : never;
 
 const OUT = 'outbox';
@@ -89,8 +91,15 @@ async function send(sb: SupabaseClient, item: OutboxItem) {
   } else if (item.kind === 'event') {
     const { error } = await sb.from('events').update(item.change).eq('id', item.eventId);
     if (error) throw error;
-  } else {
+  } else if (item.kind === 'duty') {
     const { error } = await sb.rpc('update_event_duty', { p_event: item.eventId, p_changes: item.change });
+    if (error) throw error;
+  } else if (item.kind === 'drill') {
+    // Same id every retry, so a repeat just overwrites the same scorecard.
+    const { error } = await sb.from('drill_sessions').upsert(item.row, { onConflict: 'id' });
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from('drill_sessions').delete().eq('id', item.sessionId);
     if (error) throw error;
   }
 }

@@ -1,8 +1,9 @@
 'use client';
 // Bill Drill (Bill Wilson, Wilson Combat): 7 yards, IPSC/USPSA A-zone, 6 rounds as fast as possible.
 // A run is clean only when all six hits are in the A-zone. Scored by total time; lower is better.
-// Sessions are saved in this browser, like the Man Card (see shooter-progression.tsx).
-import { useEffect, useState } from 'react';
+// Sessions are saved to the team record (lib/drills.tsx).
+import { useState } from 'react';
+import { ShooterPick, useDrillRecord, type DrillEntry } from '../../lib/drills';
 import { Plus, X } from 'lucide-react';
 import { todayISO } from '../../lib/util';
 import { Sparkline } from './ui';
@@ -12,7 +13,7 @@ type Start = 'holster' | 'low' | 'high';
 const START_LABEL: Record<Start, string> = { holster: 'Holster', low: 'Low ready', high: 'High ready' };
 type Run = { time: string; hits: string; draw: string };
 type Session = { id: string; date: string; start: Start; notes: string; runs: Run[] };
-type Entry = { shooter: string; session: Session; own: boolean };
+type Entry = DrillEntry<Session>;
 
 const blankRun = (): Run => ({ time: '', hits: '', draw: '' });
 const newSession = (): Session => ({ id: crypto.randomUUID(), date: todayISO(), start: 'holster', notes: '', runs: [blankRun(), blankRun(), blankRun()] });
@@ -49,42 +50,40 @@ function summarize(s: Session) {
 const secs = (v: number | null) => (v == null ? '—' : `${v.toFixed(2)} s`);
 
 type BillTab = 'leaderboard' | 'drill' | 'entries';
-export default function BillDrill({ storageKey, shooter, drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
-  storageKey: string; shooter: string; drillSelect?: React.ReactNode;
+export default function BillDrill({ drillSelect, tab: tabProp, onTab, onOpenDrill, onBack }: {
+  drillSelect?: React.ReactNode;
   tab?: BillTab; onTab?: (t: BillTab) => void; onOpenDrill?: () => void; onBack?: () => void;
 }) {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const rec = useDrillRecord<Session>('bill-drill');
   const [card, setCard] = useState<Session>(newSession);
+  const [cardFor, setCardFor] = useState(rec.myMemberId);
+  const [busy, setBusy] = useState(false);
   const [tabLocal, setTabLocal] = useState<BillTab>('leaderboard');
   const tab = tabProp ?? tabLocal;
   const setTab = (t: BillTab) => { if (t === 'drill' && onOpenDrill) onOpenDrill(); else if (onTab) onTab(t); else setTabLocal(t); };
-  const [viewing, setViewing] = useState<Session | null>(null);
+  const [viewing, setViewing] = useState<Entry | null>(null);
   const [status, setStatus] = useState('');
 
-  useEffect(() => {
-    try { const saved = localStorage.getItem(storageKey); if (saved) setSessions(JSON.parse(saved)); }
-    catch { setStatus('Saved Bill Drill sessions could not be opened on this device.'); }
-  }, [storageKey]);
-
-  function persist(next: Session[], msg: string) {
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); setSessions(next); setStatus(msg); }
-    catch { setStatus('Could not save on this device.'); }
-  }
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const sum = summarize(card);
     if (!sum.runs) { setStatus('Enter a time and A-zone hits for at least one run.'); return; }
     const bad = card.runs.find(r => (r.time !== '' && !(num(r.time) > 0)) || (r.draw !== '' && !(num(r.draw) > 0)));
     if (bad) { setStatus('Times must be in seconds, like 2.35.'); return; }
-    persist([card, ...sessions.filter(s => s.id !== card.id)].sort((a, b) => b.date.localeCompare(a.date)), 'Session saved in this browser.');
-    setCard(newSession()); setTab('entries');
+    if (!cardFor) { setStatus('Choose a shooter.'); return; }
+    setBusy(true);
+    try { setStatus(await rec.save(card, cardFor)); setCard(newSession()); setCardFor(rec.myMemberId); setTab('entries'); }
+    catch (err) { setStatus(`Could not save: ${(err as Error).message}`); }
+    finally { setBusy(false); }
   }
-  function remove(s: Session) {
-    if (!window.confirm('Delete this Bill Drill session?')) return;
-    persist(sessions.filter(x => x.id !== s.id), 'Session deleted.');
-    if (viewing?.id === s.id) setViewing(null);
+  async function remove(en: Entry) {
+    if (!en.own || !window.confirm(`Delete this Bill Drill session for ${en.shooter}?`)) return;
+    try { setStatus(await rec.remove(en.id)); if (viewing?.id === en.id) setViewing(null); }
+    catch (err) { setStatus(`Could not delete: ${(err as Error).message}`); }
   }
-  const entries: Entry[] = sessions.map(session => ({ shooter, session, own: true }));
+  function edit(en: Entry) { if (!en.own) return; setCard(en.session); setCardFor(en.memberId); setTab('drill'); setStatus(''); }
+  const entries = rec.entries;
+  const shooter = rec.currentShooter;
 
   return (
     <div>
@@ -98,7 +97,7 @@ export default function BillDrill({ storageKey, shooter, drillSelect, tab: tabPr
       {tab === 'entries' && (viewing ? (
         <section className="panel">
           <button className="secondary" type="button" onClick={() => setViewing(null)}>Back to entries</button>
-          <SessionCard session={viewing} shooter={shooter} readOnly />
+          <SessionCard session={viewing.session} who={<ShooterPick readOnly name={viewing.shooter} value={viewing.memberId} onChange={() => {}} options={[]} />} readOnly />
         </section>
       ) : (
         <section className="panel">
@@ -106,15 +105,16 @@ export default function BillDrill({ storageKey, shooter, drillSelect, tab: tabPr
           {entries.length === 0 ? <p className="muted">No Bill Drill sessions yet. Open “Drill & scorecard” to log one.</p> : (
             <div className="tableWrap"><table>
               <thead><tr><th>Date</th><th>Shooter</th><th>Start</th><th className="num">Runs</th><th className="num">Clean</th><th className="num">Best clean</th><th className="num">Avg clean</th><th>Level</th><th /></tr></thead>
-              <tbody>{entries.map(({ session: s, shooter: who }) => {
+              <tbody>{entries.map(en => {
+                const { session: s, shooter: who } = en;
                 const t = summarize(s);
                 return <tr key={s.id}>
                   <td>{s.date}</td><td>{who}</td><td>{START_LABEL[s.start]}</td><td className="num">{t.runs}</td><td className="num">{t.clean}/{t.runs}</td>
                   <td className="num">{secs(t.best)}</td><td className="num">{secs(t.avg)}</td><td>{s.start === 'holster' ? billLevel(t.best) : '—'}</td>
                   <td className="nowrap">
-                    <button className="secondary" type="button" onClick={() => setViewing(s)}>View</button>{' '}
-                    <button className="secondary" type="button" onClick={() => { setCard(s); setTab('drill'); setStatus(''); }}>Edit</button>{' '}
-                    <button className="secondary" type="button" onClick={() => remove(s)}>Delete</button>
+                    <button className="secondary" type="button" onClick={() => setViewing(en)}>View</button>
+                    {en.own && <>{' '}<button className="secondary" type="button" onClick={() => edit(en)}>Edit</button>{' '}
+                    <button className="secondary" type="button" onClick={() => remove(en)}>Delete</button></>}
                   </td>
                 </tr>;
               })}</tbody>
@@ -128,10 +128,10 @@ export default function BillDrill({ storageKey, shooter, drillSelect, tab: tabPr
         <form className="panel scorecardPanel billCard" onSubmit={save}>
           <div className="scHead">
             <div><h2>Scorecard</h2><p className="scNote">Bill Drill · 6 rounds · 7 yards</p></div>
-            <button className="secondary" type="button" onClick={() => { setCard(newSession()); setStatus(''); }}>Clear card</button>
+            <button className="secondary" type="button" onClick={() => { setCard(newSession()); setCardFor(rec.myMemberId); setStatus(''); }}>Clear card</button>
           </div>
-          <SessionCard session={card} shooter={shooter} onChange={setCard} />
-          <button className="primary" type="submit">Save session</button>
+          <SessionCard session={card} who={<ShooterPick value={cardFor} onChange={setCardFor} options={rec.shooters} />} onChange={setCard} />
+          <button className="primary" type="submit" disabled={busy || !rec.canSave}>{busy ? 'Saving…' : 'Save session'}</button>
         </form>
       </>}
       {status && <p role="status" className="formNote">{status}</p>}
@@ -176,13 +176,13 @@ function DrillInstructions({ onBack }: { onBack?: () => void }) {
   );
 }
 
-function SessionCard({ session: s, shooter, onChange, readOnly = false }: { session: Session; shooter: string; onChange?: (s: Session) => void; readOnly?: boolean }) {
+function SessionCard({ session: s, who, onChange, readOnly = false }: { session: Session; who: React.ReactNode; onChange?: (s: Session) => void; readOnly?: boolean }) {
   const sum = summarize(s);
   const set = (patch: Partial<Session>) => onChange?.({ ...s, ...patch });
   const setRun = (i: number, patch: Partial<Run>) => set({ runs: s.runs.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
   return (
     <fieldset disabled={readOnly} className="billFields">
-      <p className="formNote">Shooter: <b>{shooter}</b></p>
+      {who}
       <div className="billTop">
         <label>Date<input type="date" required value={s.date} onChange={e => set({ date: e.target.value })} /></label>
         <label>Start position<select value={s.start} onChange={e => set({ start: e.target.value as Start })}>

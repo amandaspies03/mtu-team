@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { flushOutbox, isNetworkError, loadSnapshot, outboxItems, saveOrQueue, saveSnapshot, type NewOutboxItem, type OutboxItem } from './offline';
-import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty } from './types';
+import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession } from './types';
 
 export type TeamData = {
   sb: SupabaseClient;
@@ -33,6 +33,8 @@ export type TeamData = {
   can: (d: Duty) => boolean;
   /** Everyone's limited roles (staff only). */
   staffDuties: StaffDuty[];
+  /** Shooter Progression drill scores for the whole team (everyone approved can read them). */
+  drillSessions: DrillSession[];
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
@@ -98,7 +100,7 @@ async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>>({
-    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [],
+    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -112,7 +114,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         const r = await sb.rpc('my_duties');
         if (!r.error && Array.isArray(r.data)) duties = (r.data as string[]).filter((d): d is Duty => d === 'vehicle' || d === 'ammo');
       }
-      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties] = await Promise.all([
+      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions] = await Promise.all([
         loadMembers(sb, isStaff),
         all<Compliance>(sb.from('member_compliance').select('*')),
         loadEvents(sb, isStaff, duties),
@@ -126,8 +128,9 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         isStaff ? all<Invite>(sb.from('invites').select('*').order('created_at', { ascending: false })) : Promise.resolve([] as Invite[]),
         all<Range>(sb.from('ranges').select('*').order('name')),
         isStaff ? all<StaffDuty>(sb.from('staff_duties').select('*').order('email')) : Promise.resolve([] as StaffDuty[]),
+        all<DrillSession>(sb.from('drill_sessions').select('id, member_id, drill, shot_on, data, created_by, updated_at').order('shot_on').limit(5000)),
       ]);
-      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties };
+      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions };
       const waiting = await outboxItems(me.id);
       setState(applyPending(fresh, waiting, me.member_id));
       setOffline(null);
@@ -223,8 +226,10 @@ function forDevice(d: TeamState): TeamState {
 /** Shows changes that are still waiting to send, so the screens match what the person entered. */
 function applyPending(d: TeamState, items: OutboxItem[], myMemberId: string | null): TeamState {
   if (!items.length) return d;
-  let { scores, attendance, events } = d;
+  let { scores, attendance, events, drillSessions } = d;
   for (const i of items) {
+    if (i.kind === 'drill') { drillSessions = [...drillSessions.filter(x => x.id !== i.row.id), i.row as DrillSession]; continue; }
+    if (i.kind === 'drill-delete') { drillSessions = drillSessions.filter(x => x.id !== i.sessionId); continue; }
     if (i.kind === 'scores') {
       const have = new Set(scores.map(x => x.id));
       scores = [...scores, ...(i.rows as unknown as Score[]).filter(r => !have.has(r.id))];
@@ -239,5 +244,5 @@ function applyPending(d: TeamState, items: OutboxItem[], myMemberId: string | nu
       events = events.map(e => (e.id === i.eventId ? ({ ...e, ...i.change } as TeamEvent) : e));
     }
   }
-  return { ...d, scores, attendance, events };
+  return { ...d, scores, attendance, events, drillSessions };
 }

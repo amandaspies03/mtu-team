@@ -160,3 +160,7 @@ export type Invite = {
 export type Duty = 'vehicle' | 'ammo';
 export const DUTY_LABEL: Record<Duty, string> = { vehicle: 'Vehicle manager', ammo: 'Ammo manager' };
 export type StaffDuty = { email: string; duty: Duty; added_by: string | null; created_at: string };
+
+/** Shooter Progression drill scores. `data` holds the drill's own scorecard (see app/views/*-drill.tsx). */
+export type DrillId = 'man-card' | 'bill-drill' | 'one-reload-one' | 'dot-torture';
+export type DrillSession = { id: string; member_id: string; drill: DrillId; shot_on: string; data: Record<string, unknown>; created_by?: string | null; updated_at?: string };

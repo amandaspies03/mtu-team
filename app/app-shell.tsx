@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy } from 'lucide-react';
+import { BookOpen, CalendarDays, Crosshair, Gauge, KeyRound, LogOut, Package, ShieldCheck, Timer, Users, Target, UserRound, Eye, Menu, X, Bell, LifeBuoy, TrendingUp } from 'lucide-react';
 import { getSupabase } from '../lib/supabase';
 import { clearSnapshot, isNetworkError, loadSnapshot, signOutHere } from '../lib/offline';
 import { OfflineBanner } from './views/offline-banner';
@@ -159,7 +159,7 @@ function Workspace() {
       ? [{ view: 'roster', label: 'Roster', icon: <Users size={18} />, match: ['member'] }]
       : [{ view: 'me', label: 'My profile', icon: <UserRound size={18} />, match: ['member'] }]),
     { view: 'scores', label: 'Match Scores', icon: <Target size={18} /> },
-    { view: 'shooter-progression', label: 'Shooter Progression', icon: <Target size={18} /> , staff: true },
+    { view: 'shooter-progression', label: 'Shooter Progression', icon: <TrendingUp size={18} /> },
     { view: 'matchday', label: 'Match day', icon: <Timer size={18} /> },
     { view: 'resources', label: 'Resources', icon: <BookOpen size={18} />, match: ['links'] },
     { view: 'whatsnew', label: 'What’s new', icon: <Bell size={18} />, badge: updates.unread.length },
@@ -180,7 +180,7 @@ function Workspace() {
     case 'events': body = <Events />; break;
     case 'event': body = <EventView id={route.id!} />; break;
     case 'scores': body = <Scores />; break;
-    case 'shooter-progression': body = isStaff ? <ShooterProgression /> : <Dashboard />; break;
+    case 'shooter-progression': body = <ShooterProgression />; break;
     case 'matchday': body = <MatchDay />; break;
     case 'resources': case 'links': body = <Resources />; break;
     case 'admin': body = isStaff ? <Admin /> : <Dashboard />; break;

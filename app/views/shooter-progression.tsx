@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { useTeam } from '../../lib/data';
-import { displayName, todayISO } from '../../lib/util';
+import { DEVICE_KEYS, ShooterPick, useDrillRecord } from '../../lib/drills';
+import { todayISO } from '../../lib/util';
 import { PageTitle, Sparkline } from './ui';
 import { ScoreChart } from './scores';
 import BillDrill from './bill-drill';
@@ -66,14 +67,12 @@ type DrillId = typeof DRILLS[number]['id'];
 type Tab = 'leaderboard' | 'drills' | 'entries';
 
 export default function ShooterProgression() {
-  const { me, memberById, isStaff } = useTeam();
+  const { me } = useTeam();
   const [tab, setTab] = useState<Tab>('leaderboard');
   // Which drill the Leaderboard and All entries show.
   const [drill, setDrill] = useState<DrillId>(() => { try { return (localStorage.getItem('mtu.progression.drill') as DrillId) || 'man-card'; } catch { return 'man-card'; } });
   // Which drill is open on the Drills tab (null = the list of drills).
   const [open, setOpen] = useState<DrillId | null>(null);
-  if (!isStaff) return null;
-  const shooter = displayName(memberById(me.member_id));
   const pickDrill = (d: DrillId) => { setDrill(d); try { localStorage.setItem('mtu.progression.drill', d); } catch { /* ignore */ } };
   const drillSelect = (
     <label>Drill<select value={drill} onChange={e => pickDrill(e.target.value as DrillId)}>
@@ -88,7 +87,8 @@ export default function ShooterProgression() {
   };
   return (
     <div>
-      <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Drills with par times and standards. Scorecards are saved in this browser.</PageTitle>
+      <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Drills with par times and standards. Everyone on the team can see and compare scores. You can add, edit and delete your own.</PageTitle>
+      <DeviceImport />
       <div className="tabs" aria-label="Shooter Progression views">
         {([['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']] as const).map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)}>{title}</button>)}
@@ -103,49 +103,76 @@ export default function ShooterProgression() {
         </div>
       )}
       {(tab !== 'drills' ? drill === 'man-card' : open === 'man-card') &&
-        <Scorecard key={me.id} storageKey={`mtu.man-card.${me.id}`} shooter={shooter} hideHeader controls={manControls} />}
+        <Scorecard key={me.id} hideHeader controls={manControls} />}
       {(tab !== 'drills' ? drill === 'bill-drill' : open === 'bill-drill') &&
-        <BillDrill key={me.id} storageKey={`mtu.bill-drill.${me.id}`} shooter={shooter} drillSelect={drillSelect}
+        <BillDrill key={me.id} drillSelect={drillSelect}
           tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'bill-drill')}
           onOpenDrill={() => { setTab('drills'); setOpen('bill-drill'); }} onBack={() => setOpen(null)} />}
       {(tab !== 'drills' ? drill === 'one-reload-one' : open === 'one-reload-one') &&
-        <ReloadDrill key={me.id} storageKey={`mtu.one-reload-one.${me.id}`} shooter={shooter} drillSelect={drillSelect}
+        <ReloadDrill key={me.id} drillSelect={drillSelect}
           tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'one-reload-one')}
           onOpenDrill={() => { setTab('drills'); setOpen('one-reload-one'); }} onBack={() => setOpen(null)} />}
       {(tab !== 'drills' ? drill === 'dot-torture' : open === 'dot-torture') &&
-        <DotTorture key={me.id} storageKey={`mtu.dot-torture.${me.id}`} shooter={shooter} drillSelect={drillSelect}
+        <DotTorture key={me.id} drillSelect={drillSelect}
           tab={tab === 'drills' ? 'drill' : tab} onTab={t => go(t === 'drill' ? 'drills' : t, 'dot-torture')}
           onOpenDrill={() => { setTab('drills'); setOpen('dot-torture'); }} onBack={() => setOpen(null)} />}
     </div>
   );
 }
 
-type Entry = { shooter: string; card: Card; own: boolean };
+/** Scores saved only in this browser before the team record existed: offer to move them up once. */
+function DeviceImport() {
+  const { me } = useTeam();
+  const rec = { 'man-card': useDrillRecord<{ id: string; date: string }>('man-card'), 'bill-drill': useDrillRecord<{ id: string; date: string }>('bill-drill'), 'one-reload-one': useDrillRecord<{ id: string; date: string }>('one-reload-one'), 'dot-torture': useDrillRecord<{ id: string; date: string }>('dot-torture') };
+  const [found, setFound] = useState<{ drill: DrillId; sessions: { id: string; date: string }[] }[]>([]);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const list: typeof found = [];
+    for (const d of DRILLS) {
+      try {
+        const raw = localStorage.getItem(DEVICE_KEYS[d.id](me.id));
+        const sessions = raw ? (JSON.parse(raw) as { id: string; date: string }[]).filter(x => x && x.date) : [];
+        if (sessions.length) list.push({ drill: d.id, sessions });
+      } catch { /* unreadable copy: leave it */ }
+    }
+    setFound(list);
+  }, [me.id]);
+  const count = found.reduce((n, f) => n + f.sessions.length, 0);
+  if (!count) return msg ? <p role="status" className="formNote">{msg}</p> : null;
+  async function move() {
+    if (!me.member_id) { setMsg('Your account isn’t linked to a roster name yet. Ask staff to link it, then try again.'); return; }
+    setBusy(true);
+    let moved = 0;
+    try {
+      for (const f of found) {
+        for (const sess of f.sessions) { await rec[f.drill].save(sess, me.member_id); moved++; }
+        try { localStorage.removeItem(DEVICE_KEYS[f.drill](me.id)); } catch { /* ignore */ }
+      }
+      setFound([]); setMsg(`Moved ${moved} score${moved === 1 ? '' : 's'} to the team record.`);
+    } catch (err) { setMsg(`Moved ${moved}, then stopped: ${(err as Error).message}`); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="callout">
+      <p><b>{count} drill score{count === 1 ? ' is' : 's are'} saved only on this device.</b> Move {count === 1 ? 'it' : 'them'} to the team record so {count === 1 ? 'it shows' : 'they show'} on the leaderboard and on your other devices.</p>
+      <button className="primary" type="button" disabled={busy} onClick={move}>{busy ? 'Moving…' : 'Move to the team record'}</button>
+      {msg && <p role="status" className="formNote">{msg}</p>}
+    </div>
+  );
+}
 
-const sampleEntries: Entry[] = [
-  ['Morgan Lee', [2, 3, 4]],
-  ['Jordan Reed', [3, 4, 5]],
-].flatMap(([name, results]) => (results as number[]).map((cold, index) => ({
-  shooter: name as string,
-  own: false,
-  card: {
-    id: `${name}-${index}`,
-    date: `2026-${String(9 + index).padStart(2, '0')}-05`,
-    mode: 'two' as const,
-    notes: '',
-    attempts: stages.map(({ par }, stage): [Attempt, Attempt] => [
-      { time: String(par), hits: stage < cold ? 'C' : 'miss' },
-      stage < cold ? blankAttempt() : { time: String(par), hits: 'C' },
-    ]),
-  },
-})));
+type Entry = { id: string; memberId: string; shooter: string; card: Card; own: boolean };
 
 type Controls = { tab: string; onTab: (t: string) => void; drillOpen: boolean; onDrillOpen: (open: boolean) => void; drillSelect: React.ReactNode };
-export function Scorecard({ storageKey, shooter, preview = false, showTabs = true, hideHeader = false, controls }: { storageKey: string; shooter: string; preview?: boolean; showTabs?: boolean; hideHeader?: boolean; controls?: Controls }) {
-  const [cards, setCards] = useState<Card[]>([]);
-  const [card, setCard] = useState<Card | null>(null);
+export function Scorecard({ showTabs = true, hideHeader = false, controls }: { showTabs?: boolean; hideHeader?: boolean; controls?: Controls }) {
+  const rec = useDrillRecord<Card>('man-card');
+  const shooter = rec.currentShooter;
+  const [card, setCard] = useState<Card | null>(() => newCard());
+  const [cardFor, setCardFor] = useState(rec.myMemberId);
+  const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
-  const [ready, setReady] = useState(false);
+  const ready = true;
   const [tabLocal, setTabLocal] = useState('leaderboard');
   const [openLocal, setOpenLocal] = useState(false);
   // On the Shooter Progression page the tabs and drill list are shared by all drills (see ShooterProgression).
@@ -155,65 +182,46 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
   const setDrillOpen = (o: boolean) => (controls ? controls.onDrillOpen(o) : setOpenLocal(o));
   const [viewing, setViewing] = useState<Entry | null>(null);
 
-  useEffect(() => {
+  async function save(entry: Card) {
+    if (!cardFor) { setStatus('Choose a shooter.'); return; }
+    setBusy(true);
     try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) setCards(JSON.parse(saved));
-      else if (preview) setCards(sampleEntries.filter(entry => entry.shooter === 'Jordan Reed').map(entry => entry.card));
-      setCard(newCard());
-      setReady(true);
-    } catch {
-      setStatus('Saved scorecards could not be opened on this device.');
-    }
-  }, [preview, storageKey]);
-
-  function save(entry: Card) {
-    const next = [entry, ...cards.filter(saved => saved.id !== entry.id)].sort((a, b) => b.date.localeCompare(a.date));
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-      setCards(next);
-      setStatus(summarize(entry).remaining ? 'Draft saved on this device.' : 'Score saved to this browser’s record.');
-      if (showTabs) { setCard(newCard()); setTab('entries'); }
-    } catch {
-      setStatus('Could not save this scorecard on this device.');
-    }
+      const msg = await rec.save(entry, cardFor);
+      setStatus(summarize(entry).remaining ? `Draft: ${msg}` : msg);
+      if (showTabs) { setCard(newCard()); setCardFor(rec.myMemberId); setTab('entries'); }
+    } catch (err) { setStatus(`Could not save: ${(err as Error).message}`); }
+    finally { setBusy(false); }
   }
 
   const activeCard = showTabs && tab === 'entries' ? viewing?.card : card;
   const summary = activeCard && summarize(activeCard);
-  const entries = showTabs ? [
-    ...(preview ? sampleEntries.filter(entry => entry.shooter !== 'Jordan Reed') : []),
-    ...cards.map(card => ({ shooter, card, own: true })),
-  ] : [];
+  // Unfinished cards (drafts) are only listed for the shooter they belong to and for staff.
+  const entries: Entry[] = showTabs ? rec.entries
+    .filter(e => rec.isStaff || e.memberId === rec.myMemberId || !summarize(e.session).remaining)
+    .map(e => ({ id: e.id, memberId: e.memberId, shooter: e.shooter, card: e.session, own: e.own })) : [];
   const readOnly = showTabs && tab === 'entries';
   function edit(entry: Entry) {
     if (!entry.own) return;
     setCard(entry.card);
+    setCardFor(entry.memberId);
     setViewing(null);
     setDrillOpen(true);
     setTab('drills');
     setStatus('');
   }
 
-  function remove(entry: Entry) {
-    if (!entry.own || !window.confirm('Delete this scorecard from the record?')) return;
-    const next = cards.filter(saved => saved.id !== entry.card.id);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-      setCards(next);
-      if (viewing?.card.id === entry.card.id) setViewing(null);
-      setStatus('Scorecard deleted.');
-    } catch {
-      setStatus('Could not delete this scorecard.');
-    }
+  async function remove(entry: Entry) {
+    if (!entry.own || !window.confirm(`Delete this Man Card for ${entry.shooter}?`)) return;
+    try { setStatus(await rec.remove(entry.id)); if (viewing?.id === entry.id) setViewing(null); }
+    catch (err) { setStatus(`Could not delete: ${(err as Error).message}`); }
   }
 
-  const reset = () => { setCard(newCard()); setStatus(''); };
+  const reset = () => { setCard(newCard()); setCardFor(rec.myMemberId); setStatus(''); };
 
   return (
     <div>
       {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card</PageTitle>
-      <p>Scorecards are saved in this browser.</p></>}
+      <p>Scorecards are saved to the team record.</p></>}
       {showTabs && !controls && <div className="tabs" aria-label="Shooter Progression views">
         {[['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']].map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); setDrillOpen(false); }}>{title}</button>
@@ -264,7 +272,7 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
             <div><h2>Scorecard</h2><p className="scNote">Man Card</p></div>
             {!readOnly && <button className="secondary" type="button" onClick={reset}>Clear card</button>}
           </div>
-          <p>Shooter {readOnly ? viewing?.shooter : shooter}</p>
+          <ShooterPick readOnly={readOnly} name={readOnly ? viewing?.shooter : undefined} value={cardFor} onChange={setCardFor} options={rec.shooters} />
           <fieldset disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
           <label>Date <input type="date" required value={activeCard.date} onChange={event => setCard({ ...activeCard, date: event.target.value })} /></label>
           <label>Evaluation mode <select value={activeCard.mode} onChange={event => setCard({ ...activeCard, mode: event.target.value === 'one' ? 'one' : 'two' })}>
@@ -342,23 +350,11 @@ export function Scorecard({ storageKey, shooter, preview = false, showTabs = tru
             <div className="scGrand"><span>Card status</span><b>{summary.remaining ? 'In progress' : summary.passed === 5 ? 'Passed' : 'Failed'}</b></div>
           </div>
           <label>Session notes <textarea value={activeCard.notes} onChange={event => setCard({ ...activeCard, notes: event.target.value })} /></label>
-          {!readOnly && <button className="primary" type="submit">{summary.remaining ? 'Save draft' : showTabs ? 'Save scores' : 'Save scorecard'}</button>}
+          {!readOnly && <button className="primary" type="submit" disabled={busy || !rec.canSave}>{busy ? 'Saving…' : summary.remaining ? 'Save draft' : showTabs ? 'Save scores' : 'Save scorecard'}</button>}
           </fieldset>
         </form>
       )}
       <p role="status">{status}</p>
-      {!showTabs && <>
-      <h2>Session history</h2>
-      {cards.length === 0 && <p>No saved scorecards yet.</p>}
-      <ul>
-        {cards.map(saved => {
-          const totals = summarize(saved);
-          return <li key={saved.id}><button type="button" onClick={() => { setCard(saved); setStatus(''); }}>
-            {saved.date} · {totals.cold}/5 first attempt · {totals.passed}/5 total{totals.remaining > 0 ? ' · Draft' : ''}
-          </button></li>;
-        })}
-      </ul>
-      </>}
     </div>
   );
 }
@@ -425,8 +421,8 @@ function ProgressionResults({ drillSelect, entries, currentShooter, leaderboard,
           <thead><tr><th>Date</th><th>Shooter</th><th>First attempt</th><th>Total passed</th><th>Status</th><th>Scorecard</th></tr></thead>
           <tbody>{filtered.map(entry => <tr key={entry.card.id}>
             <td>{entry.card.date}</td><td>{entry.shooter}</td><td>{entry.result.cold}/5</td><td>{entry.result.passed}/5</td>
-            <td>{entry.result.remaining ? 'Private draft' : entry.result.passed === 5 ? 'Passed' : 'Failed'}</td>
-            <td><button className="secondary" type="button" onClick={() => onOpen(entry)}>{entry.result.remaining ? 'Resume draft' : 'View card'}</button>
+            <td>{entry.result.remaining ? 'Draft' : entry.result.passed === 5 ? 'Passed' : 'Failed'}</td>
+            <td><button className="secondary" type="button" onClick={() => onOpen(entry)}>{entry.own && entry.result.remaining ? 'Resume draft' : 'View card'}</button>
               {entry.own && !entry.result.remaining && <button className="secondary" type="button" onClick={() => onEdit(entry)}>Edit</button>}
               {entry.own && <button className="secondary" type="button" onClick={() => onDelete(entry)}>Delete</button>}
             </td>
