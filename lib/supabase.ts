@@ -22,6 +22,14 @@ function timedFetch(input: RequestInfo | URL, init?: RequestInit) {
   const ctrl = new AbortController();
   const outer = init?.signal;
   if (outer) { if (outer.aborted) ctrl.abort(); else outer.addEventListener('abort', () => ctrl.abort(), { once: true }); }
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(t));
+  let timedOut = false;
+  const t = setTimeout(() => { timedOut = true; ctrl.abort(); }, TIMEOUT_MS);
+  return fetch(input, { ...init, signal: ctrl.signal })
+    .catch(err => {
+      // Show people what happened instead of the browser's "AbortError: signal is aborted without reason".
+      // Keep "timed out" in the text: isNetworkError (lib/offline.ts) uses it to keep changes to send later.
+      if (timedOut) throw new Error('The connection timed out — the server didn’t answer within 30 seconds. Check your signal and try again.');
+      throw err;
+    })
+    .finally(() => clearTimeout(t));
 }

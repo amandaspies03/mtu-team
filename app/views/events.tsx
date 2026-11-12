@@ -1,4 +1,5 @@
 'use client';
+import { isNetworkError } from '../../lib/offline';
 import { useState } from 'react';
 import { CalendarDays, CalendarPlus, List, Plus } from 'lucide-react';
 import { CalendarView, type CalMode } from './calendar-view';
@@ -27,10 +28,15 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
     if (f.end_date && f.end_date < f.start_date) { setErr('End date is before the start date.'); return; }
     setBusy(true); setErr('');
     const row = { ...f, end_date: f.end_date || null, location: f.location.trim() || null, notes: f.notes.trim() || null };
-    const { data, error } = event
-      ? await sb.from('events').update(row).eq('id', event.id).select('id').single()
-      : await sb.from('events').insert(row).select('id').single();
-    if (error) { setErr(error.message); setBusy(false); return; }
+    // New events get their id here, so a retry after a dropped connection can't make a duplicate.
+    const id = event?.id ?? crypto.randomUUID();
+    const send = () => event
+      ? sb.from('events').update(row).eq('id', id).select('id').single()
+      : sb.from('events').upsert({ ...row, id }, { onConflict: 'id' }).select('id').single();
+    let { data, error } = await send();
+    if (error && isNetworkError(error) && navigator.onLine !== false) ({ data, error } = await send()); // one quiet retry
+    if (error) { setErr(isNetworkError(error) ? 'Couldn’t reach the server, so the event wasn’t saved. Check your connection and tap Save again.' : error.message); setBusy(false); return; }
+    if (!data) { setErr('The event wasn’t saved. Tap Save again.'); setBusy(false); return; }
     if (event && upcoming && changed && notify) {
       const r = await groupme(sb, { type: 'change', eventId: event.id, before: { title: event.title, start_date: event.start_date, end_date: event.end_date, location: event.location } });
       if (!r.ok && !r.skipped) alert(`Saved, but the GroupMe post failed: ${r.error ?? 'unknown error'}`);
