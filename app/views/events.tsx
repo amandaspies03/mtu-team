@@ -32,9 +32,14 @@ export function EventForm({ event, onClose, initialDate }: { event?: TeamEvent; 
     const id = event?.id ?? crypto.randomUUID();
     const send = () => event
       ? sb.from('events').update(row).eq('id', id).select('id').single()
-      : sb.from('events').upsert({ ...row, id }, { onConflict: 'id' }).select('id').single();
+      : sb.from('events').insert({ ...row, id }).select('id').single();
+    // Plain insert, not upsert: staff can't read every events column, and Postgres refuses an upsert without that.
     let { data, error } = await send();
-    if (error && isNetworkError(error) && navigator.onLine !== false) ({ data, error } = await send()); // one quiet retry
+    if (error && isNetworkError(error) && navigator.onLine !== false) {
+      ({ data, error } = await send()); // one quiet retry
+      // "Already exists" on the retry means the first try did land before the connection dropped.
+      if (error && !event && (error as { code?: string }).code === '23505') ({ data, error } = { data: { id }, error: null });
+    }
     if (error) { setErr(isNetworkError(error) ? 'Couldn’t reach the server, so the event wasn’t saved. Check your connection and tap Save again.' : error.message); setBusy(false); return; }
     if (!data) { setErr('The event wasn’t saved. Tap Save again.'); setBusy(false); return; }
     if (event && upcoming && changed && notify) {
