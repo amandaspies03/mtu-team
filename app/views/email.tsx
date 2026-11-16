@@ -106,7 +106,7 @@ function buildDraft(t: Template, e: TeamEvent | undefined, going: { a: { transpo
   const where = e.location ? `\nLocation: ${e.location}` : '';
   const plan = e.notes ? `\n\nPlan:\n${e.notes}` : '';
   if (t === 'roster') {
-    const list = going.map(({ a, m }) => `- ${m ? displayName(m) : 'Unknown'}${m?.pistol_no ? ` | Pistol #${m.pistol_no}` : ''}${m?.rifle_no ? ` | Rifle #${m.rifle_no}` : ''}${a.transport ? ` | ${a.transport}` : ''}`).join('\n');
+    const list = going.map(({ a, m }) => `- ${m ? displayName(m) : 'Unknown'}${m?.weapon_no ? ` | Weapon #${m.weapon_no}` : ''}${a.transport ? ` | ${a.transport}` : ''}`).join('\n');
     return {
       subject: `184th MTU ${kindLabel[e.kind]} Roster: ${when}`,
       body: `Team,\n\nHere is the roster for ${e.title} on ${when}.${where}\n\n${list || '(No one on the roster yet)'}${plan}\n\nIf you're not on this list and plan to attend, or you can no longer make it, let me know ASAP.${sign}`,

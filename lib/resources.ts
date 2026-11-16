@@ -668,6 +668,8 @@ The empty case doesn't fully extract and a live round feeds in behind it. Causes
 - M4s
 - M14s (not used in competition)
 
+Each shooter gets one team weapon number, and it's the same number for your pistol and your rifle.
+
 ## How it fits together
 The team works under the wing and state marksmanship programs, the National Guard Marksmanship Training Center, and the Marksmanship Advisory Council (MAC) regions.
 

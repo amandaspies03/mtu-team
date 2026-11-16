@@ -90,7 +90,7 @@ export default function EventView({ id }: { id: string }) {
 
   if (!isStaff) {
     const mine = rows.find(r => r.a.member_id === me.member_id);
-    const myRifle = memberById(me.member_id)?.rifle_no;
+    const myWeapon = memberById(me.member_id)?.weapon_no;
     return (
       <div className="eventPage">
         <button className="back" onClick={() => history.length > 1 ? history.back() : go('events')}><ArrowLeft size={14} /> Back</button>
@@ -110,7 +110,7 @@ export default function EventView({ id }: { id: string }) {
           <div className="sectionTitle"><h2>Your details</h2></div>
           <dl className="facts">
             <dt>Your status</dt><dd>{mine ? (mine.a.status === 'planned' ? 'Going' : mine.a.status === 'absent' ? 'Not going' : mine.a.status === 'attended' ? 'Attended' : 'Excused') : past ? 'Not on the roster' : 'No RSVP yet'}</dd>
-            {myRifle != null && <><dt>Your rifle</dt><dd>Rifle #{myRifle}</dd></>}
+            {myWeapon != null && <><dt>Your weapon #</dt><dd>#{myWeapon}</dd></>}
           </dl>
         </section>
       </div>
@@ -189,12 +189,12 @@ export default function EventView({ id }: { id: string }) {
         <div className="sectionTitle"><h2>Roster</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
         {rows.length === 0 ? <Empty title="No one on the roster yet">{isStaff ? 'Add shooters, or have them RSVP from their dashboard.' : 'Be the first to RSVP.'}</Empty> : (
           <div className="tableWrap"><table className="attTable">
-            <thead><tr><th>Shooter</th><th>Status</th>{isPractice && <th>Rifle #</th>}<th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
+            <thead><tr><th>Shooter</th><th>Status</th>{isPractice && <th>Weapon #</th>}<th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>
             <tbody>{rows.map(({ a, m }) => isStaff ? (
               <tr key={a.id}>
                 <td><a href={`#member/${a.member_id}`}>{fullName(m)}</a>{m?.unit && <small className="sub">{m.unit}</small>}</td>
                 <td><select value={a.status} onChange={x => patch(a, { status: x.target.value as AttendanceStatus })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td>
-                {isPractice && <td>{m ? <WeaponSelect member={m} kind="rifle" /> : '—'}</td>}
+                {isPractice && <td>{m ? <WeaponSelect member={m} /> : '—'}</td>}
                 <td><input defaultValue={a.transport ?? ''} placeholder="Van, POV, ammo truck…" onBlur={x => x.target.value !== (a.transport ?? '') && patch(a, { transport: x.target.value || null })} /></td>
                 <td><input defaultValue={a.note ?? ''} onBlur={x => x.target.value !== (a.note ?? '') && patch(a, { note: x.target.value || null })} /></td>
                 <td className="noPrint"><button className="iconBtn" aria-label={`Remove ${fullName(m)}`} onClick={() => remove(a)}><X size={15} /></button></td>
@@ -202,7 +202,7 @@ export default function EventView({ id }: { id: string }) {
             ) : (
               <tr key={a.id}>
                 <td>{fullName(m)}</td><td><Tag tone={a.status === 'attended' ? 'good' : a.status === 'planned' ? 'info' : 'neutral'}>{a.status}</Tag></td>
-                {isPractice && <td>{m?.rifle_no ?? <span className="muted">Unassigned</span>}</td>}<td>{a.transport}</td><td>{a.note}</td>
+                {isPractice && <td>{m?.weapon_no ?? <span className="muted">Unassigned</span>}</td>}<td>{a.transport}</td><td>{a.note}</td>
               </tr>
             ))}</tbody>
           </table></div>

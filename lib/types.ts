@@ -28,8 +28,8 @@ export type Member = {
   cell_phone: string | null;
   mil_email: string | null;
   personal_email: string | null;
-  pistol_no: number | null;
-  rifle_no: number | null;
+  /** Team weapon number: the same number for the shooter's pistol and rifle. */
+  weapon_no: number | null;
   notes: string | null;
   gov20_pistol: boolean;
   gov20_rifle: boolean;
@@ -146,8 +146,8 @@ export const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: 'Other', ranks: ['Civilian'] },
 ];
 
-/** Team weapon inventory: numbers 1–N for each type. */
-export const WEAPON_COUNT = { pistol: 24, rifle: 24 } as const;
+/** Team weapon numbers 1–N. One number per shooter, used for both their pistol and rifle. */
+export const WEAPON_COUNT = 24;
 
 export type StaffEmail = { email: string; added_by: string | null; created_at: string };
 export type Invite = {

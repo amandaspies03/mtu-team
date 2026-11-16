@@ -3,22 +3,18 @@ import { useState } from 'react';
 import { useTeam } from '../../lib/data';
 import { WEAPON_COUNT, type Member } from '../../lib/types';
 
-type Kind = 'pistol' | 'rifle';
-const col = (k: Kind) => (k === 'pistol' ? 'pistol_no' : 'rifle_no') as 'pistol_no' | 'rifle_no';
-
-/** Staff pick a team weapon number in the roster row; everyone else just sees it. */
-export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
+/** Staff pick a shooter's team weapon number (same number for pistol and rifle); everyone else just sees it. */
+export function WeaponSelect({ member }: { member: Member }) {
   const { sb, isStaff, members, reload } = useTeam();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const key = col(kind);
-  const current = member[key];
+  const current = member.weapon_no;
   if (!isStaff) return <span className={current == null ? 'muted' : ''}>{current ?? 'Unassigned'}</span>;
-  const holder = (n: number) => members.find(m => m.id !== member.id && m[key] === n);
+  const holder = (n: number) => members.find(m => m.id !== member.id && m.weapon_no === n);
 
   async function change(v: string) {
     setBusy(true); setErr('');
-    const { error } = await sb.from('members').update({ [key]: v === '' ? null : Number(v) }).eq('id', member.id);
+    const { error } = await sb.from('members').update({ weapon_no: v === '' ? null : Number(v) }).eq('id', member.id);
     if (error) setErr(error.code === '23505' ? 'Already assigned' : error.message);
     await reload();
     setBusy(false);
@@ -26,9 +22,9 @@ export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
 
   return (
     <span className="weaponCell" onClick={e => e.stopPropagation()}>
-      <select aria-label={`${kind === 'pistol' ? 'Pistol' : 'Rifle'} number for ${member.last_name}`} className="weaponSelect" value={current ?? ''} disabled={busy} onChange={e => change(e.target.value)}>
+      <select aria-label={`Weapon number for ${member.last_name}`} className="weaponSelect" value={current ?? ''} disabled={busy} onChange={e => change(e.target.value)}>
         <option value="">Unassigned</option>
-        {Array.from({ length: WEAPON_COUNT[kind] }, (_, i) => i + 1).map(n => {
+        {Array.from({ length: WEAPON_COUNT }, (_, i) => i + 1).map(n => {
           const h = holder(n);
           return <option key={n} value={n} disabled={!!h}>{n}{h ? ` · ${h.last_name}` : ''}</option>;
         })}
@@ -37,4 +33,3 @@ export function WeaponSelect({ member, kind }: { member: Member; kind: Kind }) {
     </span>
   );
 }
-
