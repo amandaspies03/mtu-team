@@ -15,6 +15,7 @@ export default function Dashboard() {
   const active = members.filter(m => m.team_status === 'Active' || m.team_status === 'New');
   const fy = fiscalYear(today);
   const fyPractices = events.filter(e => e.kind !== 'match' && e.start_date < today && fiscalYear(e.start_date) === fy);
+  const fyScheduled = events.filter(e => e.kind !== 'match' && fiscalYear(e.start_date) === fy).length;
   const fyAttendance = attendance.filter(a => a.status === 'attended' && fyPractices.some(e => e.id === a.event_id)).length;
   const lastFy = events.filter(e => e.kind !== 'match' && fiscalYear(e.start_date) === fy - 1);
   const lastFyAtt = attendance.filter(a => a.status === 'attended' && lastFy.some(e => e.id === a.event_id)).length;
@@ -92,7 +93,7 @@ export default function Dashboard() {
 
       {isStaff && <div className="stats">
         <div><Users size={18} /><strong>{active.length}</strong><span>active &amp; new shooters</span></div>
-        <div><CalendarDays size={18} /><strong>{fyPractices.length}</strong><span>FY{String(fy).slice(2)} events so far</span></div>
+        <div><CalendarDays size={18} /><strong>{fyPractices.length}<small> / {fyScheduled}</small></strong><span>FY{String(fy).slice(2)} events held / on the calendar</span></div>
         <div><ClipboardCheck size={18} /><strong>{fyPractices.length ? (fyAttendance / fyPractices.length).toFixed(1) : (lastFy.length ? (lastFyAtt / lastFy.length).toFixed(1) : '—')}</strong><span>avg shooters per {fyPractices.length ? 'event' : `event (FY${String(fy - 1).slice(2)})`}</span></div>
         <button className="statLink" onClick={() => go('scores')} aria-label="Open Match Scores"><Target size={18} /><strong>{scores.length}</strong><span>scores on record</span><ArrowRight size={15} className="statArrow" /></button>
       </div>}
