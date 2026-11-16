@@ -1,28 +1,26 @@
-// Password rules. Supabase enforces length and character types server-side; these mirror them in the UI
-// and add NIST SP 800-63B checks (no common or breached passwords, no passwords built from your own name/email).
+// Password rules. Supabase enforces length and "letters and digits" server-side; these mirror them in the UI,
+// refuse only the most-guessed passwords, and check the breach list (isBreached) before sign-up.
 
 export const MIN_LENGTH = 12;
 export const MAX_LENGTH = 72; // bcrypt only uses the first 72 bytes
 
-export const passwordHelp = `Use at least ${MIN_LENGTH} characters with an uppercase letter, a lowercase letter, a number and a symbol. A short passphrase works well.`;
+export const passwordHelp = `Use at least ${MIN_LENGTH} characters with at least one letter and one number. A short passphrase works well.`;
 
-const COMMON = ['password', 'passw0rd', 'qwerty', 'letmein', 'welcome', 'admin', 'iloveyou', 'monkey', 'dragon', 'football',
-  'baseball', 'abc123', '123456', '654321', '111111', 'changeme', 'trustno1', 'sunshine', 'princess', 'master', 'airforce',
-  'usaf', 'military', 'marksman', 'mtu184', '184mtu', 'kansas', 'wichita', 'mcconnell', 'shooter', 'rifle', 'pistol'];
+// Only the most-guessed passwords. Matched against the password with digits and symbols stripped,
+// so "Password2026!" is refused but a password that merely contains a word like "rifle" is fine.
+const COMMON = ['password', 'passw0rd', 'qwerty', 'qwertyuiop', 'letmein', 'welcome', 'iloveyou', 'abc', 'abcdef', 'changeme', 'trustno'];
 
 export type Rule = { label: string; ok: boolean };
 
-/** Rules shown as a live checklist under the password field. */
-export function passwordRules(password: string, personal: string[] = []): Rule[] {
-  const lower = password.toLowerCase();
-  const words = personal.flatMap(p => (p || '').toLowerCase().split(/[^a-z0-9]+/)).filter(w => w.length >= 3);
+/** Rules shown as a live checklist under the password field. Supabase enforces the first two as well
+ *  (Auth > Sign In / Providers > Email: 12 characters, "Letters and digits"). */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function passwordRules(password: string, _personal: string[] = []): Rule[] {
+  const core = password.toLowerCase().replace(/[^a-z]/g, '');
   return [
     { label: `At least ${MIN_LENGTH} characters`, ok: password.length >= MIN_LENGTH && password.length <= MAX_LENGTH },
-    { label: 'Uppercase and lowercase letters', ok: /[a-z]/.test(password) && /[A-Z]/.test(password) },
-    { label: 'At least one number', ok: /[0-9]/.test(password) },
-    { label: 'At least one symbol', ok: /[^a-zA-Z0-9]/.test(password) },
-    { label: 'Not a common word, repeat or sequence', ok: !COMMON.some(c => lower.includes(c)) && !/(.)\1{3,}/.test(password) && !/(0123|1234|2345|3456|4567|5678|6789|abcd|qwer|asdf)/i.test(password) },
-    { label: 'Doesn’t contain your name or email', ok: !words.some(w => lower.includes(w)) },
+    { label: 'At least one letter and one number', ok: /[a-z]/i.test(password) && /[0-9]/.test(password) },
+    { label: 'Not an everyday password like “Password123”', ok: !(core.length > 0 && COMMON.includes(core)) && !/^(.)\1+$/.test(password) },
   ];
 }
 
