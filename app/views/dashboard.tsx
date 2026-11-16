@@ -108,7 +108,7 @@ export default function Dashboard() {
               <button key={e.id} className="listRow" onClick={() => go('event', e.id)}>
                 <div className="dateBlock"><b>{e.start_date.slice(8)}</b><span>{new Date(e.start_date + 'T12:00').toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span></div>
                 <div className="grow"><strong>{e.title}</strong><small>{kindLabel[e.kind]}{e.location ? ` · ${e.location}` : ''}</small></div>
-                {isStaff ? <Tag>{planned} going</Tag> : mineA ? <Tag tone={mineA.status === 'planned' ? 'info' : 'neutral'}>{mineA.status === 'planned' ? 'You’re going' : mineA.status === 'absent' ? 'Not going' : mineA.status}</Tag> : <Tag>No RSVP</Tag>}
+                {isStaff ? <Tag>{planned} going</Tag> : mineA && mineA.status !== 'absent' ? <Tag tone={mineA.status === 'planned' ? 'info' : 'neutral'}>{mineA.status === 'planned' ? 'You’re going' : mineA.status}</Tag> : <Tag>No RSVP</Tag>}
               </button>
             );
           })}

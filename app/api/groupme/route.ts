@@ -172,7 +172,7 @@ export async function POST(req: Request) {
   const text = [
     `📅 New ${KIND[e.kind] ?? 'event'}: ${e.title}`,
     `${when}${e.location ? ` · ${e.location}` : ''}`,
-    `Tap to RSVP (I'm going / Can't make it): ${origin}/#event/${e.id}`,
+    `Tap to RSVP (I'm going): ${origin}/#event/${e.id}`,
   ].join('\n').slice(0, 1000);
 
   const res = await post(botId, text);

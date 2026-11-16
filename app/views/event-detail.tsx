@@ -109,7 +109,7 @@ export default function EventView({ id }: { id: string }) {
         <section className="panel">
           <div className="sectionTitle"><h2>Your details</h2></div>
           <dl className="facts">
-            <dt>Your status</dt><dd>{mine ? (mine.a.status === 'planned' ? 'Going' : mine.a.status === 'absent' ? 'Not going' : mine.a.status === 'attended' ? 'Attended' : 'Excused') : past ? 'Not on the roster' : 'No RSVP yet'}</dd>
+            <dt>Your status</dt><dd>{mine && mine.a.status !== 'absent' ? (mine.a.status === 'planned' ? 'Going' : mine.a.status === 'attended' ? 'Attended' : 'Excused') : past ? 'Not on the roster' : 'No RSVP yet'}</dd>
             {myWeapon != null && <><dt>Your weapon #</dt><dd>#{myWeapon}</dd></>}
           </dl>
         </section>
