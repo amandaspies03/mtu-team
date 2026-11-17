@@ -62,8 +62,8 @@ export function Sparkline({ values, max }: { values: number[]; max?: number | nu
   );
 }
 
-/** Lets a shooter say they're coming (or take it back). Staff manage attendance on the event page.
- *  There's no "can't make it" button: the NCOIC only tracks who is coming. Cancelling stores 'absent'. */
+/** Lets a shooter say they're coming. That's all a shooter can set (the rsvp() database function refuses
+ *  anything else); staff change attendance on the event page. */
 export function Rsvp({ event }: { event: TeamEvent }) {
   const { me, attendance, reload, saveOrQueue } = useTeam();
   const [busy, setBusy] = useState(false);
@@ -72,12 +72,12 @@ export function Rsvp({ event }: { event: TeamEvent }) {
   if (!me.member_id) return <span className="formNote">Ask staff to link your account to the roster to RSVP.</span>;
   const mine = attendance.find(a => a.event_id === event.id && a.member_id === me.member_id);
   const locked = mine && (mine.status === 'attended' || mine.status === 'excused');
-  async function set(status: 'planned' | 'absent') {
+  async function set(status: 'planned') {
     setBusy(true); setErr(''); setQueued(false);
     const previous = mine?.status ?? null;
     try {
       // Sends now (and alerts the NCOIC/staff GroupMe), or waits on this phone until there's signal.
-      const r = await saveOrQueue({ kind: 'rsvp', label: `RSVP: ${status === 'planned' ? 'going' : 'cancelled'} · ${event.title}`, eventId: event.id, status, previous, memberId: me.member_id! });
+      const r = await saveOrQueue({ kind: 'rsvp', label: `RSVP: going · ${event.title}`, eventId: event.id, status, previous, memberId: me.member_id! });
       if (r === 'sent') await reload(); else setQueued(true);
     } catch (e) { setErr((e as { message?: string }).message ?? 'Couldn’t save your RSVP.'); }
     setBusy(false);
@@ -85,10 +85,9 @@ export function Rsvp({ event }: { event: TeamEvent }) {
   if (locked) return <Tag tone="good">{mine!.status === 'attended' ? 'Attended' : 'Excused'}</Tag>;
   return (
     <div className="rsvp">
-      {mine?.status === 'planned' ? <>
-        <button className="chip on" disabled={busy} onClick={() => set('absent')} aria-label="You’re going. Tap to cancel">✓ Going</button>
-        <button className="linkBtn" disabled={busy} onClick={() => set('absent')}>Cancel</button>
-      </> : <button className="chip" disabled={busy} onClick={() => set('planned')}>I’m going</button>}
+      {mine?.status === 'planned'
+        ? <span className="chip on" aria-label="You’re going">✓ Going</span>
+        : <button className="chip" disabled={busy} onClick={() => set('planned')}>I’m going</button>}
       {err && <span className="formNote error">{err}</span>}
       {queued && <span className="formNote queuedNote">Saved on this phone. Sends when you have signal.</span>}
     </div>

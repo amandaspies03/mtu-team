@@ -16,7 +16,7 @@ const STEPS: Step[] = [
   {
     icon: <CalendarDays size={22} />, title: 'RSVP for practices', view: 'dashboard',
     body: <>
-      <p>Your <b>Dashboard</b> shows the next practice or match. Tap <b>I’m going</b> so staff know you’ll be there. Tap it again to cancel.</p>
+      <p>Your <b>Dashboard</b> shows the next practice or match. Tap <b>I’m going</b> so staff know you’ll be there. If your plans change, tell staff.</p>
       <p>When staff post a practice in the team GroupMe, the link opens it right here with the same buttons.</p>
       <p className="formNote">Staff use your RSVP to plan ammo, weapons and the van, so please answer even if you can’t go.</p>
     </>,
