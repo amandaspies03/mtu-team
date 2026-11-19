@@ -11,6 +11,7 @@ import { EventForm } from './events';
 import { EmailComposer } from './email';
 import { downloadIcs } from '../../lib/ics';
 import { Empty, Modal, Rsvp, Tag } from './ui';
+import { EventPocs } from './event-pocs';
 
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
@@ -113,6 +114,7 @@ export default function EventView({ id }: { id: string }) {
             {myWeapon != null && <><dt>Your weapon #</dt><dd>#{myWeapon}</dd></>}
           </dl>
         </section>
+        {!past && <EventPocs eventId={e.id} driverSet={!!e.van_driver_id} />}
       </div>
     );
   }

@@ -854,3 +854,7 @@ table.roster td:first-child { min-width: 150px; }
 .billTop input[type="date"] { height: 44px; line-height: 42px; padding-top: 0; padding-bottom: 0; text-align: center; display: flex; align-items: center; justify-content: center; }
 .billTop input[type="date"]::-webkit-date-and-time-value { text-align: center; margin: 0; line-height: 42px; min-height: 42px; }
 .billTop input[type="date"]::-webkit-datetime-edit { padding: 0; line-height: 42px; }
+
+/* Event points of contact (shooter view) */
+.pocLinks a { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.pocLinks + .formNote { display: block; margin-top: 4px; }
