@@ -12,7 +12,8 @@ export default function AmmoReport() {
   const fys = useMemo(() => [...new Set([thisFy, ...events.map(e => fiscalYear(e.start_date))])].sort((a, b) => b - a), [events, thisFy]);
   const [fy, setFy] = useState(thisFy);
 
-  const rows = events.filter(e => fiscalYear(e.start_date) === fy && ((e.ammo_556 ?? 0) > 0 || (e.ammo_9mm ?? 0) > 0)).map(e => ({
+  // Issued counts fill in from the ammo draw request ahead of time, so only count events that have happened.
+  const rows = events.filter(e => fiscalYear(e.start_date) === fy && e.start_date <= todayISO() && ((e.ammo_556 ?? 0) > 0 || (e.ammo_9mm ?? 0) > 0)).map(e => ({
     e,
     shooters: isStaff ? attendance.filter(a => a.event_id === e.id && a.status === 'attended').length : (e.attended_count ?? 0),
     r: e.ammo_556 ?? 0,
@@ -36,7 +37,7 @@ export default function AmmoReport() {
           <label className="inlineLabel">Fiscal year<select value={fy} onChange={e => setFy(+e.target.value)}>{fys.map(y => <option key={y} value={y}>FY{String(y).slice(2)}</option>)}</select></label>
           {rows.length > 0 && <button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button>}
         </>}>
-        Rounds issued for each practice and match. Enter them on the event’s page. Fiscal year runs 1 Oct – 30 Sep.
+        Rounds issued for each practice and match that has happened. They fill in from the ammo draw request; change them on the event’s page if the amount issued was different. Fiscal year runs 1 Oct – 30 Sep.
       </PageTitle>
       <div className="stats">
         <div><strong>{total.r.toLocaleString()}</strong><span>rds 5.56 issued</span></div>
