@@ -334,7 +334,7 @@ function MatchTeams({ eventId }: { eventId: string }) {
 
 /** Vehicle / ammo managers (not full staff): just the fields their role covers. The database refuses anything else. */
 function DutyPanel({ event: e }: { event: TeamEvent }) {
-  const { can, reload, saveOrQueue } = useTeam();
+  const { can, reload, saveOrQueue, members, attendance, memberById } = useTeam();
   const [err, setErr] = useState(''), [saving, setSaving] = useState(false);
   const isPractice = e.kind === 'practice';
   const vehicle = can('vehicle') && isPractice, ammo = can('ammo');
@@ -385,6 +385,23 @@ function DutyPanel({ event: e }: { event: TeamEvent }) {
                 : { [k]: x.target.checked })} /> {k === 'prep_vehicle_requested' ? 'Vehicle requested' : 'Vehicle confirmed'}</label>
             </div>
           ))}
+          {vehicle && (() => {
+            // Shooters who said they're going come first, then everyone else on the roster.
+            const goingIds = attendance.filter(x => x.event_id === e.id && (x.status === 'planned' || x.status === 'attended')).map(x => x.member_id);
+            const goingM = goingIds.map(id => memberById(id)).filter((m): m is NonNullable<typeof m> => !!m);
+            const rest = members.filter(m => m.team_status !== 'Inactive' && !goingIds.includes(m.id));
+            const done = !!e.prep_van_driver || !!e.van_driver_id;
+            return (
+              <div className={`prepItem ${done ? 'done' : ''}`}>
+                <label className="check"><input type="checkbox" checked={done} onChange={x => void save(x.target.checked ? { prep_van_driver: true } : { prep_van_driver: false, van_driver_id: null })} /> Van driver identified</label>
+                <select aria-label="Van driver" value={e.van_driver_id ?? ''} onChange={x => void save({ van_driver_id: x.target.value || null, prep_van_driver: !!x.target.value || !!e.prep_van_driver })}>
+                  <option value="">Who’s driving?</option>
+                  {goingM.length > 0 && <optgroup label="Going">{goingM.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}</optgroup>}
+                  <optgroup label={goingM.length ? 'Everyone else' : 'Roster'}>{rest.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}</optgroup>
+                </select>
+              </div>
+            );
+          })()}
         </div>
       )}
       {err && <p className="alert" role="alert">{err}</p>}
