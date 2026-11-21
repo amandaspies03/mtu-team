@@ -81,6 +81,12 @@ export type TeamEvent = {
   groupme_posted_at: string | null;
   prep_vehicle_requested: boolean;
   prep_vehicle_confirmed: boolean;
+  /** Who's opening the vault (member ids). Set by full staff. */
+  vault_ids: string[];
+  /** Rifle numbers drawn for this practice, and which of those came back. All 24 pistols always go. */
+  rifles_out: number[];
+  rifles_in: number[];
+  pistols_in: number[];
   /** Only filled for ammo managers (shooter accounts can't count other people's attendance). */
   attended_count?: number | null;
 };
@@ -146,7 +152,7 @@ export const RANK_GROUPS: { label: string; ranks: string[] }[] = [
   { label: 'Other', ranks: ['Civilian'] },
 ];
 
-/** Team weapon numbers 1–N. One number per shooter, used for both their pistol and rifle. */
+/** Team weapon numbers 1–N. A shooter's number covers both their pistol and rifle; several shooters can share one. */
 export const WEAPON_COUNT = 24;
 
 export type StaffEmail = { email: string; added_by: string | null; created_at: string };
@@ -157,10 +163,19 @@ export type Invite = {
 };
 
 /** Limited staff roles. Full staff can do all of these. */
-export type Duty = 'vehicle' | 'ammo';
-export const DUTY_LABEL: Record<Duty, string> = { vehicle: 'Vehicle manager', ammo: 'Ammo manager' };
+export type Duty = 'vehicle' | 'ammo' | 'vault';
+export const DUTIES: Duty[] = ['vehicle', 'ammo', 'vault'];
+export const DUTY_LABEL: Record<Duty, string> = { vehicle: 'Vehicle manager', ammo: 'Ammo manager', vault: 'Vault access' };
 export type StaffDuty = { email: string; duty: Duty; added_by: string | null; created_at: string };
 
 /** Shooter Progression drill scores. `data` holds the drill's own scorecard (see app/views/*-drill.tsx). */
 export type DrillId = 'man-card' | 'bill-drill' | 'one-reload-one' | 'dot-torture';
 export type DrillSession = { id: string; member_id: string; drill: DrillId; shot_on: string; data: Record<string, unknown>; created_by?: string | null; updated_at?: string };
+
+/** A score a shooter sent from the Match day scorecard. Doesn't count until staff approve it (then it's copied into scores). */
+export type ScoreSubmission = {
+  id: string; member_id: string; course_code: string; shot_on: string; session_label: string | null;
+  total: number; x_count: number | null; breakdown: { label: string; pts: number; max: number }[] | null; notes: string | null;
+  submitted_by: string | null; submitted_at: string; status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null; reviewed_at: string | null; review_note: string | null; score_id: string | null;
+};

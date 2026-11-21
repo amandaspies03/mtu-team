@@ -11,7 +11,7 @@ type Entry = {
 
 const TABLES: Record<string, string> = {
   members: 'Roster', member_compliance: 'Quals', events: 'Calendar', attendance: 'Attendance', scores: 'Scores',
-  match_teams: 'Match teams', match_team_members: 'Match team members', profiles: 'Accounts', staff_emails: 'Staff list', invites: 'Invites',
+  match_teams: 'Match teams', match_team_members: 'Match team members', profiles: 'Accounts', staff_emails: 'Staff list', invites: 'Invites', staff_duties: 'Limited roles', score_submissions: 'Score submissions',
 };
 const OPS = { INSERT: ['Added', 'good'], UPDATE: ['Changed', 'info'], DELETE: ['Deleted', 'bad'] } as const;
 const HIDDEN = new Set(['id', 'created_at', 'updated_at', 'event_id', 'member_id', 'team_id', 'token', 'created_by', 'used_by', 'added_by']);

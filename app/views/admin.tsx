@@ -72,7 +72,9 @@ function Access() {
       if (!confirm(`Give ${who} full staff access? They’ll be able to see and edit the roster, scores, events and admin settings.`)) return false;
       return run(sb.from('staff_emails').insert({ email, added_by: me.id }));
     }
-    const what = level === 'vehicle' ? 'tick Vehicle requested / Vehicle confirmed and pick the van driver on practices' : 'open the Ammo page, enter rounds issued and fill in the ammo draw on events';
+    const what = level === 'vehicle' ? 'tick Vehicle requested / Vehicle confirmed and pick the van driver on practices'
+      : level === 'ammo' ? 'open the Ammo page, enter rounds issued and fill in the ammo draw on events'
+      : 'see the weapon roster and check weapons out and back in on practices';
     if (!confirm(`Make ${who} ${DUTY_LABEL[level].toLowerCase()}? They stay a shooter but can ${what}.`)) return false;
     return run(sb.from('staff_duties').insert({ email, duty: level, added_by: me.id }));
   }
@@ -190,10 +192,10 @@ function Access() {
         </>}
         <form className="addStaff" onSubmit={addStaff}>
           <fieldset className="levelPick"><legend>Access level</legend>
-            {(['full', 'vehicle', 'ammo'] as const).map(l => (
+            {(['full', 'vehicle', 'ammo', 'vault'] as const).map(l => (
               <label key={l} className={level === l ? 'on' : ''}><input type="radio" name="level" checked={level === l} onChange={() => { setLevel(l); setStaffMember(''); setErr(''); }} />
                 <b>{l === 'full' ? 'Full staff' : DUTY_LABEL[l]}</b>
-                <small>{l === 'full' ? 'Everything, including Admin' : l === 'vehicle' ? 'Vehicle requested / confirmed and van driver on practices' : 'Ammo page, rounds issued, ammo draw'}</small></label>
+                <small>{l === 'full' ? 'Everything, including Admin' : l === 'vehicle' ? 'Vehicle requested / confirmed and van driver on practices' : l === 'ammo' ? 'Ammo page, rounds issued, ammo draw' : 'Weapon roster, weapon draw and turn-in on practices'}</small></label>
             ))}
           </fieldset>
           {!byEmail ? (

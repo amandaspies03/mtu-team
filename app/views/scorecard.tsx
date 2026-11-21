@@ -3,6 +3,7 @@
 // Entries are kept in this browser (per match) so a page reload on the range doesn't lose them.
 import { useEffect, useState } from 'react';
 import { Delete, RotateCcw } from 'lucide-react';
+import { SubmitScore } from './score-queue';
 
 type Grid = number[][]; // [row][target]
 type RingCard = { kind: 'ring'; blocks: Grid[]; penalties: number };
@@ -104,8 +105,8 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
   const res = score(code, card);
   const totalText = `${res.total}${code === 'PI2210' || code === 'RIFLE EIC' ? `-${res.x}X` : ''}`;
 
-  function clear() {
-    if (!window.confirm('Clear this scorecard?')) return;
+  function clear(ask = true) {
+    if (ask && !window.confirm('Clear this scorecard?')) return;
     setCard(blank(code)); setCursor(0);
   }
 
@@ -113,7 +114,7 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
     <section className="panel scorecardPanel" aria-label={`${title} scorecard`}>
       <div className="scHead">
         <div><h2>Scorecard</h2><small>{title} · fill it in like the paper card</small></div>
-        <button className="secondary" onClick={clear}><RotateCcw size={14} /> Clear card</button>
+        <button className="secondary" onClick={() => clear()}><RotateCcw size={14} /> Clear card</button>
       </div>
 
       {card.kind === 'ring' && code === 'PI2210' && card.blocks.map((g, b) => (
@@ -172,6 +173,8 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
         <div className="scGrand"><span>Total</span><b>{totalText}<small>/{res.max}</small></b></div>
       </div>
       <p className="scNote">{res.entered} of {res.expected} shots entered.{res.entered > res.expected ? ' That’s more than the match fires — double-check the card.' : ''} The paper card signed by the scorer and shooter is still the official score.</p>
+      <SubmitScore code={code} title={title} total={res.total} x={code === 'PI2210' || code === 'RIFLE EIC' ? res.x : null} parts={res.parts}
+        entered={res.entered} expected={res.expected} onClear={() => clear(false)} />
     </section>
   );
 }

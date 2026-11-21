@@ -2,7 +2,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { flushOutbox, isNetworkError, loadSnapshot, outboxItems, saveOrQueue, saveSnapshot, type NewOutboxItem, type OutboxItem } from './offline';
-import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession } from './types';
+import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession, ScoreSubmission } from './types';
+import { DUTIES } from './types';
 
 export type TeamData = {
   sb: SupabaseClient;
@@ -35,6 +36,8 @@ export type TeamData = {
   staffDuties: StaffDuty[];
   /** Shooter Progression drill scores for the whole team (everyone approved can read them). */
   drillSessions: DrillSession[];
+  /** Scores sent for approval: all of them for staff, your own for shooters. */
+  submissions: ScoreSubmission[];
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
@@ -63,7 +66,7 @@ async function all<T>(q: PromiseLike<{ data: T[] | null; error: { message: strin
 }
 
 const EVENT_PUBLIC = 'id, title, kind, start_date, end_date, location';
-const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null, prep_vehicle_requested: false, prep_vehicle_confirmed: false };
+const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null, prep_vehicle_requested: false, prep_vehicle_confirmed: false, vault_ids: [] as string[], rifles_out: [] as number[], rifles_in: [] as number[], pistols_in: [] as number[] };
 
 /** Everyone gets event basics; staff also get plan, AAR, ammo and prep details. */
 async function loadEvents(sb: SupabaseClient, isStaff: boolean, duties: Duty[]): Promise<TeamEvent[]> {
@@ -86,21 +89,25 @@ async function loadEvents(sb: SupabaseClient, isStaff: boolean, duties: Duty[]):
 const MEMBER_BLANK = { unit: null, duty_status: null, staff_role: null, cell_phone: null, mil_email: null, personal_email: null, weapon_no: null, notes: null, gov20_pistol: false, gov20_rifle: false, chiefs50: false, eic_pistol: null, eic_rifle: null };
 
 /** Staff get the full roster. Shooters get their own full entry plus everyone's names (for leaderboards). */
-async function loadMembers(sb: SupabaseClient, isStaff: boolean): Promise<Member[]> {
+async function loadMembers(sb: SupabaseClient, isStaff: boolean, duties: Duty[]): Promise<Member[]> {
   if (isStaff) return all<Member>(sb.from('members').select('*').order('last_name').order('first_name'));
-  const [names, mine] = await Promise.all([
+  const [names, mine, weapons] = await Promise.all([
     sb.rpc('team_names').then(({ data, error }) => { if (error) throw new Error(error.message); return (data ?? []) as Pick<Member, 'id' | 'rank' | 'first_name' | 'last_name' | 'team_status'>[]; }),
     all<Member>(sb.from('members').select('*')),
+    // Vault access sees everyone's weapon number (weapon roster, turn-in).
+    duties.includes('vault')
+      ? sb.rpc('weapon_roster').then(({ data, error }) => { if (error) throw new Error(error.message); return new Map(((data ?? []) as { id: string; weapon_no: number | null }[]).map(w => [w.id, w.weapon_no])); })
+      : Promise.resolve(new Map<string, number | null>()),
   ]);
   const own = new Map(mine.map(m => [m.id, m]));
-  return names.map(n => own.get(n.id) ?? ({ ...MEMBER_BLANK, ...n } as Member))
+  return names.map(n => own.get(n.id) ?? ({ ...MEMBER_BLANK, ...n, weapon_no: weapons.get(n.id) ?? null } as Member))
     .sort((a, b) => a.last_name.localeCompare(b.last_name) || (a.first_name ?? '').localeCompare(b.first_name ?? ''));
 }
 
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>>({
-    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [],
+    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [], submissions: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -112,10 +119,10 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
       let duties: Duty[] = [];
       if (!isStaff) {
         const r = await sb.rpc('my_duties');
-        if (!r.error && Array.isArray(r.data)) duties = (r.data as string[]).filter((d): d is Duty => d === 'vehicle' || d === 'ammo');
+        if (!r.error && Array.isArray(r.data)) duties = (r.data as string[]).filter((d): d is Duty => (DUTIES as string[]).includes(d));
       }
-      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions] = await Promise.all([
-        loadMembers(sb, isStaff),
+      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions, submissions] = await Promise.all([
+        loadMembers(sb, isStaff, duties),
         all<Compliance>(sb.from('member_compliance').select('*')),
         loadEvents(sb, isStaff, duties),
         all<Attendance>(sb.from('attendance').select('*')),
@@ -129,8 +136,9 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         all<Range>(sb.from('ranges').select('*').order('name')),
         isStaff ? all<StaffDuty>(sb.from('staff_duties').select('*').order('email')) : Promise.resolve([] as StaffDuty[]),
         all<DrillSession>(sb.from('drill_sessions').select('id, member_id, drill, shot_on, data, created_by, updated_at').order('shot_on').limit(5000)),
+        all<ScoreSubmission>(sb.from('score_submissions').select('*').order('submitted_at', { ascending: false }).limit(2000)),
       ]);
-      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions };
+      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions, submissions };
       const waiting = await outboxItems(me.id);
       setState(applyPending(fresh, waiting, me.member_id));
       setOffline(null);
@@ -194,6 +202,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
       attendance: state.attendance.filter(a => a.member_id === mine),
       events: state.events.map(e => ({ ...e, ...EVENT_STAFF_BLANK })),
       teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], duties: [], staffDuties: [],
+      submissions: state.submissions.filter(s => s.member_id === mine),
     };
   }, [preview, state, me.member_id]);
 
@@ -226,10 +235,21 @@ function forDevice(d: TeamState): TeamState {
 /** Shows changes that are still waiting to send, so the screens match what the person entered. */
 function applyPending(d: TeamState, items: OutboxItem[], myMemberId: string | null): TeamState {
   if (!items.length) return d;
-  let { scores, attendance, events, drillSessions } = d;
+  let { scores, attendance, events, drillSessions, submissions } = d;
   for (const i of items) {
     if (i.kind === 'drill') { drillSessions = [...drillSessions.filter(x => x.id !== i.row.id), i.row as DrillSession]; continue; }
     if (i.kind === 'drill-delete') { drillSessions = drillSessions.filter(x => x.id !== i.sessionId); continue; }
+    if (i.kind === 'submission') { submissions = [i.row as unknown as ScoreSubmission, ...submissions.filter(x => x.id !== i.row.id)]; continue; }
+    if (i.kind === 'weapons') {
+      events = events.map(e => {
+        if (e.id !== i.eventId) return e;
+        const cur = e[i.list] ?? [];
+        const next = i.on ? [...new Set([...cur, ...i.numbers])].sort((a, b) => a - b) : cur.filter(n => !i.numbers.includes(n));
+        const extra = i.list === 'rifles_out' && !i.on ? { rifles_in: (e.rifles_in ?? []).filter(n => !i.numbers.includes(n)) } : {};
+        return { ...e, [i.list]: next, ...extra };
+      });
+      continue;
+    }
     if (i.kind === 'scores') {
       const have = new Set(scores.map(x => x.id));
       scores = [...scores, ...(i.rows as unknown as Score[]).filter(r => !have.has(r.id))];
@@ -244,5 +264,5 @@ function applyPending(d: TeamState, items: OutboxItem[], myMemberId: string | nu
       events = events.map(e => (e.id === i.eventId ? ({ ...e, ...i.change } as TeamEvent) : e));
     }
   }
-  return { ...d, scores, attendance, events, drillSessions };
+  return { ...d, scores, attendance, events, drillSessions, submissions };
 }

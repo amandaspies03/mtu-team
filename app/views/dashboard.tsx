@@ -7,7 +7,8 @@ import { go } from '../app-shell';
 import { Empty, Rsvp, Tag } from './ui';
 
 export default function Dashboard() {
-  const { me, isStaff, members, events, attendance, compliance, scores, courses, memberById, profiles } = useTeam();
+  const { me, isStaff, members, events, attendance, compliance, scores, courses, memberById, profiles, submissions } = useTeam();
+  const scoresWaiting = submissions.filter(s => s.status === 'pending').length;
   const pendingSignups = profiles.filter(p => p.pending && !p.approved).length;
   const today = todayISO();
   const upcoming = events.filter(e => (e.end_date ?? e.start_date) >= today).slice(0, 5);
@@ -124,7 +125,14 @@ export default function Dashboard() {
                 <Tag tone="warn">Review</Tag>
               </button>
             )}
-            {alerts.length === 0 && prepOpen.length === 0 && pendingSignups === 0 && <Empty title="All clear">No expiring quals or unfinished practice prep.</Empty>}
+            {scoresWaiting > 0 && (
+              <button className="listRow" onClick={() => go('scores', 'queue')}>
+                <Target size={16} />
+                <div className="grow"><strong>{scoresWaiting} score{scoresWaiting === 1 ? '' : 's'} waiting for approval</strong><small>Submitted by shooters · Match Scores → Score queue</small></div>
+                <Tag tone="warn">Review</Tag>
+              </button>
+            )}
+            {alerts.length === 0 && prepOpen.length === 0 && pendingSignups === 0 && scoresWaiting === 0 && <Empty title="All clear">No expiring quals or unfinished practice prep.</Empty>}
             {prepOpen.slice(0, 8).map(e => (
               <button key={e.id} className="listRow" onClick={() => go('event', e.id)}>
                 <ClipboardCheck size={16} />

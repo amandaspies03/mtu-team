@@ -8,12 +8,14 @@ import type { Score } from '../../lib/types';
 const matches = (m: Member | undefined, q: string) => !q.trim() || (!!m && `${m.last_name} ${m.first_name ?? ''} ${m.rank ?? ''} ${m.unit ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
 import { displayName, downloadCsv, fiscalYear, fullName, milDate, scoreText, todayISO } from '../../lib/util';
 import { Empty, Modal, PageTitle, Sparkline, Tag } from './ui';
+import { MySubmissions, ScoreQueue } from './score-queue';
 
-type Tab = 'board' | 'enter' | 'log';
+type Tab = 'board' | 'enter' | 'log' | 'queue';
 
 export default function Scores() {
-  const { isStaff } = useTeam();
-  const [tab, setTab] = useState<Tab>('board');
+  const { isStaff, me, submissions } = useTeam();
+  const waiting = submissions.filter(s => s.status === 'pending').length;
+  const [tab, setTab] = useState<Tab>(() => (typeof window !== 'undefined' && window.location.hash === '#scores/queue' ? 'queue' : 'board'));
   const phone = usePhone();
   return (
     <div>
@@ -22,10 +24,13 @@ export default function Scores() {
         <button className={tab === 'board' ? 'on' : ''} onClick={() => setTab('board')}>Leaderboard</button>
         {isStaff && <button className={tab === 'enter' ? 'on' : ''} onClick={() => setTab('enter')}>Enter scores</button>}
         <button className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>All entries</button>
+        {isStaff ? <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>Score queue{waiting > 0 && <b className="tabBadge">{waiting}</b>}</button>
+          : me.member_id && <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>My submissions</button>}
       </div>
       {tab === 'board' && <Leaderboard />}
       {tab === 'enter' && isStaff && (phone ? <PhoneEnterScores onDone={() => setTab('log')} /> : <EnterScores onDone={() => setTab('log')} />)}
       {tab === 'log' && <ScoreLog />}
+      {tab === 'queue' && (isStaff ? <ScoreQueue /> : <MySubmissions />)}
     </div>
   );
 }

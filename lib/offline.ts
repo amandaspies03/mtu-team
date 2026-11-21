@@ -63,7 +63,9 @@ export type OutboxItem =
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'event'; eventId: string; change: Record<string, unknown> }
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'duty'; eventId: string; change: Record<string, unknown> }
   | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'drill'; row: { id: string; member_id: string; drill: string; shot_on: string; data: Record<string, unknown> } }
-  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'drill-delete'; sessionId: string };
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'drill-delete'; sessionId: string }
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'weapons'; eventId: string; list: 'rifles_out' | 'rifles_in' | 'pistols_in'; numbers: number[]; on: boolean }
+  | { id: string; userId: string; createdAt: string; label: string; error?: string; kind: 'submission'; row: Record<string, unknown> & { id: string } };
 export type NewOutboxItem = OutboxItem extends infer T ? T extends OutboxItem ? Omit<T, 'id' | 'createdAt' | 'userId' | 'error'> : never : never;
 
 const OUT = 'outbox';
@@ -98,6 +100,13 @@ async function send(sb: SupabaseClient, item: OutboxItem) {
     // Same id every retry, so a repeat just overwrites the same scorecard.
     const { error } = await sb.from('drill_sessions').upsert(item.row, { onConflict: 'id' });
     if (error) throw error;
+  } else if (item.kind === 'weapons') {
+    // Adds / removes numbers, so sending twice gives the same result.
+    const { error } = await sb.rpc('set_event_weapons', { p_event: item.eventId, p_list: item.list, p_numbers: item.numbers, p_on: item.on });
+    if (error) throw error;
+  } else if (item.kind === 'submission') {
+    const { error } = await sb.from('score_submissions').insert(item.row);
+    if (error && error.code !== '23505') throw error; // already sent on an earlier try
   } else {
     const { error } = await sb.from('drill_sessions').delete().eq('id', item.sessionId);
     if (error) throw error;

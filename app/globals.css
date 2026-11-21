@@ -714,7 +714,7 @@ main:has(.peSave) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .addStaff label { display: grid; gap: 5px; }
 .staffRow .secondary { flex-shrink: 0; }
 /* Admin → Staff access levels */
-.levelPick { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.levelPick { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .levelPick legend { font-size: 13px; font-weight: 600; margin-bottom: 6px; padding: 0; }
 .levelPick label { position: relative; display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; background: #fff; }
 .levelPick label.on { border-color: var(--olive); box-shadow: 0 0 0 1px var(--olive); background: #f3f4ec; }
@@ -730,6 +730,7 @@ main:has(.peSave) { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .dutyChip button:hover { background: #dfe3d6; }
 .dutyPanel h3 { font-size: 14px; margin: 0 0 6px; }
 .dutyAmmo { margin-bottom: 12px; }
+@media (max-width: 1050px) { .levelPick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .levelPick { grid-template-columns: 1fr; }
   .staffRow { flex-wrap: wrap; }
@@ -858,3 +859,56 @@ table.roster td:first-child { min-width: 150px; }
 /* Event points of contact (shooter view) */
 .pocLinks a { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .pocLinks + .formNote { display: block; margin-top: 4px; }
+
+/* practice weapons: vault, draw, turn-in */
+.weaponsPanel .sectionTitle { flex-wrap: wrap; gap: 8px; }
+.wCount { display: flex; gap: 16px; font-size: 14px; color: var(--muted); }
+.wCount b { font-family: Georgia, serif; font-size: 22px; font-weight: 400; color: var(--ink); margin-left: 4px; }
+.vaultRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
+.vaultLabel { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+.vaultRow select { max-width: 260px; }
+.vaultRow .dutyChips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.wTabs { margin-bottom: 10px; }
+.wGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.wTile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 56px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); cursor: pointer; user-select: none; padding: 4px; margin: 0; }
+.wTile input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.wTile b { font-size: 18px; }
+.wTile small { font-size: 10.5px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wTile.on { background: var(--good); border-color: var(--good); color: #fff; }
+.wTile.on small { color: #e2eedd; }
+.wTile:focus-within { outline: 2px solid var(--brass); outline-offset: 1px; }
+.wHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.wHead h3 { margin: 0; font-size: 15px; }
+.wHead h3 small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+.wStatus { padding: 10px 12px; border-radius: 8px; background: var(--info-bg); color: var(--info); font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+.wStatus.good { background: var(--good-bg); color: var(--good); }
+.wStatus.warn { background: var(--warn-bg); color: #5c4a26; }
+.wMissing ul { margin: 6px 0 0; padding-left: 18px; }
+.wMissing li { margin: 2px 0; }
+@media (max-width: 600px) { .wGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); } .wTile b { font-size: 16px; } .wTile small { display: none; } }
+
+/* weapon roster + roster sort */
+.thSort { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+.weaponTable td:first-child, .weaponTable th:first-child { width: 90px; }
+.weaponTable tr.emptyWeapon td { color: var(--muted); }
+.printOnly { display: none; }
+@media print {
+  .printOnly { display: block; }
+  .weaponRoster .pageTitle { display: none; }
+  .weaponTable td, .weaponTable th { padding: 6px 10px; border-bottom: 1px solid #999; }
+}
+
+/* score queue */
+.queueCard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: var(--card); }
+.queueCard header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.queueCard header b { font-size: 15px; }
+.queueScore { font-family: Georgia, serif; font-size: 24px; }
+.queueParts { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin: 4px 0 8px; }
+.queueEdit { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 8px 0; }
+.queueEdit label { font-size: 12px; font-weight: 600; color: var(--muted); display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.queueEdit input { min-width: 0; }
+.queueEdit .numIn { width: 90px; }
+.queueEdit .wideIn { width: 220px; }
+.queueActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.submitBar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.tabBadge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; padding: 0 5px; margin-left: 6px; }

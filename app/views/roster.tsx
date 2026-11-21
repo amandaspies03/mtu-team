@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Download, Mail, Plus, Search } from 'lucide-react';
+import { Crosshair, Download, Mail, Plus, Search } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import { TEAM_STATUSES } from '../../lib/types';
 import { downloadCsv, fiscalYear, fullName, milDate, todayISO } from '../../lib/util';
@@ -17,6 +17,7 @@ export default function Roster() {
   const { isStaff, members, compliance, attendance, events } = useTeam();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('current');
+  const [sort, setSort] = useState<'name' | 'weapon'>('name');
   const inactiveCount = members.filter(m => m.team_status === 'Inactive').length;
   const [adding, setAdding] = useState(false);
   const [emailing, setEmailing] = useState(false);
@@ -32,7 +33,10 @@ export default function Roster() {
       const last = att.map(e => e!.start_date).sort().pop();
       const fyCount = att.filter(e => fiscalYear(e!.start_date) === fy).length;
       return { m, c, last, fyCount };
-    }), [members, compliance, attendance, events, q, status, fy]);
+    })
+    // Weapon # order: 1–24, then unassigned; same number sorts by name.
+    .sort((a, b) => sort === 'weapon' ? (a.m.weapon_no ?? 99) - (b.m.weapon_no ?? 99) || fullName(a.m).localeCompare(fullName(b.m)) : 0),
+  [members, compliance, attendance, events, q, status, fy, sort]);
 
   function exportCsv() {
     downloadCsv(`MTU roster ${today}.csv`, [
@@ -44,7 +48,7 @@ export default function Roster() {
   return (
     <div>
       <PageTitle eyebrow="TEAM" title="Roster"
-        actions={isStaff && <><button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email team</button><button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button><button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add shooter</button></>}>
+        actions={isStaff && <><button className="secondary" onClick={() => go('weapons')}><Crosshair size={15} /> Weapon roster</button><button className="secondary" onClick={() => setEmailing(true)}><Mail size={15} /> Email team</button><button className="secondary" onClick={exportCsv}><Download size={15} /> Export CSV</button><button className="primary" onClick={() => setAdding(true)}><Plus size={15} /> Add shooter</button></>}>
         Everyone on the team. Contact info is for team coordination only.
       </PageTitle>
       <div className="filters">
@@ -54,10 +58,14 @@ export default function Roster() {
           {TEAM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           <option value="all">Everyone, including inactive</option>
         </select></label>
+        <label><select aria-label="Sort by" value={sort} onChange={e => setSort(e.target.value as 'name' | 'weapon')}>
+          <option value="name">Sort by name</option>
+          <option value="weapon">Sort by weapon #</option>
+        </select></label>
         <span className="formNote">{rows.length} shown{status === 'current' && inactiveCount > 0 && <> · {inactiveCount} inactive hidden <button className="linkBtn" onClick={() => setStatus('Inactive')}>Show inactive</button></>}</span>
       </div>
       <div className="tableWrap" onScroll={e => e.currentTarget.classList.toggle('scrolled', e.currentTarget.scrollLeft > 0)}><table className="roster">
-        <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th>Weapon #</th><th>Awards</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
+        <thead><tr><th>Name</th><th>Rank</th><th>Unit</th><th>Status</th><th><button className="thSort" aria-pressed={sort === 'weapon'} onClick={() => setSort(sort === 'weapon' ? 'name' : 'weapon')}>Weapon #{sort === 'weapon' ? ' ▲' : ''}</button></th><th>Awards</th><th>Cell phone</th><th>Military email</th><th>Personal email</th><th className="num">FY{String(fy).slice(2)}</th><th>Last seen</th></tr></thead>
         <tbody>
           {rows.map(({ m, c, last, fyCount }) => (
             <tr key={m.id} onClick={() => go('member', m.id)} className="clickable">

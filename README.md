@@ -16,6 +16,8 @@ Same stack as Battle Buddy: Next.js 16 on Vercel, Supabase (Postgres + Auth), Gi
 - Each sign-up creates (or fills in) the person's roster entry. Staff manage invites, the staff list and accounts on the **Access** page.
 - Staff access comes only from the staff list (`staff_emails`).
 - Shooters: read the calendar, roster, scores and match-day tools; RSVP for themselves; see only their own quals.
+- Limited roles (Admin → Access): vehicle manager, ammo manager, and vault access (weapon roster, rifle draw and weapon turn-in on practices).
+- Weapon numbers can be shared by several shooters. Shooters submit scores from the Match day scorecard; they count only after staff approve them in Match Scores → Score queue.
 - Staff: edit everything. All rules are enforced by Postgres row-level security.
 - Every change is recorded in `audit_log` (Admin → Change log). A full snapshot is saved nightly at 08:15 UTC and kept 30 days (Admin → Backups).
 - Sessions sign out after 30 minutes of inactivity; open tabs show a refresh banner after each deploy.

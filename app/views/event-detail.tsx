@@ -12,6 +12,7 @@ import { EmailComposer } from './email';
 import { downloadIcs } from '../../lib/ics';
 import { Empty, Modal, Rsvp, Tag } from './ui';
 import { EventPocs } from './event-pocs';
+import { WeaponsPanel } from './event-weapons';
 
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 
@@ -107,6 +108,7 @@ export default function EventView({ id }: { id: string }) {
         </div>
         {!past && me.member_id && <div className="rsvpCard"><div><b>Are you going?</b><span>{kindLabel[e.kind]} · {eventRange(e)}</span></div><Rsvp event={e} /></div>}
         {(can('vehicle') || can('ammo')) && <DutyPanel event={e} />}
+        {e.kind === 'practice' && can('vault') && <WeaponsPanel event={e} />}
         <section className="panel">
           <div className="sectionTitle"><h2>Your details</h2></div>
           <dl className="facts">
@@ -114,7 +116,7 @@ export default function EventView({ id }: { id: string }) {
             {myWeapon != null && <><dt>Your weapon #</dt><dd>#{myWeapon}</dd></>}
           </dl>
         </section>
-        {!past && <EventPocs eventId={e.id} driverSet={!!e.van_driver_id} />}
+        {!past && <EventPocs eventId={e.id} driverSet={!!e.van_driver_id} vaultKey={(e.vault_ids ?? []).join()} />}
       </div>
     );
   }
@@ -184,6 +186,8 @@ export default function EventView({ id }: { id: string }) {
           </div>
         </section>
       )}
+
+      {isPractice && <WeaponsPanel event={e} />}
 
       {e.notes && <section className="panel"><div className="sectionTitle"><h2>Plan</h2></div><p className="pre">{e.notes}</p></section>}
 
