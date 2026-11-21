@@ -6,7 +6,8 @@ import { Delete, RotateCcw } from 'lucide-react';
 import { SubmitScore } from './score-queue';
 
 type Grid = number[][]; // [row][target]
-type RingCard = { kind: 'ring'; blocks: Grid[]; penalties: number };
+/** single: the whole match fired on one target per relay (Pistol EIC when targets are short), so only T1 is used and up to 20 hits count. */
+type RingCard = { kind: 'ring'; blocks: Grid[]; penalties: number; single?: boolean };
 type ShotCard = { kind: 'shots'; shots: (string | null)[] };
 type Card = RingCard | ShotCard;
 
@@ -36,8 +37,9 @@ type Result = { total: number; x: number; parts: { label: string; pts: number; m
 
 function scorePI2210(c: RingCard): Result {
   const warnings: string[] = [];
+  const perTarget = c.single ? 20 : 5;
   const parts = c.blocks.map((g, b) => {
-    TARGETS.forEach(t => { const h = sum(g.map(r => r[t])); if (h > 5) warnings.push(`Stages ${b ? '3 & 4' : '1 & 2'}, target ${t + 1}: ${h} hits recorded — only 5 count per target. Check with the block officer.`); });
+    (c.single ? [0] : TARGETS).forEach(t => { const h = sum(g.map(r => r[t])); if (h > perTarget) warnings.push(`Stages ${b ? '3 & 4' : '1 & 2'}${c.single ? '' : `, target ${t + 1}`}: ${h} hits recorded — only ${perTarget} count${c.single ? ' on the single target' : ' per target'}. Check with the block officer.`); });
     return { label: b ? 'Stages 3 & 4' : 'Stages 1 & 2', pts: sum(g.map((r, i) => sum(r) * PI2210_ROWS[i].pts)), max: 100 };
   });
   const x = sum(c.blocks.map(g => sum(g[0])));
@@ -87,7 +89,8 @@ function load(code: string): Card | null {
   if (!fresh) return null;
   try {
     const saved = JSON.parse(localStorage.getItem(storeKey(code)) ?? 'null') as Card | null;
-    if (saved && saved.kind === fresh.kind && JSON.stringify(Object.keys(saved)) === JSON.stringify(Object.keys(fresh))) {
+    const keys = (o: object) => JSON.stringify(Object.keys(o).filter(k => k !== 'single'));
+    if (saved && saved.kind === fresh.kind && keys(saved) === keys(fresh)) {
       if (saved.kind === 'ring' && fresh.kind === 'ring' && saved.blocks.length === fresh.blocks.length && saved.blocks.every((g, i) => g.length === fresh.blocks[i].length)) return saved;
       if (saved.kind === 'shots' && saved.shots.length === 50) return saved;
     }
@@ -107,7 +110,15 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
 
   function clear(ask = true) {
     if (ask && !window.confirm('Clear this scorecard?')) return;
-    setCard(blank(code)); setCursor(0);
+    const fresh = blank(code);
+    // Keep the single-target setting: it's about the range, not this card.
+    setCard(fresh && fresh.kind === 'ring' && card?.kind === 'ring' && card.single ? { ...fresh, single: true } : fresh); setCursor(0);
+  }
+  /** Switching to one target moves every hit into T1; switching back leaves them in T1 to spread out if needed. */
+  function setSingle(on: boolean) {
+    if (!card || card.kind !== 'ring') return;
+    const blocks = on ? card.blocks.map(g => g.map(r => [sum(r), 0, 0, 0])) : card.blocks;
+    setCard({ ...card, single: on, blocks });
   }
 
   return (
@@ -117,8 +128,13 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
         <button className="secondary" onClick={() => clear()}><RotateCcw size={14} /> Clear card</button>
       </div>
 
+      {card.kind === 'ring' && code === 'PI2210' && (
+        <label className="check singleToggle"><input type="checkbox" checked={!!card.single} onChange={e => setSingle(e.target.checked)} />
+          <span><b>Single target</b><small>Whole match on one target (score and paste after Stage 2). Only T1 is used, up to 20 hits per relay.</small></span></label>
+      )}
       {card.kind === 'ring' && code === 'PI2210' && card.blocks.map((g, b) => (
-        <RingTable key={b} title={b ? 'Stages 3 & 4' : 'Stages 1 & 2'} note="Max 5 hits per target" rows={PI2210_ROWS} grid={g} sub={res.parts[b]}
+        <RingTable key={b} title={b ? 'Stages 3 & 4' : 'Stages 1 & 2'} note={card.single ? 'Single target · max 20 hits' : 'Max 5 hits per target'} rows={PI2210_ROWS} grid={g} sub={res.parts[b]}
+          targets={card.single ? [0] : TARGETS} cellMax={card.single ? 20 : 9}
           onChange={ng => setCard({ ...card, blocks: card.blocks.map((x, i) => (i === b ? ng : x)) })} />
       ))}
       {card.kind === 'ring' && code !== 'PI2210' && <>
@@ -179,9 +195,9 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
   );
 }
 
-function RingTable({ title, note, rows, grid, sub, targetPts, factorNote, onChange }: {
+function RingTable({ title, note, rows, grid, sub, targetPts, factorNote, onChange, targets = TARGETS, cellMax = 9 }: {
   title: string; note: string; rows: { label: string; pts: number }[]; grid: Grid; sub: { pts: number; max: number };
-  targetPts?: number[]; factorNote?: (i: number) => string | undefined; onChange: (g: Grid) => void;
+  targetPts?: number[]; factorNote?: (i: number) => string | undefined; onChange: (g: Grid) => void; targets?: number[]; cellMax?: number;
 }) {
   const set = (r: number, t: number, v: number) => onChange(grid.map((row, ri) => (ri === r ? row.map((c, ti) => (ti === t ? v : c)) : row)));
   return (
@@ -189,14 +205,14 @@ function RingTable({ title, note, rows, grid, sub, targetPts, factorNote, onChan
       <div className="ringHead"><h3>{title}</h3><small>{note}</small></div>
       <div className="tableWrap">
         <table>
-          <thead><tr><th>Ring</th>{TARGETS.map(t => <th key={t}>T{t + 1}</th>)}<th>Hits</th><th>×</th><th>Pts</th></tr></thead>
+          <thead><tr><th>Ring</th>{targets.map(t => <th key={t}>{targets.length === 1 ? 'Target' : `T${t + 1}`}</th>)}<th>Hits</th><th>×</th><th>Pts</th></tr></thead>
           <tbody>
             {rows.map((row, ri) => {
               const hits = sum(grid[ri]);
               return (
                 <tr key={row.label}>
                   <th scope="row">{row.label}</th>
-                  {TARGETS.map(t => <td key={t}><Stepper value={grid[ri][t]} max={9} label={`${title}, ${row.label} ring, target ${t + 1}`} onChange={v => set(ri, t, v)} compact /></td>)}
+                  {targets.map(t => <td key={t}><Stepper value={grid[ri][t]} max={cellMax} label={`${title}, ${row.label} ring, target ${t + 1}`} onChange={v => set(ri, t, v)} compact /></td>)}
                   <td className="num">{hits}</td>
                   <td className="num muted">{factorNote?.(ri) ?? row.pts}</td>
                   <td className="num">{factorNote ? '' : hits * row.pts}</td>
@@ -206,7 +222,7 @@ function RingTable({ title, note, rows, grid, sub, targetPts, factorNote, onChan
           </tbody>
           <tfoot>
             {targetPts && <tr><th scope="row">Pts</th>{targetPts.map((p, t) => <td key={t} className="num"><b>{p}</b></td>)}<td colSpan={3} /></tr>}
-            <tr><th scope="row" colSpan={7}>{title} sub total</th><td className="num"><b>{sub.pts}</b></td></tr>
+            <tr><th scope="row" colSpan={targets.length + 3}>{title} sub total</th><td className="num"><b>{sub.pts}</b></td></tr>
           </tfoot>
         </table>
       </div>
