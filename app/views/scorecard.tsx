@@ -6,7 +6,7 @@ import { Delete, RotateCcw } from 'lucide-react';
 import { SubmitScore } from './score-queue';
 
 type Grid = number[][]; // [row][target]
-/** single: the whole match fired on one target per relay (Pistol EIC when targets are short), so only T1 is used and up to 20 hits count. */
+/** single: all four stages fired on one target with no pasting (practice, when EIC targets are short). All 40 hits go in blocks[0], column T1. */
 type RingCard = { kind: 'ring'; blocks: Grid[]; penalties: number; single?: boolean };
 type ShotCard = { kind: 'shots'; shots: (string | null)[] };
 type Card = RingCard | ShotCard;
@@ -37,9 +37,15 @@ type Result = { total: number; x: number; parts: { label: string; pts: number; m
 
 function scorePI2210(c: RingCard): Result {
   const warnings: string[] = [];
-  const perTarget = c.single ? 20 : 5;
+  if (c.single) {
+    const g = c.blocks[0];
+    const hits = sum(g.map(r => r[0]));
+    if (hits > 40) warnings.push(`${hits} hits recorded on the target — the match is 40 shots. Recount the target.`);
+    const pts = sum(g.map((r, i) => r[0] * PI2210_ROWS[i].pts));
+    return { total: Math.max(0, pts - c.penalties * 5), x: g[0][0], parts: [{ label: 'All stages', pts, max: 200 }], perTarget: [], warnings, entered: hits, expected: 40, max: 200 };
+  }
   const parts = c.blocks.map((g, b) => {
-    (c.single ? [0] : TARGETS).forEach(t => { const h = sum(g.map(r => r[t])); if (h > perTarget) warnings.push(`Stages ${b ? '3 & 4' : '1 & 2'}${c.single ? '' : `, target ${t + 1}`}: ${h} hits recorded — only ${perTarget} count${c.single ? ' on the single target' : ' per target'}. Check with the block officer.`); });
+    TARGETS.forEach(t => { const h = sum(g.map(r => r[t])); if (h > 5) warnings.push(`Stages ${b ? '3 & 4' : '1 & 2'}, target ${t + 1}: ${h} hits recorded — only 5 count per target. Check with the block officer.`); });
     return { label: b ? 'Stages 3 & 4' : 'Stages 1 & 2', pts: sum(g.map((r, i) => sum(r) * PI2210_ROWS[i].pts)), max: 100 };
   });
   const x = sum(c.blocks.map(g => sum(g[0])));
@@ -114,10 +120,10 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
     // Keep the single-target setting: it's about the range, not this card.
     setCard(fresh && fresh.kind === 'ring' && card?.kind === 'ring' && card.single ? { ...fresh, single: true } : fresh); setCursor(0);
   }
-  /** Switching to one target moves every hit into T1; switching back leaves them in T1 to spread out if needed. */
+  /** Switching to one target adds every hit from both relays and all four targets into one; switching back leaves them in Stages 1 & 2, T1. */
   function setSingle(on: boolean) {
     if (!card || card.kind !== 'ring') return;
-    const blocks = on ? card.blocks.map(g => g.map(r => [sum(r), 0, 0, 0])) : card.blocks;
+    const blocks = on ? [card.blocks[0].map((r, i) => [sum(r) + sum(card.blocks[1][i]), 0, 0, 0]), card.blocks[1].map(() => [0, 0, 0, 0])] : card.blocks;
     setCard({ ...card, single: on, blocks });
   }
 
@@ -130,11 +136,14 @@ export function Scorecard({ code, title }: { code: string; title: string }) {
 
       {card.kind === 'ring' && code === 'PI2210' && (
         <label className="check singleToggle"><input type="checkbox" checked={!!card.single} onChange={e => setSingle(e.target.checked)} />
-          <span><b>Single target</b><small>Whole match on one target (score and paste after Stage 2). Only T1 is used, up to 20 hits per relay.</small></span></label>
+          <span><b>Single target</b><small>All four stages on one target, no pasting. Enter all 40 hits at the end.</small></span></label>
       )}
-      {card.kind === 'ring' && code === 'PI2210' && card.blocks.map((g, b) => (
-        <RingTable key={b} title={b ? 'Stages 3 & 4' : 'Stages 1 & 2'} note={card.single ? 'Single target · max 20 hits' : 'Max 5 hits per target'} rows={PI2210_ROWS} grid={g} sub={res.parts[b]}
-          targets={card.single ? [0] : TARGETS} cellMax={card.single ? 20 : 9}
+      {card.kind === 'ring' && code === 'PI2210' && card.single && (
+        <RingTable title="All stages" note="One target · 40 shots" rows={PI2210_ROWS} grid={card.blocks[0]} sub={res.parts[0]} targets={[0]} cellMax={40}
+          onChange={ng => setCard({ ...card, blocks: [ng, card.blocks[1]] })} />
+      )}
+      {card.kind === 'ring' && code === 'PI2210' && !card.single && card.blocks.map((g, b) => (
+        <RingTable key={b} title={b ? 'Stages 3 & 4' : 'Stages 1 & 2'} note="Max 5 hits per target" rows={PI2210_ROWS} grid={g} sub={res.parts[b]}
           onChange={ng => setCard({ ...card, blocks: card.blocks.map((x, i) => (i === b ? ng : x)) })} />
       ))}
       {card.kind === 'ring' && code !== 'PI2210' && <>
