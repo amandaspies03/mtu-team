@@ -23,12 +23,13 @@ export default function EventView({ id }: { id: string }) {
   const [aar, setAar] = useState<string | null>(null);
   const [err, setErr] = useState(''), [copied, setCopied] = useState(false);
   const [posting, setPosting] = useState(false), [posted, setPosted] = useState('');
+  const [byWeapon, setByWeapon] = useState(false);
   const [announceCancel, setAnnounceCancel] = useState(() => !!events.find(x => x.id === id)?.groupme_posted_at);
   if (!e) return <Empty title="Event not found"><button className="linkBtn" onClick={() => go('events')}>Back to calendar</button></Empty>;
   const past = (e.end_date ?? e.start_date) < todayISO();
   const rows = attendance.filter(a => a.event_id === e.id)
     .map(a => ({ a, m: memberById(a.member_id) }))
-    .sort((x, y) => STATUSES.indexOf(x.a.status) - STATUSES.indexOf(y.a.status) || fullName(x.m).localeCompare(fullName(y.m)));
+    .sort((x, y) => (byWeapon ? (x.m?.weapon_no ?? 99) - (y.m?.weapon_no ?? 99) : 0) || STATUSES.indexOf(x.a.status) - STATUSES.indexOf(y.a.status) || fullName(x.m).localeCompare(fullName(y.m)));
   const going = rows.filter(r => r.a.status === 'planned' || r.a.status === 'attended');
   const evTeams = teams.filter(t => t.event_id === e.id);
   const isPractice = e.kind === 'practice';
@@ -192,7 +193,7 @@ export default function EventView({ id }: { id: string }) {
       {e.notes && <section className="panel"><div className="sectionTitle"><h2>Plan</h2></div><p className="pre">{e.notes}</p></section>}
 
       <section className="panel">
-        <div className="sectionTitle"><h2>Roster</h2>{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div>
+        <div className="sectionTitle"><h2>Roster</h2><div className="row">{isPractice && <label className="check noPrint"><input type="checkbox" checked={byWeapon} onChange={x => setByWeapon(x.target.checked)} /> Sort by weapon #</label>}{isStaff && <button className="noPrint" onClick={() => setAdding(true)}><UserPlus size={15} /> Add shooters</button>}</div></div>
         {rows.length === 0 ? <Empty title="No one on the roster yet">{isStaff ? 'Add shooters, or have them RSVP from their dashboard.' : 'Be the first to RSVP.'}</Empty> : (
           <div className="tableWrap"><table className="attTable">
             <thead><tr><th>Shooter</th><th>Status</th>{isPractice && <th>Weapon #</th>}<th>Transport / duty</th><th>Note</th>{isStaff && <th className="noPrint" />}</tr></thead>

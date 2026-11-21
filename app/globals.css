@@ -915,3 +915,4 @@ table.roster td:first-child { min-width: 150px; }
 .singleToggle { align-items: flex-start !important; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; background: var(--card); }
 .singleToggle span { display: flex; flex-direction: column; gap: 2px; }
 .singleToggle small { color: var(--muted); font-size: 12.5px; }
+.testBanner { background: #6b4c8a; color: #fff; padding: 8px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13.5px; }

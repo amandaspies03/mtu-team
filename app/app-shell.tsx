@@ -228,6 +228,7 @@ function Workspace() {
       </aside>
       <main>
         <OfflineBanner />
+        {process.env.NEXT_PUBLIC_DEPLOY_ENV === 'preview' && <div className="testBanner"><b>Test version.</b> Changes here save to the real team data.</div>}
         {previewShooter && <div className="previewBar"><Eye size={16} /><span><b>Shooter view.</b> This is what a shooter sees. Anything you change still saves to your real account.</span><button onClick={() => setPreviewShooter(false)}>Back to staff view</button></div>}
         {error && <div className="alert">Couldn’t load team data: {error} <button onClick={reload}>Retry</button></div>}
         {loading ? <div className="loadingScreen">Loading team data…</div> : body}

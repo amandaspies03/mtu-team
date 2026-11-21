@@ -12,17 +12,12 @@ type List = 'rifles_out' | 'rifles_in' | 'pistols_in';
 type Lists = Record<List, number[]>;
 const ALL = Array.from({ length: WEAPON_COUNT }, (_, i) => i + 1);
 
-/** Members who can open the vault: the Vault access role plus full staff. Staff-only data, so empty for everyone else. */
+/** Members with the Vault access role (being staff doesn't give it). Staff-only data, so empty for everyone else. */
 export function useVaultPeople() {
-  const { members, profiles, staffDuties, staffEmails } = useTeam();
+  const { members, profiles, staffDuties } = useTeam();
   const emailOf = (m: Member) => (profiles.find(p => p.member_id === m.id)?.email ?? m.personal_email ?? '').trim().toLowerCase();
   const vaultEmails = new Set(staffDuties.filter(d => d.duty === 'vault').map(d => d.email));
-  const staffSet = new Set(staffEmails.map(s => s.email));
-  const active = members.filter(m => m.team_status !== 'Inactive');
-  return {
-    vault: active.filter(m => vaultEmails.has(emailOf(m))),
-    staff: active.filter(m => staffSet.has(emailOf(m)) && !vaultEmails.has(emailOf(m))),
-  };
+  return members.filter(m => m.team_status !== 'Inactive' && vaultEmails.has(emailOf(m)));
 }
 
 export function WeaponsPanel({ event: e }: { event: TeamEvent }) {
@@ -134,7 +129,7 @@ function who(h: Member[], going: Set<string>) {
 /** Who's opening the vault. Full staff pick; vault access sees the names. */
 function VaultPeople({ event: e, editable }: { event: TeamEvent; editable: boolean }) {
   const { memberById, saveOrQueue, reload } = useTeam();
-  const { vault, staff } = useVaultPeople();
+  const vault = useVaultPeople();
   const [err, setErr] = useState('');
   const ids = e.vault_ids ?? [];
   async function save(next: string[]) {
@@ -144,7 +139,7 @@ function VaultPeople({ event: e, editable }: { event: TeamEvent; editable: boole
       if (r === 'sent') await reload();
     } catch (x) { setErr((x as { message?: string }).message ?? 'Couldn’t save.'); }
   }
-  const pickVault = vault.filter(m => !ids.includes(m.id)), pickStaff = staff.filter(m => !ids.includes(m.id));
+  const pickVault = vault.filter(m => !ids.includes(m.id));
   return (
     <div className="vaultRow">
       <span className="vaultLabel"><Lock size={14} /> Vault</span>
@@ -156,14 +151,13 @@ function VaultPeople({ event: e, editable }: { event: TeamEvent; editable: boole
           </span>
         ))}
       </div>
-      {editable && (pickVault.length + pickStaff.length > 0) && (
+      {editable && pickVault.length > 0 && (
         <select className="noPrint" aria-label="Add who's opening the vault" value="" onChange={x => x.target.value && void save([...ids, x.target.value])}>
           <option value="">+ Who’s opening the vault?</option>
-          {pickVault.length > 0 && <optgroup label="Vault access">{pickVault.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}</optgroup>}
-          {pickStaff.length > 0 && <optgroup label="Staff">{pickStaff.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}</optgroup>}
+          {pickVault.map(m => <option key={m.id} value={m.id}>{fullName(m)}</option>)}
         </select>
       )}
-      {editable && vault.length === 0 && <small className="formNote">Give people the Vault access role on the Admin page to list them here.</small>}
+      {editable && vault.length === 0 && <small className="formNote">Only people with the Vault access role are listed. Give it on Admin → Access (staff need it too).</small>}
       {err && <p className="alert" role="alert">{err}</p>}
     </div>
   );

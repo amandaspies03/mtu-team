@@ -63,7 +63,7 @@ function Access() {
   };
   const staffMemberIds = new Set(members.filter(m => { const e = signInEmail(m).email; return e && staffSet.has(e); }).map(m => m.id));
   const hasDuty = (m: Member, d: Duty) => { const e = signInEmail(m).email; return !!e && staffDuties.some(x => x.email === e && x.duty === d); };
-  const staffCandidates = members.filter(m => m.team_status !== 'Inactive' && !staffMemberIds.has(m.id) && (level === 'full' || !hasDuty(m, level))).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  const staffCandidates = members.filter(m => m.team_status !== 'Inactive' && (level === 'vault' || !staffMemberIds.has(m.id)) && (level === 'full' || !hasDuty(m, level))).sort((a, b) => fullName(a).localeCompare(fullName(b)));
   const picked = members.find(m => m.id === staffMember);
   const pickedEmail = picked ? signInEmail(picked) : null;
 
