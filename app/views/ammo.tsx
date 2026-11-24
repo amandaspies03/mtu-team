@@ -82,35 +82,48 @@ export default function AmmoReport() {
 
       {rows.length === 0 ? <Empty title="No ammo types yet">Use “Ammo types” to add the ammo assigned to the team.</Empty> : (
         <section className="panel">
-          <div className="tableWrap ammoGridWrap"><table className="ammoGrid">
+          <div className="tableWrap"><table className="ammoGrid">
             <thead>
               <tr>
-                <th className="stick">Nomenclature</th><th className="num">Forecasted</th><th>DODIC</th><th className="num">Remaining</th><th className="num">Expended</th>
-                {cols.map(c => (
-                  <th key={c.id} className={`num dateCol clickable ${past(c.id) ? '' : 'upcoming'}`} title={`${c.title} – open`} onClick={() => go('event', c.id)}>
-                    {fmtDate(c.start_date, { day: '2-digit', month: 'short' }).toUpperCase()}<small>{c.kind === 'practice' ? parseInt(c.start_date) : kindLabel[c.kind]}</small>
-                  </th>
-                ))}
+                <th>Nomenclature</th><th className="num">Forecasted</th><th>DODIC</th><th className="num">Remaining</th><th className="num">Expended</th><th className="num">Planned</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
                 <tr key={r.t.id} className={r.t.active ? '' : 'muted'}>
-                  <td className="stick"><b>{r.t.nomenclature}</b></td>
+                  <td><b>{r.t.nomenclature}</b></td>
                   <td className="num"><input className="numIn" type="number" min={0} inputMode="numeric" aria-label={`${fyLabel} forecast for ${r.t.nomenclature}`} defaultValue={r.f ?? ''} key={`${fy}-${r.t.id}-${r.f}`}
                     onBlur={x => { const v = num(x.target.value); if (v !== r.f) void saveForecast(r.t, v); }} /></td>
                   <td>{r.t.dodic}</td>
                   <td className={`num ${r.remaining != null && r.remaining < 0 ? 'over' : ''}`}><b>{r.remaining == null ? '—' : n(r.remaining)}</b></td>
                   <td className="num">{n(r.expended)}</td>
-                  {cols.map(c => {
-                    const v = cell(r.t.id, c.id);
-                    return <td key={c.id} className={`num ${past(c.id) ? '' : 'upcoming'}`} title={v != null && !past(c.id) ? 'Planned – counts as expended after the practice' : undefined}>{v == null ? '' : n(v)}</td>;
-                  })}
+                  <td className="num muted">{r.planned ? n(r.planned) : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table></div>
-          <p className="formNote">Grey columns are upcoming. Their numbers are the planned draw and don’t count against the forecast yet. Click a date to open that practice.</p>
+          <p className="formNote">Planned is ammo entered on upcoming practices. It doesn’t count against the forecast until the practice date passes.</p>
+        </section>
+      )}
+
+      {rows.length > 0 && (
+        <section className="panel">
+          <div className="sectionTitle"><h2>Practices</h2><span className="formNote">Rounds drawn · click a row to open it</span></div>
+          {cols.length === 0 ? <p className="formNote">No practices on the calendar for {fyLabel} yet.</p> : (
+            <div className="tableWrap"><table className="ammoGrid">
+              <thead><tr><th>Date</th><th>Event</th>{rows.map(r => <th key={r.t.id} className="num" title={`${r.t.nomenclature} (${r.t.dodic})`}>{r.t.nomenclature}</th>)}</tr></thead>
+              <tbody>
+                {cols.map(c => (
+                  <tr key={c.id} className={`clickable ${past(c.id) ? '' : 'upcoming'}`} onClick={() => go('event', c.id)}>
+                    <td>{fmtDate(c.start_date)}</td>
+                    <td>{c.title}{c.kind !== 'practice' && <small className="sub">{kindLabel[c.kind]}</small>}{!past(c.id) && <small className="sub">Upcoming</small>}</td>
+                    {rows.map(r => { const v = cell(r.t.id, c.id); return <td key={r.t.id} className="num">{v == null ? '' : n(v)}</td>; })}
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          )}
+          <p className="formNote">Grey rows are upcoming. Their numbers are the planned draw.</p>
         </section>
       )}
       {managing && <AmmoTypes onClose={() => setManaging(false)} />}

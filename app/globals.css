@@ -927,11 +927,7 @@ a.fileOpen:hover { text-decoration: underline; }
 .ammoAdd { max-width: 260px; }
 .ammoGrid { font-size: 13px; }
 .ammoGrid th, .ammoGrid td { white-space: nowrap; }
-.ammoGrid .stick { position: sticky; left: 0; background: var(--card); z-index: 1; }
-.ammoGrid .dateCol small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
 .ammoGrid .upcoming { color: var(--muted); background: #f6f4ee; }
 .ammoGrid .over { color: #b4432f; }
 .ammoGrid tr.muted td { color: var(--muted); }
 .ammoGrid .numIn { width: 90px !important; }
-.ammoGrid th.clickable { cursor: pointer; }
-.ammoGrid th.clickable:hover { color: var(--olive); text-decoration: underline; }
