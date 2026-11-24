@@ -1,6 +1,6 @@
 'use client';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Backpack, Crosshair, Download, FileText, Info, Search, ShieldCheck, Trash2, Trophy, Upload, UserRound, X, Printer } from 'lucide-react';
+import { ArrowRight, Backpack, Crosshair, Download, FileText, Info, Search, ShieldCheck, Trash2, Trophy, Upload, UserRound, X } from 'lucide-react';
 import { RESOURCES, type ResourceCategory } from '../../lib/resources';
 import { useTeam } from '../../lib/data';
 import { Modal, PageTitle } from './ui';
@@ -14,7 +14,7 @@ const ICONS: Record<ResourceCategory['icon'], React.ReactNode> = {
   info: <Info size={20} />,
 };
 
-/** Upload destination for the "Printable targets" section (it isn't a guide category). */
+/** Upload destination for the "Printable files" section (it isn't a guide category). */
 const PRINTABLE_TARGETS = 'printable-targets';
 
 type ResourceFile = { id: string; category_id: string; title: string; path: string; size_bytes: number | null; mime_type: string | null; created_at: string };
@@ -99,14 +99,16 @@ export default function Resources() {
           )}
 
           <section className="panel printTargets">
-            <div className="sectionTitle"><h2>Printable targets</h2></div>
-            <p className="formNote">Print on letter-size paper at 100% (actual size) so the dots stay 2 inches.</p>
-            <a className="printTarget" href="/drills/dot-torture-target.pdf" target="_blank" rel="noopener">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/drills/dot-torture-target.png" alt="" loading="lazy" />
-              <span><b>Dot Torture target</b><small>10 numbered 2-inch dots · 50-round drill · course of fire printed on the target</small><span className="printLink"><Printer size={14} /> Open to print (PDF)</span></span>
-            </a>
-            <FileList files={files.filter(f => f.category_id === PRINTABLE_TARGETS)} isStaff={isStaff} onOpen={openFile} onDelete={removeFile} heading={null} />
+            <div className="sectionTitle"><h2>Printable files</h2></div>
+            <p className="formNote">Print on letter-size paper at 100% (actual size) so targets come out to scale.</p>
+            <FileList files={files.filter(f => f.category_id === PRINTABLE_TARGETS)} isStaff={isStaff} onOpen={openFile} onDelete={removeFile} heading={null}
+              pinned={(
+                <div className="fileRow">
+                  <FileText size={16} />
+                  <a className="fileOpen" href="/drills/dot-torture-target.pdf" target="_blank" rel="noopener">Dot Torture target<small>PDF · 10 numbered 2-inch dots · 50-round drill</small></a>
+                  <a className="iconBtn" href="/drills/dot-torture-target.pdf" download aria-label="Download Dot Torture target"><Download size={15} /></a>
+                </div>
+              )} />
           </section>
         </>
       )}
@@ -125,11 +127,12 @@ function GuideItem({ title, summary, body, defaultOpen }: { title: string; summa
   );
 }
 
-function FileList({ files, isStaff, onOpen, onDelete, heading = 'Printable files' }: { files: ResourceFile[]; isStaff: boolean; onOpen: (f: ResourceFile) => void; onDelete: (f: ResourceFile) => void; heading?: string | null }) {
-  if (files.length === 0) return isStaff && heading ? <p className="formNote fileHint">No printable files here yet. Use “Upload file” to add targets, data book pages or forms.</p> : null;
+function FileList({ files, isStaff, onOpen, onDelete, heading = 'Printable files', pinned }: { files: ResourceFile[]; isStaff: boolean; onOpen: (f: ResourceFile) => void; onDelete: (f: ResourceFile) => void; heading?: string | null; pinned?: React.ReactNode }) {
+  if (files.length === 0 && !pinned) return isStaff && heading ? <p className="formNote fileHint">No printable files here yet. Use “Upload file” to add targets, data book pages or forms.</p> : null;
   return (
     <div className="fileList">
       {heading && <h3>{heading}</h3>}
+      {pinned}
       {files.map(f => (
         <div key={f.id} className="fileRow">
           <FileText size={16} />
@@ -169,7 +172,7 @@ function UploadFile({ defaultCategory, onClose, onDone }: { defaultCategory: str
         <div className="resourceNotice"><p>Only signed-in team members can open these files. Don’t upload anything with SSNs, DoD IDs, home addresses or other personal information.</p></div>
         <label>File<input type="file" accept=".pdf,.docx,.doc,.pptx,.xlsx,.png,.jpg,.jpeg" onChange={e => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ')); }} /></label>
         <label>Title<input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Pistol EIC target" /></label>
-        <label>Section<select value={category} onChange={e => setCategory(e.target.value)}>{RESOURCES.categories.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}<option value={PRINTABLE_TARGETS}>Printable targets</option></select></label>
+        <label>Section<select value={category} onChange={e => setCategory(e.target.value)}>{RESOURCES.categories.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}<option value={PRINTABLE_TARGETS}>Printable files</option></select></label>
         {err && <p className="alert">{err}</p>}
         <div className="formActions"><button className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy} onClick={save}><Upload size={15} /> {busy ? 'Uploading…' : 'Upload'}</button></div>
       </div>
