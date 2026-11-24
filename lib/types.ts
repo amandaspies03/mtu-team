@@ -67,6 +67,8 @@ export type TeamEvent = {
   start_date: string;
   end_date: string | null;
   location: string | null;
+  /** Instructor focus for the practice. Everyone can read it; only staff can edit it. */
+  what_to_expect: string | null;
   notes: string | null;
   aar: string | null;
   ammo_556: number | null;

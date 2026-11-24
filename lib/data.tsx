@@ -65,13 +65,13 @@ async function all<T>(q: PromiseLike<{ data: T[] | null; error: { message: strin
   return data ?? [];
 }
 
-const EVENT_PUBLIC = 'id, title, kind, start_date, end_date, location';
+const EVENT_PUBLIC = 'id, title, kind, start_date, end_date, location, what_to_expect';
 const EVENT_STAFF_BLANK = { notes: null, aar: null, ammo_556: null, ammo_9mm: null, prep_ammo_draw: false, prep_placard: false, prep_van_driver: false, van_driver_id: null, ammo_draw_requested_on: null, ammo_draw_556: null, ammo_draw_9mm: null, groupme_posted_at: null, prep_vehicle_requested: false, prep_vehicle_confirmed: false, vault_ids: [] as string[], rifles_out: [] as number[], rifles_in: [] as number[], pistols_in: [] as number[] };
 
 /** Everyone gets event basics; staff also get plan, AAR, ammo and prep details. */
 async function loadEvents(sb: SupabaseClient, isStaff: boolean, duties: Duty[]): Promise<TeamEvent[]> {
-  const base = await all<Pick<TeamEvent, 'id' | 'title' | 'kind' | 'start_date' | 'end_date' | 'location'>>(sb.from('events').select(EVENT_PUBLIC).order('start_date'));
-  const pub = (e: typeof base[number]) => ({ id: e.id, title: e.title, kind: e.kind, start_date: e.start_date, end_date: e.end_date, location: e.location });
+  const base = await all<Pick<TeamEvent, 'id' | 'title' | 'kind' | 'start_date' | 'end_date' | 'location' | 'what_to_expect'>>(sb.from('events').select(EVENT_PUBLIC).order('start_date'));
+  const pub = (e: typeof base[number]) => ({ id: e.id, title: e.title, kind: e.kind, start_date: e.start_date, end_date: e.end_date, location: e.location, what_to_expect: e.what_to_expect ?? null });
   if (!isStaff && duties.length) {
     // Vehicle / ammo managers get just the fields their role covers (the database returns the rest as null).
     const { data, error } = await sb.rpc('event_duty_details');

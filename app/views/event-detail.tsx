@@ -111,6 +111,7 @@ export default function EventView({ id }: { id: string }) {
           </div>
         </div>
         {!past && me.member_id && <div className="rsvpCard"><div><b>Are you going?</b><span>{kindLabel[e.kind]} · {eventRange(e)}</span></div><Rsvp event={e} /></div>}
+        <WhatToExpect event={e} />
         {(can('vehicle') || can('ammo')) && <DutyPanel event={e} />}
         {e.kind === 'practice' && can('vault') && <WeaponsPanel event={e} />}
         <section className="panel">
@@ -154,6 +155,8 @@ export default function EventView({ id }: { id: string }) {
         {AmmoStat({ label: "5.56", field: "ammo_556" })}
         {AmmoStat({ label: "9mm", field: "ammo_9mm" })}
       </div>
+
+      <WhatToExpect event={e} />
 
       {isPractice && isStaff && (
         <section className="panel prep">
@@ -242,6 +245,32 @@ export default function EventView({ id }: { id: string }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+/** Instructor notes on what the practice will focus on. Everyone sees it; only staff (admins) can edit. */
+function WhatToExpect({ event: e }: { event: TeamEvent }) {
+  const { sb, isStaff, reload } = useTeam();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false), [err, setErr] = useState('');
+  if (!isStaff && !e.what_to_expect) return null;
+  async function save() {
+    setSaving(true); setErr('');
+    const { error } = await sb.from('events').update({ what_to_expect: draft?.trim() || null }).eq('id', e.id);
+    setSaving(false);
+    if (error) setErr(error.message); else { setDraft(null); await reload(); }
+  }
+  return (
+    <section className="panel">
+      <div className="sectionTitle"><h2>What to expect</h2>{isStaff && draft === null && <button className="noPrint" onClick={() => setDraft(e.what_to_expect ?? '')}>{e.what_to_expect ? 'Edit' : 'Add'}</button>}</div>
+      {err && <p className="alert">{err}</p>}
+      {draft !== null ? (
+        <div className="form">
+          <textarea rows={5} value={draft} onChange={x => setDraft(x.target.value)} placeholder="What this practice will focus on — drills, positions, anything shooters should prepare for…" />
+          <div className="formActions"><button className="secondary" onClick={() => { setDraft(null); setErr(''); }}>Cancel</button><button className="primary" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button></div>
+        </div>
+      ) : e.what_to_expect ? <p className="pre">{e.what_to_expect}</p> : <p className="formNote">Nothing added yet. Shooters won’t see this box until you add something.</p>}
+    </section>
   );
 }
 
