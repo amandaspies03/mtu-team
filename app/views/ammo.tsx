@@ -42,7 +42,6 @@ export default function AmmoReport() {
     const f = forecast(t.id);
     return { t, f, expended, planned, remaining: f == null ? null : f - expended };
   });
-  const totals = rows.reduce((s, r) => ({ expended: s.expended + r.expended, planned: s.planned + r.planned }), { expended: 0, planned: 0 });
 
   async function saveForecast(t: AmmoType, value: number | null) {
     setErr('');
@@ -72,12 +71,6 @@ export default function AmmoReport() {
         Forecasted rounds for {fyLabel} and what’s drawn for each practice. Everything drawn is shot, so a practice’s rounds count as expended once its date has passed. Remaining is forecasted minus expended. Enter ammo on each practice’s page; type the forecast right in the table. Fiscal year runs 1 Oct – 30 Sep.
       </PageTitle>
 
-      <div className="stats">
-        <div><strong>{n(totals.expended)}</strong><span>rds expended</span></div>
-        <div><strong>{n(totals.planned)}</strong><span>rds planned for upcoming practices</span></div>
-        <div><strong>{cols.filter(c => past(c.id)).length}/{cols.length}</strong><span>practices done</span></div>
-        <div><strong>{rows.filter(r => r.remaining != null && r.remaining < 0).length}</strong><span>types over forecast</span></div>
-      </div>
       {err && <p className="alert">{err}</p>}
 
       {rows.length === 0 ? <Empty title="No ammo types yet">Use “Ammo types” to add the ammo assigned to the team.</Empty> : (
