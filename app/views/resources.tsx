@@ -14,6 +14,9 @@ const ICONS: Record<ResourceCategory['icon'], React.ReactNode> = {
   info: <Info size={20} />,
 };
 
+/** Upload destination for the "Printable targets" section (it isn't a guide category). */
+const PRINTABLE_TARGETS = 'printable-targets';
+
 type ResourceFile = { id: string; category_id: string; title: string; path: string; size_bytes: number | null; mime_type: string | null; created_at: string };
 
 const fmtSize = (n: number | null) => (n == null ? '' : n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
@@ -103,6 +106,7 @@ export default function Resources() {
               <img src="/drills/dot-torture-target.png" alt="" loading="lazy" />
               <span><b>Dot Torture target</b><small>10 numbered 2-inch dots · 50-round drill · course of fire printed on the target</small><span className="printLink"><Printer size={14} /> Open to print (PDF)</span></span>
             </a>
+            <FileList files={files.filter(f => f.category_id === PRINTABLE_TARGETS)} isStaff={isStaff} onOpen={openFile} onDelete={removeFile} heading={null} />
           </section>
         </>
       )}
@@ -121,11 +125,11 @@ function GuideItem({ title, summary, body, defaultOpen }: { title: string; summa
   );
 }
 
-function FileList({ files, isStaff, onOpen, onDelete }: { files: ResourceFile[]; isStaff: boolean; onOpen: (f: ResourceFile) => void; onDelete: (f: ResourceFile) => void }) {
-  if (files.length === 0) return isStaff ? <p className="formNote fileHint">No printable files here yet. Use “Upload file” to add targets, data book pages or forms.</p> : null;
+function FileList({ files, isStaff, onOpen, onDelete, heading = 'Printable files' }: { files: ResourceFile[]; isStaff: boolean; onOpen: (f: ResourceFile) => void; onDelete: (f: ResourceFile) => void; heading?: string | null }) {
+  if (files.length === 0) return isStaff && heading ? <p className="formNote fileHint">No printable files here yet. Use “Upload file” to add targets, data book pages or forms.</p> : null;
   return (
     <div className="fileList">
-      <h3>Printable files</h3>
+      {heading && <h3>{heading}</h3>}
       {files.map(f => (
         <div key={f.id} className="fileRow">
           <FileText size={16} />
@@ -165,7 +169,7 @@ function UploadFile({ defaultCategory, onClose, onDone }: { defaultCategory: str
         <div className="resourceNotice"><p>Only signed-in team members can open these files. Don’t upload anything with SSNs, DoD IDs, home addresses or other personal information.</p></div>
         <label>File<input type="file" accept=".pdf,.docx,.doc,.pptx,.xlsx,.png,.jpg,.jpeg" onChange={e => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ')); }} /></label>
         <label>Title<input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Pistol EIC target" /></label>
-        <label>Section<select value={category} onChange={e => setCategory(e.target.value)}>{RESOURCES.categories.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
+        <label>Section<select value={category} onChange={e => setCategory(e.target.value)}>{RESOURCES.categories.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}<option value={PRINTABLE_TARGETS}>Printable targets</option></select></label>
         {err && <p className="alert">{err}</p>}
         <div className="formActions"><button className="secondary" onClick={onClose}>Cancel</button><button className="primary" disabled={busy} onClick={save}><Upload size={15} /> {busy ? 'Uploading…' : 'Upload'}</button></div>
       </div>
