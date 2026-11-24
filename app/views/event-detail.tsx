@@ -13,12 +13,13 @@ import { downloadIcs } from '../../lib/ics';
 import { Empty, Modal, Rsvp, Tag } from './ui';
 import { EventPocs } from './event-pocs';
 import { WeaponsPanel } from './event-weapons';
+import { AmmoLines, drawnByCaliber } from './event-ammo';
 
 const STATUSES: AttendanceStatus[] = ['planned', 'attended', 'absent', 'excused'];
 const goingRank = (s: AttendanceStatus) => (s === 'planned' || s === 'attended' ? 0 : s === 'excused' ? 1 : 2);
 
 export default function EventView({ id }: { id: string }) {
-  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload, can, saveOrQueue } = useTeam();
+  const { sb, me, isStaff, events, attendance, memberById, members, teams, teamMembers, reload, can, saveOrQueue, eventAmmo, ammoTypes } = useTeam();
   const e = events.find(x => x.id === id);
   const [editing, setEditing] = useState(false), [adding, setAdding] = useState(false), [deleting, setDeleting] = useState(false), [emailing, setEmailing] = useState(false);
   const [aar, setAar] = useState<string | null>(null);
@@ -36,18 +37,8 @@ export default function EventView({ id }: { id: string }) {
   const going = rows.filter(r => r.a.status === 'planned' || r.a.status === 'attended');
   const evTeams = teams.filter(t => t.event_id === e.id);
   const isPractice = e.kind === 'practice';
+  const drawn = drawnByCaliber(eventAmmo.filter(a => a.event_id === e.id), ammoTypes);
 
-  function AmmoStat({ label, field }: { label: string; field: 'ammo_556' | 'ammo_9mm' }) {
-    const value = e![field];
-    if (!isStaff) return <div><strong>{value ?? '—'}</strong><span>rds {label} issued</span></div>;
-    return (
-      <div className="ammoStat">
-        <input className="numIn ammoIn" type="number" min={0} inputMode="numeric" aria-label={`Rounds of ${label} issued`} defaultValue={value ?? ''} key={`${field}-${value}`}
-          onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== value) saveEvent({ [field]: v }); }} />
-        <span>rds {label} issued</span>
-      </div>
-    );
-  }
   async function saveEvent(change: Record<string, number | boolean | string | null>) {
     setErr('');
     try {
@@ -152,8 +143,7 @@ export default function EventView({ id }: { id: string }) {
       <div className="stats">
         <div><strong>{going.length}</strong><span>{past ? 'on roster' : 'going'}</span></div>
         {isPractice && isStaff && <div><strong>{prepDone(e)}/{PREP_ITEMS.length}</strong><span>prep done</span></div>}
-        {AmmoStat({ label: "5.56", field: "ammo_556" })}
-        {AmmoStat({ label: "9mm", field: "ammo_9mm" })}
+        {['5.56', '9mm'].map(c => <div key={c}><strong>{drawn.get(c)?.toLocaleString() ?? '—'}</strong><span>rds {c} drawn</span></div>)}
       </div>
 
       <WhatToExpect event={e} />
@@ -172,12 +162,8 @@ export default function EventView({ id }: { id: string }) {
                     : { [i.key]: x.target.checked })} /> {i.label}</label>
                   {i.key === 'prep_ammo_draw' && (
                     <div className="drawFields">
-                      <label>Requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
+                      <label>Date requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
                         onBlur={x => { const v = x.target.value || null; if (v !== e.ammo_draw_requested_on) saveEvent(v ? { ammo_draw_requested_on: v, prep_ammo_draw: true } : { ammo_draw_requested_on: null }); }} /></label>
-                      {(['ammo_draw_556', 'ammo_draw_9mm'] as const).map(f => (
-                        <label key={f}>{f === 'ammo_draw_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
-                          onBlur={x => { const v = x.target.value === '' ? null : Math.max(0, Math.round(+x.target.value)); if (v !== e[f]) saveEvent({ [f]: v }); }} /></label>
-                      ))}
                     </div>
                   )}
                   {i.key === 'prep_van_driver' && (
@@ -193,6 +179,11 @@ export default function EventView({ id }: { id: string }) {
           </div>
         </section>
       )}
+
+      <section className="panel">
+        <div className="sectionTitle"><h2>Ammo</h2></div>
+        <AmmoLines event={e} />
+      </section>
 
       {isPractice && <WeaponsPanel event={e} />}
 
@@ -384,19 +375,13 @@ function DutyPanel({ event: e }: { event: TeamEvent }) {
     } catch (x) { setErr((x as { message?: string }).message ?? 'Couldn’t save.'); }
     setSaving(false);
   }
-  const num = (v: string) => (v === '' ? null : Math.max(0, Math.round(+v)));
   return (
     <section className="panel dutyPanel">
       <div className="sectionTitle"><h2>Your checklist</h2><span className="formNote">{[vehicle && 'Vehicle', ammo && 'Ammo'].filter(Boolean).join(' · ')}{saving ? ' · Saving…' : ''}</span></div>
       {ammo && (
         <div className="dutyAmmo">
-          <h3>Rounds issued</h3>
-          <div className="drawFields">
-            {(['ammo_556', 'ammo_9mm'] as const).map(f => (
-              <label key={f}>{f === 'ammo_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
-                onBlur={x => { const v = num(x.target.value); if (v !== e[f]) void save({ [f]: v }); }} /></label>
-            ))}
-          </div>
+          <h3>Ammo</h3>
+          <AmmoLines event={e} />
         </div>
       )}
       {isPractice && (
@@ -405,12 +390,8 @@ function DutyPanel({ event: e }: { event: TeamEvent }) {
             <div className={`prepItem ${e.prep_ammo_draw ? 'done' : ''}`}>
               <label className="check"><input type="checkbox" checked={!!e.prep_ammo_draw} onChange={x => void save({ prep_ammo_draw: x.target.checked })} /> Ammo draw requested</label>
               <div className="drawFields">
-                <label>Requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
+                <label>Date requested<input type="date" defaultValue={e.ammo_draw_requested_on ?? ''} key={`d-${e.ammo_draw_requested_on}`}
                   onBlur={x => { const v = x.target.value || null; if (v !== e.ammo_draw_requested_on) void save(v ? { ammo_draw_requested_on: v, prep_ammo_draw: true } : { ammo_draw_requested_on: null }); }} /></label>
-                {(['ammo_draw_556', 'ammo_draw_9mm'] as const).map(f => (
-                  <label key={f}>{f === 'ammo_draw_556' ? '5.56 rds' : '9mm rds'}<input className="numIn" type="number" min={0} inputMode="numeric" defaultValue={e[f] ?? ''} key={`${f}-${e[f]}`}
-                    onBlur={x => { const v = num(x.target.value); if (v !== e[f]) void save({ [f]: v }); }} /></label>
-                ))}
               </div>
             </div>
           )}

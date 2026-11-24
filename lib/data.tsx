@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { flushOutbox, isNetworkError, loadSnapshot, outboxItems, saveOrQueue, saveSnapshot, type NewOutboxItem, type OutboxItem } from './offline';
-import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession, ScoreSubmission } from './types';
+import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession, ScoreSubmission, AmmoType, AmmoForecast, EventAmmo } from './types';
 import { DUTIES } from './types';
 
 export type TeamData = {
@@ -38,6 +38,10 @@ export type TeamData = {
   drillSessions: DrillSession[];
   /** Scores sent for approval: all of them for staff, your own for shooters. */
   submissions: ScoreSubmission[];
+  /** Ammo types (everyone); forecasts and per-event ammo (ammo managers and staff only). */
+  ammoTypes: AmmoType[];
+  ammoForecasts: AmmoForecast[];
+  eventAmmo: EventAmmo[];
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
@@ -107,7 +111,7 @@ async function loadMembers(sb: SupabaseClient, isStaff: boolean, duties: Duty[])
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>>({
-    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [], submissions: [],
+    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [], submissions: [], ammoTypes: [], ammoForecasts: [], eventAmmo: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -121,7 +125,8 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         const r = await sb.rpc('my_duties');
         if (!r.error && Array.isArray(r.data)) duties = (r.data as string[]).filter((d): d is Duty => (DUTIES as string[]).includes(d));
       }
-      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions, submissions] = await Promise.all([
+            const ammoAccess = isStaff || duties.includes('ammo');
+      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo] = await Promise.all([
         loadMembers(sb, isStaff, duties),
         all<Compliance>(sb.from('member_compliance').select('*')),
         loadEvents(sb, isStaff, duties),
@@ -137,8 +142,11 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         isStaff ? all<StaffDuty>(sb.from('staff_duties').select('*').order('email')) : Promise.resolve([] as StaffDuty[]),
         all<DrillSession>(sb.from('drill_sessions').select('id, member_id, drill, shot_on, data, created_by, updated_at').order('shot_on').limit(5000)),
         all<ScoreSubmission>(sb.from('score_submissions').select('*').order('submitted_at', { ascending: false }).limit(2000)),
+        ammoAccess ? all<AmmoType>(sb.from('ammo_types').select('id, nomenclature, dodic, caliber, sort, active').order('sort').order('nomenclature')) : Promise.resolve([] as AmmoType[]),
+        ammoAccess ? all<AmmoForecast>(sb.from('ammo_forecasts').select('fiscal_year, ammo_type_id, rounds')) : Promise.resolve([] as AmmoForecast[]),
+        ammoAccess ? all<EventAmmo>(sb.from('event_ammo').select('id, event_id, ammo_type_id, requested, drawn')) : Promise.resolve([] as EventAmmo[]),
       ]);
-      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions, submissions };
+      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo };
       const waiting = await outboxItems(me.id);
       setState(applyPending(fresh, waiting, me.member_id));
       setOffline(null);
@@ -146,7 +154,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
     } catch (e) {
       const snap = isNetworkError(e) ? await loadSnapshot<Profile, typeof state>() : undefined;
       if (snap && snap.userId === me.id) {
-        setState(applyPending(snap.data, await outboxItems(me.id), me.member_id));
+        setState(applyPending({ ...snap.data, ammoTypes: snap.data.ammoTypes ?? [], ammoForecasts: snap.data.ammoForecasts ?? [], eventAmmo: snap.data.eventAmmo ?? [] }, await outboxItems(me.id), me.member_id));
         setOffline({ savedAt: snap.savedAt });
       } else setError(isNetworkError(e) ? 'No signal, and there’s no saved copy of the team data on this device yet.' : e instanceof Error ? e.message : 'Could not load team data');
     } finally {
@@ -201,7 +209,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
       compliance: state.compliance.filter(c => c.member_id === mine),
       attendance: state.attendance.filter(a => a.member_id === mine),
       events: state.events.map(e => ({ ...e, ...EVENT_STAFF_BLANK })),
-      teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], duties: [], staffDuties: [],
+      teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], duties: [], staffDuties: [], ammoForecasts: [], eventAmmo: [],
       submissions: state.submissions.filter(s => s.member_id === mine),
     };
   }, [preview, state, me.member_id]);

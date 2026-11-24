@@ -919,3 +919,19 @@ a.fileOpen:hover { text-decoration: underline; }
 .singleToggle span { display: flex; flex-direction: column; gap: 2px; }
 .singleToggle small { color: var(--muted); font-size: 12.5px; }
 .testBanner { background: #6b4c8a; color: #fff; padding: 8px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13.5px; }
+
+/* Ammo: per-type lines on an event, and the FY ammo usage grid */
+.ammoLines { display: grid; gap: 8px; }
+.ammoLineTable { max-width: 560px; }
+.ammoLineTable select { min-width: 220px; }
+.ammoAdd { max-width: 260px; }
+.ammoGrid { font-size: 13px; }
+.ammoGrid th, .ammoGrid td { white-space: nowrap; }
+.ammoGrid .stick { position: sticky; left: 0; background: var(--card); z-index: 1; }
+.ammoGrid .dateCol small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+.ammoGrid .upcoming { color: var(--muted); background: #f6f4ee; }
+.ammoGrid .over { color: #b4432f; }
+.ammoGrid tr.muted td { color: var(--muted); }
+.ammoGrid .numIn { width: 90px !important; }
+.ammoGrid th.clickable { cursor: pointer; }
+.ammoGrid th.clickable:hover { color: var(--olive); text-decoration: underline; }

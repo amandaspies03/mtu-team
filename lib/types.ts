@@ -164,6 +164,13 @@ export type Invite = {
   multi_use?: boolean; use_count?: number;
 };
 
+/** An ammo type assigned to the team, identified by its DODIC. */
+export type AmmoType = { id: string; nomenclature: string; dodic: string; caliber: string; sort: number; active: boolean };
+/** Forecasted rounds of one ammo type for one fiscal year (FY27 = 1 Oct 2026 – 30 Sep 2027). */
+export type AmmoForecast = { fiscal_year: number; ammo_type_id: string; rounds: number };
+/** Rounds of one ammo type requested and drawn for an event. Everything drawn is shot. */
+export type EventAmmo = { id: string; event_id: string; ammo_type_id: string; requested: number | null; drawn: number | null };
+
 /** Limited staff roles. Full staff can do all of these. */
 export type Duty = 'vehicle' | 'ammo' | 'vault';
 export const DUTIES: Duty[] = ['vehicle', 'ammo', 'vault'];
