@@ -56,7 +56,7 @@ export default function WeaponRoster() {
       </section>
       {marking !== null && (
         <Modal title={`Rifle #${marking} out of service`} onClose={() => setMarking(null)}>
-          <p>Rifle #{marking} can’t be drawn for practices until you put it back in service. Weapon #{marking} can still be assigned, since the pistol is fine.</p>
+          <p>Rifle #{marking} can’t be drawn for practices until you put it back in service. No one new can be assigned #{marking} until then. Anyone who already has it keeps the number, flagged on the rosters.</p>
           <div className="form"><label>Reason <span className="muted">(optional)</span>
             <input autoFocus value={note} maxLength={200} onChange={e => setNote(e.target.value)} placeholder="e.g. Sent to armory for repair" /></label></div>
           {err && <p className="alert">{err}</p>}

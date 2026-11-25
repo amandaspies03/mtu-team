@@ -45,3 +45,16 @@ begin
 end $$;
 revoke all on function public.set_event_weapons(uuid, text, integer[], boolean) from public, anon;
 grant execute on function public.set_event_weapons(uuid, text, integer[], boolean) to authenticated;
+
+-- Out-of-service numbers can't be newly assigned (whoever already has one keeps it).
+create or replace function private.weapon_assignable() returns trigger
+language plpgsql security definer set search_path to '' as $$
+begin
+  if new.weapon_no is not null and (tg_op = 'INSERT' or new.weapon_no is distinct from old.weapon_no)
+     and exists (select 1 from public.weapons_out_of_service w where w.weapon_type = 'rifle' and w.weapon_no = new.weapon_no) then
+    raise exception 'Weapon #% is out of service and can''t be assigned', new.weapon_no;
+  end if;
+  return new;
+end $$;
+create trigger members_weapon_assignable before insert or update of weapon_no on public.members
+  for each row execute function private.weapon_assignable();
