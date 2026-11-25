@@ -931,3 +931,8 @@ a.fileOpen:hover { text-decoration: underline; }
 .ammoGrid .over { color: #b4432f; }
 .ammoGrid tr.muted td { color: var(--muted); }
 .ammoGrid .numIn { width: 90px !important; }
+.wTile.down { background: repeating-linear-gradient(135deg, #f5dfd8 0 6px, #fbeee9 6px 12px); border-color: #e3b9ad; color: var(--bad); cursor: not-allowed; }
+.wTile.down input { cursor: not-allowed; }
+.wTile.down small { color: var(--bad); display: block !important; }
+.weaponTable .linkBtn { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; }
+@media print { .printHide { display: none; } }

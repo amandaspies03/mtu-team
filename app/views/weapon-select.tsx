@@ -8,7 +8,7 @@ import { WEAPON_COUNT, type Member } from '../../lib/types';
  * Numbers can be shared: not everyone comes to every practice, so two shooters may hold the same number.
  */
 export function WeaponSelect({ member }: { member: Member }) {
-  const { sb, isStaff, members, reload } = useTeam();
+  const { sb, isStaff, members, reload, weaponsDown } = useTeam();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const current = member.weapon_no;
@@ -29,7 +29,8 @@ export function WeaponSelect({ member }: { member: Member }) {
         <option value="">Unassigned</option>
         {Array.from({ length: WEAPON_COUNT }, (_, i) => i + 1).map(n => {
           const h = holders(n);
-          return <option key={n} value={n}>{n}{h.length ? ` · also ${h.join(', ')}` : ''}</option>;
+          const down = weaponsDown.some(w => w.weapon_type === 'rifle' && w.weapon_no === n);
+          return <option key={n} value={n}>{n}{down ? ' · rifle out of service' : ''}{h.length ? ` · also ${h.join(', ')}` : ''}</option>;
         })}
       </select>
       {err && <small className="formNote error">{err}</small>}

@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { flushOutbox, isNetworkError, loadSnapshot, outboxItems, saveOrQueue, saveSnapshot, type NewOutboxItem, type OutboxItem } from './offline';
-import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession, ScoreSubmission, AmmoType, AmmoForecast, EventAmmo } from './types';
+import type { Attendance, Compliance, Course, Invite, MatchTeam, StaffEmail, MatchTeamMember, Member, Profile, Range, Score, TeamEvent, Duty, StaffDuty, DrillSession, ScoreSubmission, AmmoType, AmmoForecast, EventAmmo, WeaponDown } from './types';
 import { DUTIES } from './types';
 
 export type TeamData = {
@@ -42,6 +42,8 @@ export type TeamData = {
   ammoTypes: AmmoType[];
   ammoForecasts: AmmoForecast[];
   eventAmmo: EventAmmo[];
+  /** Weapons out of service (everyone can see them). */
+  weaponsDown: WeaponDown[];
   loading: boolean;
   error: string;
   reload: () => Promise<void>;
@@ -111,7 +113,7 @@ async function loadMembers(sb: SupabaseClient, isStaff: boolean, duties: Duty[])
 export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Profile; children: React.ReactNode }) {
   const isStaff = me.role === 'staff' && me.approved;
   const [state, setState] = useState<Omit<TeamData, 'sb' | 'me' | 'isStaff' | 'realStaff' | 'previewShooter' | 'setPreviewShooter' | 'tourOpen' | 'openTour' | 'closeTour' | 'reload' | 'memberById' | 'can' | 'loading' | 'error' | 'offline' | 'pending' | 'saveOrQueue' | 'sendPending'>>({
-    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [], submissions: [], ammoTypes: [], ammoForecasts: [], eventAmmo: [],
+    members: [], compliance: [], events: [], attendance: [], courses: [], scores: [], teams: [], teamMembers: [], profiles: [], staffEmails: [], invites: [], ranges: [], duties: [], staffDuties: [], drillSessions: [], submissions: [], ammoTypes: [], ammoForecasts: [], eventAmmo: [], weaponsDown: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -126,7 +128,7 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         if (!r.error && Array.isArray(r.data)) duties = (r.data as string[]).filter((d): d is Duty => (DUTIES as string[]).includes(d));
       }
             const ammoAccess = isStaff || duties.includes('ammo');
-      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo] = await Promise.all([
+      const [members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo, weaponsDown] = await Promise.all([
         loadMembers(sb, isStaff, duties),
         all<Compliance>(sb.from('member_compliance').select('*')),
         loadEvents(sb, isStaff, duties),
@@ -145,8 +147,9 @@ export function TeamProvider({ sb, me, children }: { sb: SupabaseClient; me: Pro
         ammoAccess ? all<AmmoType>(sb.from('ammo_types').select('id, nomenclature, dodic, caliber, sort, active').order('sort').order('nomenclature')) : Promise.resolve([] as AmmoType[]),
         ammoAccess ? all<AmmoForecast>(sb.from('ammo_forecasts').select('fiscal_year, ammo_type_id, rounds')) : Promise.resolve([] as AmmoForecast[]),
         ammoAccess ? all<EventAmmo>(sb.from('event_ammo').select('id, event_id, ammo_type_id, requested, drawn')) : Promise.resolve([] as EventAmmo[]),
+        all<WeaponDown>(sb.from('weapons_out_of_service').select('weapon_type, weapon_no, note, marked_at').order('weapon_no')),
       ]);
-      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo };
+      const fresh = { members, compliance, events, attendance, courses, scores, teams, teamMembers, profiles, staffEmails, invites, ranges, duties, staffDuties, drillSessions, submissions, ammoTypes, ammoForecasts, eventAmmo, weaponsDown };
       const waiting = await outboxItems(me.id);
       setState(applyPending(fresh, waiting, me.member_id));
       setOffline(null);

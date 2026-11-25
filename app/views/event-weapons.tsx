@@ -21,7 +21,8 @@ export function useVaultPeople() {
 }
 
 export function WeaponsPanel({ event: e }: { event: TeamEvent }) {
-  const { isStaff, members, attendance, saveOrQueue, reload, can } = useTeam();
+  const { isStaff, members, attendance, saveOrQueue, reload, can, weaponsDown } = useTeam();
+  const rifleDown = (n: number) => weaponsDown.some(w => w.weapon_type === 'rifle' && w.weapon_no === n);
   const lists: Lists = { rifles_out: e.rifles_out ?? [], rifles_in: e.rifles_in ?? [], pistols_in: e.pistols_in ?? [] };
   // Show taps right away; the saved copy replaces this once every save has finished.
   const [local, setLocal] = useState<Lists | null>(null);
@@ -60,9 +61,9 @@ export function WeaponsPanel({ event: e }: { event: TeamEvent }) {
   const turnInStarted = cur.pistols_in.length + cur.rifles_in.length > 0;
   const allBack = missingPistols.length === 0 && missingRifles.length === 0;
 
-  const Tile = ({ n, on, list, sub }: { n: number; on: boolean; list: List; sub?: string }) => (
-    <label className={`wTile ${on ? 'on' : ''}`}>
-      <input type="checkbox" checked={on} onChange={x => void set(list, [n], x.target.checked)} aria-label={`${list === 'pistols_in' ? 'Pistol' : 'Rifle'} ${n}`} />
+  const Tile = ({ n, on, list, sub, down }: { n: number; on: boolean; list: List; sub?: string; down?: boolean }) => (
+    <label className={`wTile ${on ? 'on' : ''} ${down ? 'down' : ''}`} title={down ? `Rifle #${n} is out of service` : undefined}>
+      <input type="checkbox" checked={on} disabled={down && !on} onChange={x => void set(list, [n], x.target.checked)} aria-label={`${list === 'pistols_in' ? 'Pistol' : 'Rifle'} ${n}`} />
       <b>{n}</b>{sub && <small>{sub}</small>}
     </label>
   );
@@ -82,7 +83,7 @@ export function WeaponsPanel({ event: e }: { event: TeamEvent }) {
 
       {mode === 'out' && <>
         <p className="formNote">Tick each rifle as it’s drawn. All {WEAPON_COUNT} pistols go every time.</p>
-        <div className="wGrid">{ALL.map(n => <Tile key={n} n={n} list="rifles_out" on={cur.rifles_out.includes(n)} sub={shortNames(n)} />)}</div>
+        <div className="wGrid">{ALL.map(n => <Tile key={n} n={n} list="rifles_out" on={cur.rifles_out.includes(n)} down={rifleDown(n)} sub={rifleDown(n) ? 'Out of service' : shortNames(n)} />)}</div>
         {cur.rifles_out.length > 0 && <p className="formNote">Drawn: {cur.rifles_out.join(', ')} <button className="linkBtn noPrint" onClick={() => { if (confirm('Clear the whole rifle draw for this practice?')) void set('rifles_out', cur.rifles_out, false); }}>Clear draw</button></p>}
       </>}
 

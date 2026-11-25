@@ -188,3 +188,6 @@ export type ScoreSubmission = {
   submitted_by: string | null; submitted_at: string; status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null; reviewed_at: string | null; review_note: string | null; score_id: string | null;
 };
+
+/** A weapon sent off to be fixed. The number can still be assigned; a rifle that's down can't be drawn. */
+export type WeaponDown = { weapon_type: 'rifle' | 'pistol'; weapon_no: number; note: string | null; marked_at: string };
