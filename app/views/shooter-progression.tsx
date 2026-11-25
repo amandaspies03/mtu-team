@@ -87,9 +87,9 @@ export default function ShooterProgression() {
   };
   return (
     <div>
-      <PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Drills with par times and standards. Everyone on the team can see and compare scores. You can add, edit and delete your own.</PageTitle>
+      <PageTitle eyebrow="PERFORMANCE" title="Shooter Drills">Drills with par times and standards. Everyone on the team can see and compare scores. You can add, edit and delete your own.</PageTitle>
       <DeviceImport />
-      <div className="tabs" aria-label="Shooter Progression views">
+      <div className="tabs" aria-label="Shooter Drills views">
         {([['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']] as const).map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => go(id)}>{title}</button>)}
       </div>
@@ -220,9 +220,9 @@ export function Scorecard({ showTabs = true, hideHeader = false, controls }: { s
 
   return (
     <div>
-      {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Progression">Man Card</PageTitle>
+      {!hideHeader && <><PageTitle eyebrow="PERFORMANCE" title="Shooter Drills">Man Card</PageTitle>
       <p>Scorecards are saved to the team record.</p></>}
-      {showTabs && !controls && <div className="tabs" aria-label="Shooter Progression views">
+      {showTabs && !controls && <div className="tabs" aria-label="Shooter Drills views">
         {[['leaderboard', 'Leaderboard'], ['drills', 'Drills'], ['entries', 'All entries']].map(([id, title]) =>
           <button type="button" key={id} className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setViewing(null); setDrillOpen(false); }}>{title}</button>
         )}
