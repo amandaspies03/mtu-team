@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCheck, Lock, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
+import { ConfirmButton } from './ui';
 import { WEAPON_COUNT, type Member, type TeamEvent } from '../../lib/types';
 import { displayName, fullName, todayISO } from '../../lib/util';
 
@@ -84,7 +85,7 @@ export function WeaponsPanel({ event: e }: { event: TeamEvent }) {
       {mode === 'out' && <>
         <p className="formNote">Tick each rifle as it’s drawn. All {WEAPON_COUNT} pistols go every time.</p>
         <div className="wGrid">{ALL.map(n => <Tile key={n} n={n} list="rifles_out" on={cur.rifles_out.includes(n)} down={rifleDown(n)} sub={rifleDown(n) ? 'Out of service' : shortNames(n)} />)}</div>
-        {cur.rifles_out.length > 0 && <p className="formNote">Drawn: {cur.rifles_out.join(', ')} <button className="linkBtn noPrint" onClick={() => { if (confirm('Clear the whole rifle draw for this practice?')) void set('rifles_out', cur.rifles_out, false); }}>Clear draw</button></p>}
+        {cur.rifles_out.length > 0 && <p className="formNote">Drawn: {cur.rifles_out.join(', ')} <ConfirmButton className="linkBtn noPrint" confirmText="Tap again to clear the whole draw" onConfirm={() => void set('rifles_out', cur.rifles_out, false)}>Clear draw</ConfirmButton></p>}
       </>}
 
       {mode === 'in' && <>

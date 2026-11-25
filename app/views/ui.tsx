@@ -93,3 +93,16 @@ export function Rsvp({ event }: { event: TeamEvent }) {
     </div>
   );
 }
+
+/** A button that asks "Sure?" on the first tap and acts on the second, so it works where browser pop-ups are blocked. */
+export function ConfirmButton({ onConfirm, children, confirmText = 'Tap again to confirm', className = 'secondary', disabled, label }: {
+  onConfirm: () => void; children: React.ReactNode; confirmText?: string; className?: string; disabled?: boolean; label?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button className={`${className}${armed ? ' armed' : ''}`} disabled={disabled} aria-label={label}
+      onClick={() => { if (armed) { setArmed(false); onConfirm(); } else { setArmed(true); setTimeout(() => setArmed(false), 4000); } }}>
+      {armed ? confirmText : children}
+    </button>
+  );
+}

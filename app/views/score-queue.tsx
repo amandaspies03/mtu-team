@@ -6,7 +6,7 @@ import { Check, Send, Trash2, X } from 'lucide-react';
 import { useTeam } from '../../lib/data';
 import type { ScoreSubmission } from '../../lib/types';
 import { displayName, milDate, scoreText, todayISO } from '../../lib/util';
-import { Empty, Modal, Tag } from './ui';
+import { ConfirmButton, Empty, Modal, Tag } from './ui';
 
 /** Match day scorecard code → score course. */
 export const SCORECARD_COURSE: Record<string, string> = { PI2210: 'PISTOL_EIC', PI2250: 'PISTOL_AB', RI3020: 'RIFLE_RR', 'RIFLE EIC': 'RIFLE_EIC' };
@@ -100,7 +100,6 @@ function QueueItem({ s }: { s: ScoreSubmission }) {
   const edited = total !== Number(s.total) || xc !== s.x_count || date !== s.shot_on || label.trim() !== (s.session_label ?? '');
 
   async function review(action: 'approve' | 'reject') {
-    if (action === 'reject' && !confirm(`Reject this score from ${displayName(memberById(s.member_id))}? They’ll see it was rejected${note.trim() ? ' with your note' : ''}.`)) return;
     setBusy(true); setErr('');
     const { error } = await sb.rpc('review_score_submission', action === 'approve'
       ? { p_id: s.id, p_action: 'approve', p_total: total, p_x: xc, p_shot_on: date, p_label: label.trim() || null, p_note: note.trim() || null }
@@ -128,7 +127,7 @@ function QueueItem({ s }: { s: ScoreSubmission }) {
       {err && <p className="alert">{err}</p>}
       <div className="queueActions">
         <button className="primary" disabled={busy || !ok} onClick={() => review('approve')}><Check size={15} /> {edited ? 'Approve with changes' : 'Approve'}</button>
-        <button className="secondary danger" disabled={busy} onClick={() => review('reject')}><X size={15} /> Reject</button>
+        <ConfirmButton className="secondary danger" disabled={busy} confirmText="Tap again to reject" onConfirm={() => void review('reject')}><X size={15} /> Reject</ConfirmButton>
       </div>
     </div>
   );
@@ -153,7 +152,6 @@ function SubmissionTable({ rows, showShooter, withdraw }: { rows: ScoreSubmissio
   // Approved with changes: show what went on the record.
   const final = (s: ScoreSubmission) => scores.find(x => x.id === s.score_id) ?? s;
   async function remove(s: ScoreSubmission) {
-    if (!confirm('Withdraw this score? Staff won’t see it anymore.')) return;
     const { error } = await sb.from('score_submissions').delete().eq('id', s.id);
     if (error) setErr(error.message); else await reload();
   }
@@ -170,7 +168,7 @@ function SubmissionTable({ rows, showShooter, withdraw }: { rows: ScoreSubmissio
             <td className="num"><b>{scoreText(Number(final(s).total), final(s).x_count)}</b></td>
             <td className="nowrap">{when(s.submitted_at)}</td>
             <td>{statusTag(s.status)}{s.review_note && <small className="sub">“{s.review_note}”</small>}</td>
-            {withdraw && <td>{s.status === 'pending' && <button className="iconBtn" aria-label="Withdraw" onClick={() => remove(s)}><Trash2 size={14} /></button>}</td>}
+            {withdraw && <td>{s.status === 'pending' && <ConfirmButton className="linkBtn" label="Withdraw" confirmText="Tap to withdraw" onConfirm={() => void remove(s)}><Trash2 size={14} /></ConfirmButton>}</td>}
           </tr>
         ))}</tbody>
       </table>
