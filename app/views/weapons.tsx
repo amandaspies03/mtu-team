@@ -44,7 +44,7 @@ export default function WeaponRoster() {
             return (
               <tr key={n} className={h.length ? '' : 'emptyWeapon'}>
                 <td className="num"><b>{n}</b></td>
-                <td>{h.length ? h.map((m, i) => <span key={m.id}>{i > 0 && ', '}{displayName(m)}{m.team_status === 'Inactive' && <small className="muted"> (inactive)</small>}</span>) : <span className="muted">—</span>}</td>
+                <td>{h.length ? h.map(m => <span key={m.id} className="holder">{displayName(m)}{m.team_status === 'Inactive' && <small className="muted"> (inactive)</small>}</span>) : <span className="muted">—</span>}</td>
                 <td className="nowrap">
                   {down ? <><Tag tone="bad">Out of service</Tag>{down.note && <small className="sub">{down.note}</small>}</> : <span className="muted printHide">In service</span>}
                   {can('vault') && <button className="linkBtn noPrint" disabled={busy === n} onClick={() => (down ? void save(n, false) : (setMarking(n), setNote('')))}>{down ? 'Back in service' : <><Wrench size={12} /> Mark out of service</>}</button>}

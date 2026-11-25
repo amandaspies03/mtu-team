@@ -937,3 +937,4 @@ a.fileOpen:hover { text-decoration: underline; }
 .weaponTable .linkBtn { margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; }
 @media print { .printHide { display: none; } }
 .armed { outline: 2px solid var(--bad); outline-offset: 1px; }
+.weaponTable .holder { display: block; line-height: 1.5; }
